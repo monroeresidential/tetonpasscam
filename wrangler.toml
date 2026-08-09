@@ -1,0 +1,22 @@
+name = "tetonpasscam"
+main = "src/worker/index.ts"
+compatibility_date = "2026-08-01"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tetonpasscam"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[triggers]
+# "*/10 11-6 * * *" would wrap around midnight UTC, which Cloudflare cron
+# triggers do not support (ranges cannot wrap). Split into two entries that
+# together cover the same 11:00 UTC-06:59 UTC window.
+crons = ["*/10 11-23 * * *", "*/10 0-6 * * *", "0 7-10 * * *", "10 9 * * *"]
+
+[vars]
+ADMIN_EMAIL = "drew@monroeresidential.com"
