@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>tetonpasscam admin</title>
+    <style>
+      /* Deliberately crude -- internal moderation tool, not the public site. */
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 1rem;
+        background: #fff;
+        color: #111;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      h2 {
+        font-size: 1rem;
+        margin-top: 2rem;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+      }
+      th,
+      td {
+        border: 1px solid #999;
+        padding: 0.25rem 0.4rem;
+        text-align: left;
+        vertical-align: top;
+        word-break: break-word;
+      }
+      th {
+        background: #eee;
+      }
+      button {
+        font-size: 0.8rem;
+        margin: 0 0.15rem;
+      }
+      .status-removed {
+        color: #999;
+        text-decoration: line-through;
+      }
+      .status-expired {
+        color: #999;
+      }
+      #status {
+        color: #900;
+        font-weight: bold;
+      }
+      #reload {
+        margin-bottom: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>tetonpasscam admin</h1>
+    <p id="status"></p>
+    <button id="reload">Reload</button>
+
+    <h2>Alerts</h2>
+    <table id="alerts-table">
+      <thead>
+        <tr>
+          <th>id</th>
+          <th>created</th>
+          <th>type</th>
+          <th>note</th>
+          <th>direction</th>
+          <th>status</th>
+          <th>deviceHash</th>
+          <th>ipHash</th>
+          <th>actions</th>
+        </tr>
+      </thead>
+      <tbody id="alerts-body"></tbody>
+    </table>
+
+    <h2>Feedback</h2>
+    <table id="feedback-table">
+      <thead>
+        <tr>
+          <th>id</th>
+          <th>created</th>
+          <th>body</th>
+          <th>email</th>
+        </tr>
+      </thead>
+      <tbody id="feedback-body"></tbody>
+    </table>
+
+    <script>
+      // No framework, on purpose -- this is a crude internal moderation
+      // tool, not part of the public site build.
+      var TOKEN_KEY = 'tetonpasscam_admin_token';
+
+      function getToken() {
+        var token = sessionStorage.getItem(TOKEN_KEY);
+        if (!token) {
+          token = window.prompt('Admin token:') || '';
+          sessionStorage.setItem(TOKEN_KEY, token);
+        }
+        return token;
+      }
+
+      function clearTokenAndReprompt() {
+        sessionStorage.removeItem(TOKEN_KEY);
+        return getToken();
+      }
+
+      function setStatus(msg) {
+        document.getElementById('status').textContent = msg || '';
+      }
+
+      // Wraps fetch to /api/admin/*, attaching the bearer token. On a 401 it
+      // assumes the stored token is stale/wrong, clears it, reprompts once,
+      // and retries exactly one time before giving up.
+      function adminFetch(path, options, retried) {
+        options = options || {};
+        var token = getToken();
+        options.headers = Object.assign({}, options.headers, {
+          Authorization: 'Bearer ' + token,
+        });
+        return fetch('/api/admin' + path, options).then(function (res) {
+          if (res.status === 401 && !retried) {
+            clearTokenAndReprompt();
+            return adminFetch(path, options, true);
+          }
+          return res;
+        });
+      }
+
+      function escapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function renderAlerts(alerts) {
+        var body = document.getElementById('alerts-body');
+        body.innerHTML = '';
+        alerts.forEach(function (a) {
+          var tr = document.createElement('tr');
+          tr.className = 'status-' + a.status;
+          tr.innerHTML =
+            '<td>' + a.id + '</td>' +
+            '<td>' + escapeHtml(a.createdAt) + '</td>' +
+            '<td>' + escapeHtml(a.type) + '</td>' +
+            '<td>' + escapeHtml(a.note) + '</td>' +
+            '<td>' + escapeHtml(a.direction) + '</td>' +
+            '<td>' + escapeHtml(a.status) + '</td>' +
+            '<td>' + escapeHtml(a.deviceHash) + '</td>' +
+            '<td>' + escapeHtml(a.ipHash) + '</td>' +
+            '<td></td>';
+
+          var actionsCell = tr.lastElementChild;
+
+          if (a.status !== 'removed') {
+            var removeBtn = document.createElement('button');
+            removeBtn.textContent = 'Remove';
+            removeBtn.addEventListener('click', function () {
+              adminFetch('/alerts/' + a.id, { method: 'DELETE' }).then(function (res) {
+                if (res.ok) {
+                  setStatus('Removed alert ' + a.id);
+                  loadAlerts();
+                } else {
+                  setStatus('Failed to remove alert ' + a.id + ' (HTTP ' + res.status + ')');
+                }
+              });
+            });
+            actionsCell.appendChild(removeBtn);
+          }
+
+          if (a.deviceHash) {
+            var banDeviceBtn = document.createElement('button');
+            banDeviceBtn.textContent = 'Ban device';
+            banDeviceBtn.addEventListener('click', function () {
+              banIdentity({ deviceHash: a.deviceHash });
+            });
+            actionsCell.appendChild(banDeviceBtn);
+          }
+
+          if (a.ipHash) {
+            var banIpBtn = document.createElement('button');
+            banIpBtn.textContent = 'Ban IP';
+            banIpBtn.addEventListener('click', function () {
+              banIdentity({ ipHash: a.ipHash });
+            });
+            actionsCell.appendChild(banIpBtn);
+          }
+
+          body.appendChild(tr);
+        });
+      }
+
+      function banIdentity(payload) {
+        adminFetch('/bans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).then(function (res) {
+          if (res.ok) {
+            setStatus('Ban created (' + (payload.deviceHash || payload.ipHash) + ')');
+          } else {
+            setStatus('Ban failed (HTTP ' + res.status + ')');
+          }
+        });
+      }
+
+      function renderFeedback(rows) {
+        var body = document.getElementById('feedback-body');
+        body.innerHTML = '';
+        rows.forEach(function (f) {
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + f.id + '</td>' +
+            '<td>' + escapeHtml(f.createdAt) + '</td>' +
+            '<td>' + escapeHtml(f.body) + '</td>' +
+            '<td>' + escapeHtml(f.email) + '</td>';
+          body.appendChild(tr);
+        });
+      }
+
+      function loadAlerts() {
+        return adminFetch('/alerts').then(function (res) {
+          if (!res.ok) {
+            setStatus('Failed to load alerts (HTTP ' + res.status + ')');
+            return;
+          }
+          return res.json().then(renderAlerts);
+        });
+      }
+
+      function loadFeedback() {
+        return adminFetch('/feedback').then(function (res) {
+          if (!res.ok) {
+            setStatus('Failed to load feedback (HTTP ' + res.status + ')');
+            return;
+          }
+          return res.json().then(renderFeedback);
+        });
+      }
+
+      function loadAll() {
+        setStatus('Loading...');
+        Promise.all([loadAlerts(), loadFeedback()]).then(function () {
+          setStatus('');
+        });
+      }
+
+      document.getElementById('reload').addEventListener('click', loadAll);
+      loadAll();
+    </script>
+  </body>
+</html>

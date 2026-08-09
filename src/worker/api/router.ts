@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
 import type { Env } from '../env';
+import { admin } from './admin';
 import { getActiveAlerts, postAlert, postCameraError } from './alerts';
 import { postFeedback } from './feedback';
 import { getHistory } from './history';
 import { getStatus } from './status';
 
 export const api = new Hono<{ Bindings: Env }>();
+api.route('/admin', admin);
 api.get('/health', (c) => c.json({ ok: true }));
 api.get('/status', async (c) => {
   const status = await getStatus(c.env);
