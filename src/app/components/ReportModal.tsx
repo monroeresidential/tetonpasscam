@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { AlertType } from '../../shared/types';
 import { getDeviceId } from '../deviceId';
@@ -18,8 +18,38 @@ type SubmitState = 'idle' | 'submitting' | 'rate-limited' | 'error';
 
 const TOAST_MS = 4000;
 
-export default function ReportModal({ onSuccess }: { onSuccess?: () => void } = {}) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function ReportModal({
+  onSuccess,
+  open,
+  onOpenChange,
+  renderTrigger = true,
+}: {
+  onSuccess?: () => void;
+  /**
+   * Trigger-placement refactor (Task 2): ReportModal now supports being
+   * driven by an external open flag (`open`/`onOpenChange`, React's usual
+   * controlled-component pair) in addition to its original fully-internal
+   * state. When `open` is left `undefined` (every existing caller/test),
+   * behavior is byte-identical to before -- internal state owns `isOpen`.
+   * App.tsx uses the controlled form so Header's desktop button and this
+   * component's own phone-only fixed pill can open the *same* modal
+   * instance instead of App needing two ReportModal trees.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /**
+   * Whether ReportModal renders its own "⚠ Report conditions" trigger
+   * button. Defaults to true (unchanged standalone behavior, e.g.
+   * ReportModal.test.tsx). App.tsx passes `false` on desktop, where
+   * Header's own inline button is the trigger instead -- this is what
+   * keeps exactly one such button in the DOM at a time (see Header.tsx's
+   * comment on why two can't coexist under jsdom).
+   */
+  renderTrigger?: boolean;
+} = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
   const [step, setStep] = useState<Step>('type');
   const [type, setType] = useState<AlertType | null>(null);
   const [note, setNote] = useState('');
@@ -41,13 +71,26 @@ export default function ReportModal({ onSuccess }: { onSuccess?: () => void } = 
     setSubmitState('idle');
   }
 
+  function setOpen(next: boolean) {
+    if (!isControlled) setInternalOpen(next);
+    onOpenChange?.(next);
+  }
+
+  // Reset the flow on every transition into "open" -- covers both the
+  // internal trigger button below (openModal) and an external open (e.g.
+  // Header's desktop button flipping App's lifted `reportOpen` state)
+  // equally, since both ultimately just change `isOpen`.
+  useEffect(() => {
+    if (isOpen) resetFlow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   function openModal() {
-    resetFlow();
-    setIsOpen(true);
+    setOpen(true);
   }
 
   function closeModal() {
-    setIsOpen(false);
+    setOpen(false);
   }
 
   function chooseType(t: AlertType) {
@@ -80,7 +123,7 @@ export default function ReportModal({ onSuccess }: { onSuccess?: () => void } = 
         return;
       }
 
-      setIsOpen(false);
+      setOpen(false);
       setShowToast(true);
       setTimeout(() => setShowToast(false), TOAST_MS);
       // Pull the just-added report into the Home screen immediately rather
@@ -94,13 +137,15 @@ export default function ReportModal({ onSuccess }: { onSuccess?: () => void } = 
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openModal}
-        className="fixed bottom-4 inset-x-4 z-40 rounded-full bg-red-600 px-4 py-3 font-semibold text-white shadow-lg sm:inset-x-auto sm:right-4 sm:w-auto"
-      >
-        ⚠ Report conditions
-      </button>
+      {renderTrigger && (
+        <button
+          type="button"
+          onClick={openModal}
+          className="fixed inset-x-4 bottom-4 z-40 min-h-12 rounded-full bg-btn-bg px-4 py-3 font-display font-bold text-btn-ink shadow-lg lg:hidden"
+        >
+          ⚠ Report conditions
+        </button>
+      )}
 
       {showToast && (
         <p

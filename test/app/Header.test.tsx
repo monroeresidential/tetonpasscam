@@ -1,0 +1,34 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+
+import Header from '../../src/app/components/Header';
+
+const NOW = new Date('2026-08-09T12:12:00');
+
+describe('Header', () => {
+  it('renders the wordmark "Teton Pass Cam"', () => {
+    render(<Header onReport={vi.fn()} now={NOW} />);
+    expect(screen.getByText('Teton Pass Cam')).toBeInTheDocument();
+  });
+
+  it('renders the local time as "Sat 6:12 AM"-style text (weekday-short + h:mm AM/PM)', () => {
+    render(<Header onReport={vi.fn()} now={NOW} />);
+    expect(screen.getByText(/^[A-Z][a-z]{2} \d{1,2}:\d{2} (AM|PM)$/)).toBeInTheDocument();
+  });
+
+  it('does not render a report button in the default (phone) variant', () => {
+    render(<Header onReport={vi.fn()} now={NOW} />);
+    expect(screen.queryByRole('button', { name: /report conditions/i })).not.toBeInTheDocument();
+  });
+
+  it('renders an inline report button in the desktop variant and calls onReport when clicked', async () => {
+    const onReport = vi.fn();
+    const user = userEvent.setup();
+    render(<Header onReport={onReport} now={NOW} variant="desktop" />);
+
+    const button = screen.getByRole('button', { name: /report conditions/i });
+    await user.click(button);
+    expect(onReport).toHaveBeenCalledTimes(1);
+  });
+});

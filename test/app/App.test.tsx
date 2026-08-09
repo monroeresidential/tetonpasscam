@@ -29,6 +29,16 @@ function statusFetchCount(fetchMock: ReturnType<typeof vi.fn>): number {
   return fetchMock.mock.calls.filter(([input]) => input === '/api/status').length;
 }
 
+function mockStatusOnlyFetch(): void {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = typeof input === 'string' ? input : (input as Request).url;
+    if (url === '/api/status') {
+      return new Response(JSON.stringify(makeStatus()), { status: 200 });
+    }
+    throw new Error(`unexpected fetch: ${url}`);
+  });
+}
+
 describe('App', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -105,6 +115,32 @@ describe('App', () => {
       // Never present a >2h-old cached "open" as a current OPEN status.
       expect(screen.queryByText('OPEN')).not.toBeInTheDocument();
       expect(await screen.findByText('UNKNOWN')).toBeInTheDocument();
+    });
+  });
+
+  describe('phone/desktop layout (Task 2)', () => {
+    it('renders the cameras section exactly once (not duplicated by the grid restructure)', async () => {
+      mockStatusOnlyFetch();
+      render(<App />);
+      await screen.findByText('OPEN');
+
+      expect(screen.getAllByRole('region', { name: 'Teton Pass cameras' })).toHaveLength(1);
+    });
+
+    it('renders exactly one report-conditions trigger button (the fixed pill, in default jsdom)', async () => {
+      mockStatusOnlyFetch();
+      render(<App />);
+      await screen.findByText('OPEN');
+
+      expect(screen.getAllByRole('button', { name: /report conditions/i })).toHaveLength(1);
+    });
+
+    it('renders the header wordmark', async () => {
+      mockStatusOnlyFetch();
+      render(<App />);
+      await screen.findByText('OPEN');
+
+      expect(screen.getByText('Teton Pass Cam')).toBeInTheDocument();
     });
   });
 });
