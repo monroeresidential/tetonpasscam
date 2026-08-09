@@ -3,10 +3,68 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Teton Pass Cam</title>
-    <meta name="description" content="Teton Pass (WY-22) status, drive times, weather, and cams." />
+    <title>Teton Pass Cam — Live Cameras, Conditions & Drive Times</title>
+    <meta
+      name="description"
+      content="Live Teton Pass cameras, WYDOT road conditions, summit weather, real-time Victor and Driggs to Jackson drive times, and community alerts. Is the pass open? Check before you cross."
+    />
+    <link rel="canonical" href="https://tetonpasscam.com/" />
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" />
+    <meta name="theme-color" content="#1e293b" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Teton Pass open right now?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Check the live status banner at the top of this page for the current WYDOT-reported status. WYDOT (511wy.com) is the authority on Teton Pass conditions, and a posted closure is a legal closure -- do not attempt to cross a closed pass."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How long is the drive from Victor to Jackson?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In normal conditions, the drive from Victor, Idaho to Jackson, Wyoming over Teton Pass typically takes about 35 to 45 minutes. This site shows the current live drive time alongside the typical time for the same hour and season."
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
+    <!--
+      Static SEO shell (Task 16): this block is a plain sibling of #root, not
+      a child of it, and nothing in src/app ever queries or mounts into it.
+      main.tsx's `createRoot(...).render(...)` only ever touches #root, so
+      this markup is structurally guaranteed to survive the React mount --
+      there is no hydration step (this is a client-render-only SPA, not SSR)
+      that could wipe or replace it. It stays visible alongside the live app
+      below (rather than being CSS-hidden once JS runs) so it doubles as a
+      no-JS fallback and as real above-the-fold content for first-time
+      visitors and crawlers, satisfying "H1 must remain in the DOM" by
+      construction rather than by a runtime toggle.
+    -->
+    <div id="seo-shell" class="mx-auto max-w-2xl px-4 pt-6 pb-2 dark:text-neutral-100">
+      <h1 class="text-2xl font-bold tracking-tight">Teton Pass — live cams & conditions</h1>
+      <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+        Teton Pass Cam shows the current status of Wyoming Highway 22 over Teton Pass, between
+        Wilson, Wyoming and Victor, Idaho, refreshed automatically about every 10 minutes. The
+        live banner above reflects WYDOT road-condition reports, cross-checked against Idaho 511
+        and highway sensor data, alongside summit weather readings, current drive-time estimates
+        for the Victor-to-Jackson and Driggs-to-Jackson commutes, and recent community-submitted
+        reports of crashes, slick spots, or wildlife on the roadway. This site is an independent,
+        unofficial resource built for commuters and travelers -- it is not affiliated with,
+        endorsed by, or operated by the Wyoming Department of Transportation. WYDOT's own
+        511wy.com remains the official and authoritative source for closures and travel
+        advisories; always confirm current conditions there before deciding whether to cross,
+        especially in winter weather.
+      </p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>

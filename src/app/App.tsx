@@ -8,13 +8,19 @@ import Sponsor from './components/Sponsor';
 import Footer from './components/Footer';
 import { useStatus } from './useStatus';
 
+const OFFLINE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Denver',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
 function App() {
-  const { data, error, refreshedAt, refresh } = useStatus();
+  const { data, error, refreshedAt, refresh, offline, offlineSince } = useStatus();
 
   if (!data) {
     return (
       <main className="min-h-screen bg-white dark:bg-neutral-900 p-4">
-        <h1 className="sr-only">Teton Pass Cam</h1>
         <p
           role="status"
           aria-live="polite"
@@ -28,7 +34,12 @@ function App() {
 
   return (
     <main className="min-h-screen bg-white pb-24 dark:bg-neutral-900">
-      <h1 className="sr-only">Teton Pass Cam</h1>
+      {offline && (
+        <div role="alert" className="w-full bg-red-800 p-3 text-center font-bold text-white">
+          OFFLINE — showing last known status from{' '}
+          {offlineSince ? OFFLINE_TIME_FORMAT.format(offlineSince) : 'an earlier visit'}
+        </div>
+      )}
       <StatusBanner data={data} />
       <DriveTimes travelTimes={data.travelTimes} />
       <AlertsStrip alerts={data.alerts} id33Advisory={data.id33Advisory} />

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,10 +44,76 @@ function flattenAdminHtml() {
   };
 }
 
-// PWA plugin (vite-plugin-pwa) is wired up in a later task (SEO shell + PWA + offline).
 export default defineConfig({
   root: '.',
-  plugins: [react(), tailwindcss(), flattenAdminHtml()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    flattenAdminHtml(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'robots.txt'],
+      manifest: {
+        name: 'Teton Pass Cam',
+        short_name: 'PassCam',
+        description: 'Live Teton Pass cameras, WYDOT conditions, weather, and drive times.',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        // Tasteful dark slate (matches the app's dark-mode background and
+        // the generated icon glyph's own background) + white, per brief.
+        theme_color: '#1e293b',
+        background_color: '#ffffff',
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      },
+      workbox: {
+        // Precache the app shell only -- built JS/CSS, the HTML entry, the
+        // generated icons, and the manifest itself. `admin.html`/
+        // `privacy.html` are deliberately excluded: they're plain static
+        // pages outside the installable app shell, and admin.html in
+        // particular has no reason to be usable/cacheable offline (its
+        // whole purpose depends on live API calls anyway).
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,webmanifest}'],
+        globIgnores: ['**/admin.html', '**/privacy.html'],
+        // vite-plugin-pwa defaults `navigateFallback` to 'index.html' (an
+        // SPA fallback for any navigation not otherwise precached), and
+        // workbox-routing's `NavigationRoute` in this version defaults its
+        // own `denylist` to `[]` -- i.e. with no denylist it would swallow
+        // literally every same-origin navigation, including a direct visit
+        // to /admin.html or /privacy.html, and serve the app shell's
+        // index.html instead. Denylisting those two paths (and anything
+        // under /api/, which never receives navigation-mode requests
+        // anyway but is denylisted defensively) preserves the existing
+        // "real files win" precedent (wrangler's own asset serving already
+        // does this outside the SW; this keeps the SW consistent with it
+        // once installed).
+        navigateFallbackDenylist: [/^\/admin\.html$/, /^\/privacy\.html$/, /^\/api\//],
+        runtimeCaching: [
+          {
+            // Deliberately narrow: matches ONLY a same-origin GET to
+            // exactly `/api/status`. Never matches `/api/admin`, any other
+            // `/api/*` route, or any POST (Workbox's default `method` for a
+            // registered route is GET, and this matcher checks it
+            // explicitly too) -- those must always hit the network
+            // uncached, in particular the mutating alert/report/feedback
+            // endpoints.
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' && url.origin === self.location.origin && url.pathname === '/api/status',
+            handler: 'NetworkFirst',
+            method: 'GET',
+            options: {
+              cacheName: 'api-status-cache',
+              networkTimeoutSeconds: 10,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+    }),
+  ],
   build: {
     outDir: 'dist',
     rollupOptions: {

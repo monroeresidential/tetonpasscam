@@ -142,4 +142,103 @@ describe('useStatus', () => {
     expect(result.current.error).toBeInstanceOf(Error);
     expect(result.current.data?.status).toBe('open');
   });
+
+  describe('offline fallback (Task 16)', () => {
+    function setOnline(value: boolean) {
+      Object.defineProperty(window.navigator, 'onLine', { value, configurable: true });
+    }
+
+    afterEach(() => {
+      setOnline(true);
+    });
+
+    it('falls back to the cached payload and reports offline when navigator.onLine is false', async () => {
+      const cached = makeStatus({ status: 'closed' });
+      localStorage.setItem('last-status', JSON.stringify(cached));
+      localStorage.setItem('last-status-at', new Date().toISOString());
+      setOnline(false);
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.offline).toBe(true));
+
+      expect(result.current.data?.status).toBe('closed');
+      expect(result.current.offlineSince).toBeInstanceOf(Date);
+    });
+
+    it('marks offline when the fetch call itself rejects, even if navigator.onLine still reads true', async () => {
+      const cached = makeStatus({ status: 'open' });
+      localStorage.setItem('last-status', JSON.stringify(cached));
+      localStorage.setItem('last-status-at', new Date().toISOString());
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.offline).toBe(true));
+      expect(result.current.data?.status).toBe('open');
+    });
+
+    it('does NOT report offline for a plain non-2xx HTTP response while online', async () => {
+      const cached = makeStatus({ status: 'open' });
+      localStorage.setItem('last-status', JSON.stringify(cached));
+      localStorage.setItem('last-status-at', new Date().toISOString());
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('server error', { status: 500 }));
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.error).toBeInstanceOf(Error));
+      expect(result.current.offline).toBe(false);
+    });
+
+    it('forces pollerDead (unknown presentation) when the cached payload is more than 2h old, even though the payload itself claims pollerDead: false', async () => {
+      const cached = makeStatus({ status: 'open', pollerDead: false });
+      localStorage.setItem('last-status', JSON.stringify(cached));
+      const threeHoursAgo = new Date(Date.now() - 3 * 3_600_000).toISOString();
+      localStorage.setItem('last-status-at', threeHoursAgo);
+      setOnline(false);
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.offline).toBe(true));
+
+      expect(result.current.data?.pollerDead).toBe(true);
+      // Underlying status is preserved (StatusBanner reads pollerDead to
+      // decide the presentation) -- only the gating flag is forced.
+      expect(result.current.data?.status).toBe('open');
+    });
+
+    it('does not force pollerDead when the cached payload is recent', async () => {
+      const cached = makeStatus({ status: 'open', pollerDead: false });
+      localStorage.setItem('last-status', JSON.stringify(cached));
+      localStorage.setItem('last-status-at', new Date().toISOString());
+      setOnline(false);
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.offline).toBe(true));
+      expect(result.current.data?.pollerDead).toBe(false);
+    });
+
+    it('clears offline on the next successful fetch', async () => {
+      const cached = makeStatus({ status: 'open' });
+      localStorage.setItem('last-status', JSON.stringify(cached));
+      localStorage.setItem('last-status-at', new Date().toISOString());
+      setOnline(false);
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce(new Response(JSON.stringify(makeStatus({ status: 'restricted' })), { status: 200 }));
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.offline).toBe(true));
+
+      setOnline(true);
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(result.current.offline).toBe(false);
+      expect(result.current.offlineSince).toBeNull();
+      expect(result.current.data?.status).toBe('restricted');
+    });
+  });
 });
