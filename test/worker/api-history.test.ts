@@ -24,6 +24,13 @@ describe('GET /api/history', () => {
     expect(body.error).toBeTruthy();
   });
 
+  it('400s when the ?route= query param is missing entirely', async () => {
+    const res = await api.request('/history', {}, env as any);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBeTruthy();
+  });
+
   it('happy path: returns route, typicals, and today for a known slug; sets Cache-Control', async () => {
     const slug = 'victor-tetonvillage-eb';
     const id = await routeId(slug);
@@ -92,5 +99,44 @@ describe('getHistory — today window', () => {
     const result = await getHistory(env as any, slug, FIXED_NOW_MS);
     expect(result).not.toBeNull();
     expect(result!.today).toEqual([{ capturedAt: thisMorningAt, durationSec: 2222 }]);
+  });
+
+  it('returns 3+ same-Denver-day rows in ascending capturedAt order regardless of insertion order', async () => {
+    const slug = 'victor-airport-wb';
+    const id = await routeId(slug);
+
+    // Same fixed clock as the previous test: Denver-local midnight for Jan
+    // 15 2026 (MST) == 07:00 UTC that day.
+    const FIXED_NOW_MS = Date.parse('2026-01-15T17:00:00.000Z');
+    const earliest = '2026-01-15T08:00:00.000Z'; // 01:00 Denver
+    const middle = '2026-01-15T12:00:00.000Z'; // 05:00 Denver
+    const latest = '2026-01-15T16:00:00.000Z'; // 09:00 Denver
+
+    // Inserted deliberately OUT of chronological order -- if the endpoint
+    // ever relied on insertion/rowid order instead of an explicit ORDER BY
+    // captured_at, this would catch it.
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 3333)`,
+    )
+      .bind(id, latest)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1111)`,
+    )
+      .bind(id, earliest)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 2222)`,
+    )
+      .bind(id, middle)
+      .run();
+
+    const result = await getHistory(env as any, slug, FIXED_NOW_MS);
+    expect(result).not.toBeNull();
+    expect(result!.today).toEqual([
+      { capturedAt: earliest, durationSec: 1111 },
+      { capturedAt: middle, durationSec: 2222 },
+      { capturedAt: latest, durationSec: 3333 },
+    ]);
   });
 });

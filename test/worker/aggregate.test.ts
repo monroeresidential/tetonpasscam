@@ -65,6 +65,30 @@ describe('runNightly — typicals rebuild', () => {
     },
   );
 
+  it(
+    // Same formula, even-sized group (n=4) so the ceil() rounding actually
+    // bites (odd n=5 above lands on exact integer ranks without exercising
+    // the rounding-up behavior an even n does):
+    //   p50 -> rank ceil(2)=2   -> index 1 -> 2000
+    //   p25 -> rank ceil(1)=1   -> index 0 -> 1000
+    //   p75 -> rank ceil(3)=3   -> index 2 -> 3000
+    'even-sized group (n=4) ⇒ median 2000, p25 1000, p75 3000 (nearest-rank)',
+    async () => {
+      const id = await routeId('victor-tetonvillage-wb');
+      // 2026-01-21 is also a Wednesday (one week after the n=5 test's Jan
+      // 14); 09:00 MST == 16:00 UTC -- weekday, hour 9, winter.
+      const durations = [1000, 2000, 3000, 4000];
+      for (let i = 0; i < durations.length; i++) {
+        await insertTravelTime(id, `2026-01-21T16:0${i}:00.000Z`, durations[i]);
+      }
+
+      await runNightly(env as any, Date.parse('2026-01-21T16:10:00.000Z'));
+
+      const row = await typicalsFor(id, 'weekday', 9, 'winter');
+      expect(row).toEqual({ medianSec: 2000, p25Sec: 1000, p75Sec: 3000 });
+    },
+  );
+
   it('is idempotent: running twice produces identical rowcount and rows', async () => {
     const id = await routeId('driggs-jackson-eb');
     await insertTravelTime(id, '2026-02-10T14:00:00.000Z', 1500); // Tue, 07:00 MST, winter
@@ -178,5 +202,40 @@ describe('runNightly — retention', () => {
       `SELECT status FROM alerts WHERE device_hash = 'device-future'`,
     ).first()) as { status: string };
     expect(futureRow.status).toBe('active');
+  });
+
+  it('leaves an already-removed alert as removed, even though its expires_at is in the past', async () => {
+    const expiredAt = new Date(NOW_MS - 60_000).toISOString();
+
+    // A moderator-removed alert (status='removed', Task 10 territory, out of
+    // this job's scope) whose expires_at also happens to be in the past --
+    // the retention UPDATE filters on status='active', so this row must
+    // never flip to 'expired' and must never be resurrected to 'active'.
+    await env.DB.prepare(
+      `INSERT INTO alerts (created_at, expires_at, type, device_hash, status)
+       VALUES (?, ?, 'closure', 'device-removed', 'removed')`,
+    )
+      .bind(new Date(NOW_MS - 7_200_000).toISOString(), expiredAt)
+      .run();
+    // Alongside a normal active+expired alert, so this test also confirms
+    // the removed row's presence doesn't block the active row's flip.
+    await env.DB.prepare(
+      `INSERT INTO alerts (created_at, expires_at, type, device_hash, status)
+       VALUES (?, ?, 'closure', 'device-expired-2', 'active')`,
+    )
+      .bind(new Date(NOW_MS - 7_200_000).toISOString(), expiredAt)
+      .run();
+
+    await runNightly(env as any, NOW_MS);
+
+    const removedRow = (await env.DB.prepare(
+      `SELECT status FROM alerts WHERE device_hash = 'device-removed'`,
+    ).first()) as { status: string };
+    expect(removedRow.status).toBe('removed');
+
+    const activeExpiredRow = (await env.DB.prepare(
+      `SELECT status FROM alerts WHERE device_hash = 'device-expired-2'`,
+    ).first()) as { status: string };
+    expect(activeExpiredRow.status).toBe('expired');
   });
 });
