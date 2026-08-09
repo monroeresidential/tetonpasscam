@@ -121,6 +121,27 @@ describe('StatusBanner', () => {
     expect(screen.queryByText(/Falling Rock/)).not.toBeInTheDocument();
   });
 
+  // The advisory pills lowercase their text (`Advisory: falling rock
+  // (standing)`), so the frozen assertion above -- which only checks the
+  // original-cased `/Falling Rock/` -- can never catch a leak of the
+  // lowercased pill. Cover that gap with a case-insensitive check plus a
+  // check for the pill's own leading label, without touching the frozen
+  // test's byte-exact assertions.
+  it('pollerDead never renders the stale advisory as a "standing" pill (case-insensitive)', () => {
+    render(
+      <StatusBanner
+        data={{
+          ...base,
+          status: 'open',
+          pollerDead: true,
+          advisories: ['Falling Rock'],
+        }}
+      />,
+    );
+    expect(screen.queryByText(/falling rock/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Advisory:/)).not.toBeInTheDocument();
+  });
+
   // Same safety flag, but for `restrictions` specifically: the binding
   // constraint names conditionText/advisories/restrictions together, so a
   // dead poller with a stale 'restricted' snapshot must not leak the old
@@ -145,13 +166,18 @@ describe('StatusBanner', () => {
     expect(screen.getByText(/data may be outdated/i)).toBeInTheDocument();
   });
 
+  // Each of these four targets `banner-headline` specifically (rather than
+  // the whole container's flattened text) so the assertion can't be
+  // satisfied by some other element -- e.g. deleting the CLOSED headline
+  // entirely would still leave the byte-frozen legal `<p>` alone to satisfy
+  // a container-wide substring check, silently losing headline coverage.
   it('OPEN headline reads "The pass is OPEN"', () => {
-    const { container } = render(<StatusBanner data={base} />);
-    expect(container.textContent).toContain('The pass is OPEN');
+    render(<StatusBanner data={base} />);
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent('The pass is OPEN');
   });
 
   it('RESTRICTED headline leads with the first restriction', () => {
-    const { container } = render(
+    render(
       <StatusBanner
         data={{
           ...base,
@@ -160,21 +186,27 @@ describe('StatusBanner', () => {
         }}
       />,
     );
-    expect(container.textContent).toContain('RESTRICTED — Chain Law Level 1');
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent(
+      'RESTRICTED — Chain Law Level 1',
+    );
   });
 
   it('UNKNOWN headline reads "UNKNOWN — check Wyoming 511"', () => {
-    const { container } = render(<StatusBanner data={{ ...base, status: 'unknown' }} />);
-    expect(container.textContent).toContain('UNKNOWN — check Wyoming 511');
+    render(<StatusBanner data={{ ...base, status: 'unknown' }} />);
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent(
+      'UNKNOWN — check Wyoming 511',
+    );
   });
 
   // Split across markup (see StatusBanner's headline comment) so the
   // frozen assertions above -- which query the loose substrings
   // "Closed — do not attempt" and "up to $750 fine" -- keep matching a
-  // single element each; this test checks the two pieces still read
-  // correctly back-to-back when flattened.
+  // single element each; this test checks the headline itself reads
+  // correctly (testid-scoped) and that it's immediately followed by the
+  // complete byte-frozen legal sentence.
   it('CLOSED headline is followed by the complete byte-frozen legal sentence', () => {
     const { container } = render(<StatusBanner data={{ ...base, status: 'closed' }} />);
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent('Closed — do not attempt');
     expect(container.textContent).toContain(
       'Closed — do not attempt. Traveling a closed Wyoming road is illegal (up to $750 fine).',
     );

@@ -113,7 +113,7 @@ describe('App', () => {
 
       await screen.findByRole('alert');
       // Never present a >2h-old cached "open" as a current OPEN status.
-      expect(screen.queryByText('OPEN')).not.toBeInTheDocument();
+      expect(screen.queryByText(/The pass is OPEN/)).not.toBeInTheDocument();
       expect(await screen.findByText('UNKNOWN')).toBeInTheDocument();
     });
   });

@@ -40,10 +40,14 @@ export default function StatusBanner({ data }: { data: ApiStatus }) {
       aria-live="polite"
       className={`rounded-banner p-5 text-white ${STATUS_FILL[effectiveStatus]}`}
     >
-      {effectiveStatus === 'open' && <p className={HEADLINE_CLASS}>The pass is OPEN</p>}
+      {effectiveStatus === 'open' && (
+        <p data-testid="banner-headline" className={HEADLINE_CLASS}>
+          The pass is OPEN
+        </p>
+      )}
 
       {effectiveStatus === 'restricted' && (
-        <p className={HEADLINE_CLASS}>
+        <p data-testid="banner-headline" className={HEADLINE_CLASS}>
           RESTRICTED{data.restrictions.length > 0 ? ` — ${data.restrictions[0]}` : ''}
         </p>
       )}
@@ -56,7 +60,7 @@ export default function StatusBanner({ data }: { data: ApiStatus }) {
         // test's getByText(/Closed — do not attempt/) would match both
         // this headline and the legal sentence and throw for finding
         // multiple elements. Reads identically to a driver either way.
-        <p className={HEADLINE_CLASS}>
+        <p data-testid="banner-headline" className={HEADLINE_CLASS}>
           <span>Closed —</span> <span>do not attempt</span>
         </p>
       )}
@@ -66,12 +70,23 @@ export default function StatusBanner({ data }: { data: ApiStatus }) {
         // an exact getByText('UNKNOWN') match, so "UNKNOWN" needs to be
         // some element's own text on its own, separate from the " check
         // Wyoming 511" tail.
-        <p className={HEADLINE_CLASS}>
+        <p data-testid="banner-headline" className={HEADLINE_CLASS}>
           <span>UNKNOWN</span> — check{' '}
           <a href="https://www.wyoroad.info" className="underline">
             Wyoming 511
           </a>
         </p>
+      )}
+
+      {effectiveStatus === 'closed' && (
+        // The statutory warning is the banner's most important line in its
+        // most important state -- keep it directly under the headline, at
+        // full (not de-emphasized) size, ahead of the last-confirmed/
+        // advisory meta below.
+        <>
+          <p className="mt-3 font-semibold">{CLOSED_LEGAL_COPY}</p>
+          <DetourBlock detours={data.detours} />
+        </>
       )}
 
       <div className="mt-2 text-[13px] opacity-90">
@@ -98,15 +113,8 @@ export default function StatusBanner({ data }: { data: ApiStatus }) {
         </div>
       )}
 
-      {effectiveStatus === 'closed' && (
-        <>
-          <p className="mt-3 text-sm font-semibold">{CLOSED_LEGAL_COPY}</p>
-          <DetourBlock detours={data.detours} />
-        </>
-      )}
-
       {data.isStale && (
-        <p className="mt-3 inline-block rounded-full bg-status-restricted px-2 py-1 text-sm font-semibold text-white">
+        <p className="mt-3 inline-block rounded-full bg-status-restricted px-2 py-1 text-sm font-semibold text-ink">
           Data may be outdated — last WYDOT report{' '}
           {data.wydotReportTime ? formatDenverTime(data.wydotReportTime) : 'unavailable'}
         </p>
