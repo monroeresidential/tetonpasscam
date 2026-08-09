@@ -18,7 +18,7 @@ type SubmitState = 'idle' | 'submitting' | 'rate-limited' | 'error';
 
 const TOAST_MS = 4000;
 
-export default function ReportModal() {
+export default function ReportModal({ onSuccess }: { onSuccess?: () => void } = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<Step>('type');
   const [type, setType] = useState<AlertType | null>(null);
@@ -83,6 +83,10 @@ export default function ReportModal() {
       setIsOpen(false);
       setShowToast(true);
       setTimeout(() => setShowToast(false), TOAST_MS);
+      // Pull the just-added report into the Home screen immediately rather
+      // than waiting for useStatus's next scheduled poll (~120s) -- see
+      // App.tsx, which wires this to useStatus's `refresh()`.
+      onSuccess?.();
     } catch {
       setSubmitState('error');
     }

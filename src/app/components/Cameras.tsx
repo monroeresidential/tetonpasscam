@@ -29,12 +29,16 @@ function beaconCameraErrorOnce(camera: CameraId): void {
   navigator.sendBeacon?.('/api/camera-error', JSON.stringify({ camera }));
 }
 
-export default function Cameras() {
+export default function Cameras({ refreshedAt = null }: { refreshedAt?: Date | null }) {
   const [errored, setErrored] = useState<Record<string, boolean>>({});
-  // Cache-buster computed once per mount (not per render) -- WYDOT's image
-  // is refreshed periodically upstream; re-fetching on every React render
-  // would just hammer the CDN mirror for no new frame.
-  const [ts] = useState(() => Date.now());
+  // Cache-buster: tied to `useStatus`'s `refreshedAt` (App threads it
+  // through), so the cams refresh on the same ~120s poll + visibilitychange
+  // cadence as the rest of the Home screen, instead of freezing at
+  // page-load for the tab's lifetime. `mountTs` is only a fallback for the
+  // brief pre-first-load render (refreshedAt is null until useStatus's
+  // first fetch resolves) and for callers that render Cameras standalone.
+  const [mountTs] = useState(() => Date.now());
+  const ts = refreshedAt ? refreshedAt.getTime() : mountTs;
 
   return (
     <section aria-label="Teton Pass cameras" className="p-4">

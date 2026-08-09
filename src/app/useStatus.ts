@@ -10,6 +10,12 @@ export interface UseStatusResult {
   data: ApiStatus | null;
   error: Error | null;
   refreshedAt: Date | null;
+  /** Manually triggers the same fetch the mount/poll/visibility effect
+   *  uses -- e.g. so a successful report submission can pull the just-added
+   *  alert into `data.alerts` immediately instead of waiting up to
+   *  `POLL_MS` for the next scheduled poll. Shares the `inFlight` guard, so
+   *  calling it while a poll is already in progress is a harmless no-op. */
+  refresh: () => Promise<void>;
 }
 
 function readCached(): ApiStatus | null {
@@ -75,5 +81,5 @@ export function useStatus(): UseStatusResult {
     };
   }, [refresh]);
 
-  return { data, error, refreshedAt };
+  return { data, error, refreshedAt, refresh };
 }

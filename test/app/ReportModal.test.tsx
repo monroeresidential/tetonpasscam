@@ -92,6 +92,20 @@ describe('ReportModal', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/thanks|submitted/i);
   });
 
+  it('on success, calls onSuccess (App wires this to an immediate /api/status refetch)', async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValue(jsonResponse(201, { id: 1 }));
+    const onSuccess = vi.fn();
+
+    const user = userEvent.setup();
+    render(<ReportModal onSuccess={onSuccess} />);
+    await user.click(screen.getByRole('button', { name: /report conditions/i }));
+    await user.click(screen.getByRole('button', { name: 'Crash' }));
+    await user.click(screen.getByRole('button', { name: /submit/i }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+  });
+
   it('on a 429 response, shows "You\'re reporting too often" and keeps the modal open', async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValue(jsonResponse(429, { error: 'rate limited' }));

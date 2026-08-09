@@ -105,6 +105,20 @@ describe('useStatus', () => {
     expect(JSON.parse(localStorage.getItem('last-status')!)).toEqual(payload);
   });
 
+  it('exposes a refresh() that manually triggers another fetch (e.g. after a report submission)', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(makeStatus()), { status: 200 }),
+    );
+
+    const { result } = renderHook(() => useStatus());
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps prior data and exposes an error when a later fetch fails', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')

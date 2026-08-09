@@ -9,7 +9,7 @@ import Footer from './components/Footer';
 import { useStatus } from './useStatus';
 
 function App() {
-  const { data, error } = useStatus();
+  const { data, error, refreshedAt, refresh } = useStatus();
 
   if (!data) {
     return (
@@ -32,9 +32,9 @@ function App() {
       <StatusBanner data={data} />
       <DriveTimes travelTimes={data.travelTimes} />
       <AlertsStrip alerts={data.alerts} id33Advisory={data.id33Advisory} />
-      <Cameras />
+      <Cameras refreshedAt={refreshedAt} />
       <WeatherStrip weather={data.weather} />
-      <ReportModal />
+      <ReportModal onSuccess={refresh} />
       <Sponsor />
       <Footer />
     </main>
