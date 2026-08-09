@@ -120,6 +120,25 @@ describe('StatusBanner', () => {
     expect(screen.queryByText(/Falling Rock/)).not.toBeInTheDocument();
   });
 
+  // Same safety flag, but for `restrictions` specifically: the binding
+  // constraint names conditionText/advisories/restrictions together, so a
+  // dead poller with a stale 'restricted' snapshot must not leak the old
+  // restriction text either.
+  it('pollerDead with a stale RESTRICTED snapshot never renders the old restriction text', () => {
+    render(
+      <StatusBanner
+        data={{
+          ...base,
+          status: 'restricted',
+          pollerDead: true,
+          restrictions: ['Chain Law Level 1'],
+        }}
+      />,
+    );
+    expect(screen.getByText('UNKNOWN')).toBeInTheDocument();
+    expect(screen.queryByText(/Chain Law Level 1/)).not.toBeInTheDocument();
+  });
+
   it('shows an amber stale chip with the WYDOT report time when isStale', () => {
     render(<StatusBanner data={{ ...base, isStale: true }} />);
     expect(screen.getByText(/data may be outdated/i)).toBeInTheDocument();
