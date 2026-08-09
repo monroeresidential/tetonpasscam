@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../env';
 import { getActiveAlerts, postAlert, postCameraError } from './alerts';
 import { postFeedback } from './feedback';
+import { getHistory } from './history';
 import { getStatus } from './status';
 
 export const api = new Hono<{ Bindings: Env }>();
@@ -34,4 +35,13 @@ api.post('/feedback', async (c) => {
   const body: unknown = await c.req.json().catch(() => ({}));
   const result = await postFeedback(c.env, body);
   return c.json(result.body, result.status);
+});
+
+api.get('/history', async (c) => {
+  const slug = c.req.query('route');
+  if (!slug) return c.json({ error: 'missing route' }, 400);
+  const result = await getHistory(c.env, slug);
+  if (!result) return c.json({ error: 'not found' }, 404);
+  c.header('Cache-Control', 'public, max-age=300');
+  return c.json(result);
 });

@@ -4,6 +4,7 @@ import type { ApiStatus } from '../../shared/types';
 import type { PassStatus } from '../../shared/types';
 import { db, id33Events, statusSnapshots, weatherSnapshots } from '../db';
 import type { Env } from '../env';
+import { denverParts } from '../tz';
 import { getActiveAlerts } from './alerts';
 
 /** Newest snapshot older than this ⇒ the poller itself is considered dead;
@@ -53,36 +54,20 @@ function safeStringArray(raw: string | null): string[] {
   }
 }
 
-const DENVER_PARTS_FORMAT = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/Denver',
-  hour: 'numeric',
-  hourCycle: 'h23',
-  weekday: 'short',
-  month: 'numeric',
-});
-
 /**
  * Derive the (weekday-class, hour, season) key used to look up a route's
  * typical travel time for "now", all computed in America/Denver per the
- * brief (there's DST-aware Denver-tz precedent in google-routes.ts /
- * wydot-status.ts; this is a small local helper rather than reaching for a
- * shared tz module, which is Task 12's job).
+ * brief. Thin wrapper over the shared `tz.ts` derivation (Task 12
+ * consolidated this and google-routes.ts's `inPollingWindow` onto one
+ * module) -- kept exported here under its original name since
+ * test/worker/api-status.test.ts imports it from this module.
  */
 export function denverTypicalsKey(nowMs: number): {
   weekdayClass: 'weekday' | 'weekend';
   hour: number;
   season: 'winter' | 'summer';
 } {
-  const parts = DENVER_PARTS_FORMAT.formatToParts(new Date(nowMs));
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-  const weekday = get('weekday');
-  const hour = Number(get('hour'));
-  const month = Number(get('month'));
-  return {
-    weekdayClass: weekday === 'Sat' || weekday === 'Sun' ? 'weekend' : 'weekday',
-    hour,
-    season: month >= 11 || month <= 4 ? 'winter' : 'summer',
-  };
+  return denverParts(nowMs);
 }
 
 interface TravelTimeRow {
