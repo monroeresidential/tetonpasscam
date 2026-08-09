@@ -143,19 +143,40 @@ describe('POST /api/alerts', () => {
     }
   });
 
-  it('honeypot `website` filled ⇒ 200 fake success, no row, no email', async () => {
+  it('honeypot `website` filled ⇒ 201 fake success indistinguishable from a real acceptance, no row, no email', async () => {
     const calls = stubEmailFetcher();
     const note = 'marker-honeypot';
     const res = await postAlert(
-      { type: 'bogus-type-doesnt-matter', note, deviceId: 'device-honeypot', website: 'http://spam.example.com' },
+      { type: 'slick', note, direction: 'wb', deviceId: 'device-honeypot', website: 'http://spam.example.com' },
       { 'CF-Connecting-IP': '203.0.113.2' },
     );
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    // Same status code and same PublicAlert shape a genuine 201 returns --
+    // a bot probing the endpoint must not be able to tell the honeypot
+    // field caused its submission to be discarded.
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
     expect(body).not.toHaveProperty('error');
+    expect(Object.keys(body).sort()).toEqual(['createdAt', 'direction', 'id', 'note', 'type'].sort());
+    expect(typeof body.id).toBe('number');
+    expect(body.type).toBe('slick');
+    expect(body.note).toBe(note);
+    expect(body.direction).toBe('wb');
 
+    // ...but nothing was actually persisted or emailed.
     const row = await alertRowByNote(note);
     expect(row).toBeFalsy();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('honeypot with an invalid `type` ⇒ still 201, fake body falls back to a valid type rather than leaking the raw value', async () => {
+    const calls = stubEmailFetcher();
+    const res = await postAlert(
+      { type: 'not-a-real-type', deviceId: 'device-honeypot-bad-type', website: 'yes-a-bot' },
+      { 'CF-Connecting-IP': '203.0.113.22' },
+    );
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as any;
+    expect(body.type).toBe('other');
     expect(calls).toHaveLength(0);
   });
 
@@ -378,7 +399,7 @@ describe('GET /api/alerts', () => {
 describe('POST /api/camera-error', () => {
   it('first beacon for a camera today ⇒ sends one email; a second the same day sends none', async () => {
     const calls = stubEmailFetcher();
-    const camera = 'camera-throttle-test';
+    const camera = 'wilson'; // canonical allowlisted id
 
     const first = await postCameraError({ camera });
     expect(first.status).toBe(200);
@@ -392,7 +413,7 @@ describe('POST /api/camera-error', () => {
 
   it('a beacon for a NEW day (prior day already recorded) ⇒ sends an email again', async () => {
     const calls = stubEmailFetcher();
-    const camera = 'camera-throttle-new-day';
+    const camera = 'summit'; // canonical allowlisted id
     const yesterday = new Date(Date.now() - 24 * 3_600_000);
     const yesterdayDay = yesterday.toISOString().slice(0, 10);
 
@@ -407,10 +428,29 @@ describe('POST /api/camera-error', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('missing/invalid camera ⇒ 400, no email', async () => {
+  it('missing camera ⇒ 400, no email', async () => {
     const calls = stubEmailFetcher();
     const res = await postCameraError({});
     expect(res.status).toBe(400);
     expect(calls).toHaveLength(0);
+  });
+
+  it('unknown/unlisted camera id ⇒ 400, no row, no email (caps the flood surface to the allowlist)', async () => {
+    const calls = stubEmailFetcher();
+    const res = await postCameraError({ camera: 'some-arbitrary-string-an-attacker-picked' });
+    expect(res.status).toBe(400);
+    expect(calls).toHaveLength(0);
+    const row = await env.DB.prepare('SELECT 1 FROM camera_errors WHERE camera = ?')
+      .bind('some-arbitrary-string-an-attacker-picked')
+      .first();
+    expect(row).toBeFalsy();
+  });
+
+  it('each of the three canonical camera ids (wilson, summit, stateline) is accepted', async () => {
+    stubEmailFetcher();
+    for (const camera of ['wilson', 'summit', 'stateline']) {
+      const res = await postCameraError({ camera });
+      expect(res.status).toBe(200);
+    }
   });
 });

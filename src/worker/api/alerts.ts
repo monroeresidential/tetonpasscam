@@ -1,10 +1,12 @@
 import { and, desc, eq, gt, or, sql } from 'drizzle-orm';
 
-import type { AlertType, PublicAlert } from '../../shared/types';
+import { CAMERA_IDS, type AlertType, type PublicAlert } from '../../shared/types';
 import { alerts, bans, db } from '../db';
 import type { Env } from '../env';
 import { sendEmail } from '../notify';
 import { containsProfanity } from '../profanity';
+
+const CAMERA_ID_SET = new Set<string>(CAMERA_IDS);
 
 /** Hours until an alert of each type auto-expires, added to `created_at` to
  *  produce `expires_at`. Per the brief (overrides the design doc's "closure:
@@ -74,6 +76,38 @@ async function hashIdentifier(env: Env, kind: 'device' | 'ip', value: string): P
   return sha256Hex(`${env.ADMIN_TOKEN}:${kind}:${value}`);
 }
 
+/**
+ * Builds the fake-success response for a honeypot hit: a `PublicAlert`-
+ * shaped body that's indistinguishable in status code and shape from a real
+ * `201`, so a bot probing the endpoint can't use the response itself to
+ * detect that its submission was silently discarded. `id` is read from the
+ * real table's current max (a SELECT, not a write) so it looks like a
+ * plausible next-inserted id rather than an obviously-fake constant;
+ * `type`/`note`/`direction` echo whatever the caller submitted, coerced to
+ * fit the real shape when the submitted value doesn't (e.g. an invalid
+ * `type` string falls back to `'other'` rather than leaking a `string` type
+ * the real field could never hold). Nothing is persisted and no email is
+ * sent for this path -- this function only reads.
+ */
+async function buildHoneypotResponse(
+  env: Env,
+  body: PostAlertBody,
+  nowMs: number,
+): Promise<PublicAlert> {
+  const database = db(env);
+  const [maxRow] = await database.select({ maxId: sql<number | null>`MAX(${alerts.id})` }).from(alerts);
+  const fakeId = (maxRow?.maxId ?? 0) + 1;
+
+  const type: AlertType = typeof body.type === 'string' && ALERT_TYPES.has(body.type)
+    ? (body.type as AlertType)
+    : 'other';
+  const note = typeof body.note === 'string' ? body.note : null;
+  const direction: 'wb' | 'eb' | null =
+    body.direction === 'wb' || body.direction === 'eb' ? body.direction : null;
+
+  return { id: fakeId, type, note, direction, createdAt: new Date(nowMs).toISOString() };
+}
+
 function toPublicAlert(row: {
   id: number;
   type: string;
@@ -132,11 +166,14 @@ export async function postAlert(
   const body = (typeof rawBody === 'object' && rawBody !== null ? rawBody : {}) as PostAlertBody;
 
   // Honeypot: a hidden form field real users never fill in. Any non-empty
-  // value ⇒ pretend success (200, no error detail) but write NOTHING --
-  // no alerts row, no email -- so a bot probing the endpoint can't tell its
-  // submission was discarded.
+  // value ⇒ pretend success -- same 201 status and same PublicAlert-shaped
+  // body a real acceptance returns (see buildHoneypotResponse) -- but write
+  // NOTHING: no alerts row, no email. The response must be indistinguishable
+  // from a genuine 201 or a bot probing the endpoint could use the response
+  // itself (a differing status/shape) to detect that its submission was
+  // silently discarded, then resubmit without the honeypot field.
   if (typeof body.website === 'string' && body.website.length > 0) {
-    return { status: 200, body: { ok: true } };
+    return { status: 201, body: await buildHoneypotResponse(env, body, nowMs) };
   }
 
   if (typeof body.type !== 'string' || !ALERT_TYPES.has(body.type)) {
@@ -252,6 +289,13 @@ export async function postAlert(
  * `onerror` handler. Throttled to one notification email per camera per UTC
  * calendar day via the `camera_errors(camera, day)` UNIQUE table (an
  * `INSERT OR IGNORE`; the email only fires when the row was actually new).
+ *
+ * `camera` MUST be one of `CAMERA_IDS` (the canonical 3-cam allowlist in
+ * `shared/types.ts`) -- without this check, an unauthenticated caller could
+ * submit an unbounded number of distinct `camera` strings and trigger one
+ * email per string per day (the per-camera throttle alone doesn't bound the
+ * *number* of cameras). Rejecting unknown ids up front caps the worst case
+ * at exactly 3 emails/UTC-day, so no separate IP/rate limit is needed here.
  */
 export async function postCameraError(
   env: Env,
@@ -261,7 +305,7 @@ export async function postCameraError(
   const body = (typeof rawBody === 'object' && rawBody !== null ? rawBody : {}) as {
     camera?: unknown;
   };
-  if (typeof body.camera !== 'string' || body.camera.length === 0) {
+  if (typeof body.camera !== 'string' || !CAMERA_ID_SET.has(body.camera)) {
     return { status: 400, body: { error: 'invalid camera' } };
   }
   const camera = body.camera;

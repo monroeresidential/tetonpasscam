@@ -2,6 +2,16 @@ import type { WeatherReading } from '../worker/poller/wydot-weather';
 
 export type PassStatus = 'open' | 'restricted' | 'closed' | 'unknown';
 
+/** Canonical camera ids for `POST /api/camera-error` and the frontend's
+ *  camera strip (Task 15's frontend uses these exact ids) -- the three
+ *  WY-22 cams reused from tetonflats.com's working WYDOT image URLs. This
+ *  is the single allowlist: `postCameraError` rejects anything not in this
+ *  set before it ever reaches the per-day throttle table, which caps the
+ *  worst-case email-flood surface at exactly `CAMERA_IDS.length` emails per
+ *  UTC day regardless of how many distinct bogus ids an attacker submits. */
+export const CAMERA_IDS = ['wilson', 'summit', 'stateline'] as const;
+export type CameraId = (typeof CAMERA_IDS)[number];
+
 /** The `alerts.type` schema enum (see `src/worker/db/schema.ts`) -- the full
  *  set of community-report categories a driver can submit via
  *  `POST /api/alerts`. */
