@@ -62,4 +62,17 @@ describe('parseSensorPage', () => {
     const r = parseSensorPage(html);
     expect(r?.airF).toBe(-5);
   });
+
+  it('a duplicate sensor-group label (e.g. two Air temperature rows): the FIRST occurrence wins, deterministically', () => {
+    // The real Teton Pass page never has duplicate labels, but the brief
+    // flags multi-group pages as a real possibility on other stations --
+    // this locks in a deterministic rule rather than "whichever happens to
+    // parse last wins".
+    const html = `
+      <table><tbody>
+        <tr><td><font size="-1">Air temperature</font></td><td><font size="-1">70&#176F (21&#176C)</font></td></tr>
+        <tr><td><font size="-1">Air temperature</font></td><td><font size="-1">10&#176F (-12&#176C)</font></td></tr>
+      </tbody></table>`;
+    expect(parseSensorPage(html)?.airF).toBe(70);
+  });
 });

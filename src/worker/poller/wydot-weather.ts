@@ -122,7 +122,13 @@ export function parseSensorPage(html: string): WeatherReading | null {
       reportedAt: null,
     };
 
-    let matchedAnyField = false;
+    // Fields already resolved by an earlier row. Tracked separately from
+    // "reading.<field> !== null" because a legitimately blank first match
+    // (e.g. a blanked value cell) must still block a later duplicate-label
+    // row from overwriting it -- first occurrence wins, deterministically,
+    // even though this capture never actually has duplicate labels (see
+    // layout comment above).
+    const resolved = new Set<NumericField | 'windDir'>();
 
     for (const rowMatch of stripped.matchAll(ROW_RX)) {
       const cells = [...rowMatch[1].matchAll(CELL_RX)].map((c) => stripTags(c[1]));
@@ -132,18 +138,20 @@ export function parseSensorPage(html: string): WeatherReading | null {
       if (!label) continue;
 
       if (/^wind direction$/i.test(label)) {
-        matchedAnyField = true;
+        if (resolved.has('windDir')) continue;
+        resolved.add('windDir');
         reading.windDir = valueText.length > 0 ? valueText : null;
         continue;
       }
 
       const field = matchNumericLabel(label);
       if (!field) continue; // e.g. "Relative humidity" / "Dew point" -- not in WeatherReading
-      matchedAnyField = true;
+      if (resolved.has(field)) continue;
+      resolved.add(field);
       reading[field] = extractNumber(valueText);
     }
 
-    if (!matchedAnyField) return null;
+    if (resolved.size === 0) return null;
 
     const dateMatch = DATE_RX.exec(stripTags(stripped));
     reading.reportedAt = dateMatch ? denverToUtcIso(dateMatch[0].trim()) : null;
