@@ -1,9 +1,10 @@
 import { desc, isNull, ne } from 'drizzle-orm';
 
-import type { ApiStatus, PublicAlert } from '../../shared/types';
+import type { ApiStatus } from '../../shared/types';
 import type { PassStatus } from '../../shared/types';
 import { db, id33Events, statusSnapshots, weatherSnapshots } from '../db';
 import type { Env } from '../env';
+import { getActiveAlerts } from './alerts';
 
 /** Newest snapshot older than this ⇒ the poller itself is considered dead;
  *  the response's `status` is forced to 'unknown' regardless of what that
@@ -260,7 +261,10 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
       .map((r) => ({ route: r.route, conditionText: r.conditionText }));
   }
 
-  const alerts: PublicAlert[] = []; // wired in Task 10
+  // Community reports are pure display data here -- this NEVER feeds back
+  // into `status`/`isStale`/`pollerDead`/etc above; only WYDOT-derived data
+  // drives those fields.
+  const alerts = await getActiveAlerts(env, nowMs);
 
   return {
     status,

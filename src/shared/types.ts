@@ -2,15 +2,27 @@ import type { WeatherReading } from '../worker/poller/wydot-weather';
 
 export type PassStatus = 'open' | 'restricted' | 'closed' | 'unknown';
 
-/** Minimal placeholder shape for a publicly-visible driver-submitted alert.
- *  Task 10 owns the alerts table/API and will refine this (e.g. narrowing
- *  `type` to the `alerts` schema enum); this task only needs it typed so
- *  `ApiStatus.alerts` isn't `any[]`. */
+/** The `alerts.type` schema enum (see `src/worker/db/schema.ts`) -- the full
+ *  set of community-report categories a driver can submit via
+ *  `POST /api/alerts`. */
+export type AlertType =
+  | 'crash'
+  | 'slideoff'
+  | 'slick'
+  | 'wildlife'
+  | 'stopped'
+  | 'closure'
+  | 'other';
+
+/** Public shape of a community-submitted alert, as returned by
+ *  `GET /api/alerts` and embedded in `ApiStatus.alerts`. Deliberately omits
+ *  `device_hash`/`ip_hash`/`status`/`expires_at` -- those are
+ *  storage/anti-abuse internals, never exposed to clients. */
 export interface PublicAlert {
   id: number;
-  type: string;
+  type: AlertType;
   note: string | null;
-  direction: string | null;
+  direction: 'wb' | 'eb' | null;
   createdAt: string;
 }
 
@@ -43,5 +55,5 @@ export interface ApiStatus {
   }[];
   id33Advisory: string | null;
   detours: { route: string; conditionText: string }[] | null; // only when closed
-  alerts: PublicAlert[]; // wired in Task 10
+  alerts: PublicAlert[]; // active, unexpired community reports, newest first
 }

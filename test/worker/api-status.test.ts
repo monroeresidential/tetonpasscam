@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { api } from '../../src/worker/api/router';
 import { denverTypicalsKey, setTestNowMs } from '../../src/worker/api/status';
 import { seedRoutes } from '../../src/worker/db/seed-routes';
+import { setTestEmailFetcher } from '../../src/worker/notify';
 import type { ApiStatus } from '../../src/shared/types';
 
 const HOUR_MS = 3_600_000;
@@ -259,9 +260,52 @@ describe('GET /api/status', () => {
     }
   });
 
-  it('alerts is always [] (Task 10 wires this up)', async () => {
+  it('alerts is [] when there are no active alerts', async () => {
     const { body } = await getStatus();
     expect(body.alerts).toEqual([]);
+  });
+
+  it('a posted community alert appears in alerts[] without altering status/pollerDead/isStale', async () => {
+    // Fresh open snapshot so this request's status fields reflect ONLY the
+    // WYDOT-derived data, not some earlier test's stale row -- isolating
+    // this test's real assertion: that a community report is display-only
+    // and never touches those fields.
+    await insertStatusSnapshot({ capturedAt: new Date().toISOString(), status: 'open' });
+
+    // Stub the Resend fetcher so this POST doesn't attempt a real network
+    // call (see notify.ts's setTestEmailFetcher / api-alerts.test.ts for the
+    // full Resend-call assertions -- this test only cares about the
+    // status.ts wiring).
+    setTestEmailFetcher(async () => new Response('{}', { status: 200 }));
+    let postRes: Response;
+    try {
+      postRes = await api.request(
+        '/alerts',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'closure', note: 'gate down', deviceId: 'status-wiring-device' }),
+        },
+        env as any,
+      );
+    } finally {
+      setTestEmailFetcher(undefined);
+    }
+    expect(postRes.status).toBe(201);
+
+    const { body } = await getStatus();
+    expect(body.status).toBe('open');
+    expect(body.pollerDead).toBe(false);
+    expect(body.isStale).toBe(false);
+    expect(body.alerts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'closure', note: 'gate down', direction: null }),
+      ]),
+    );
+    // No hashes or internal fields ever leak into the public shape.
+    expect(body.alerts.every((a) => !('deviceHash' in a) && !('ipHash' in a) && !('status' in a))).toBe(
+      true,
+    );
   });
 
   it('detours are populated only when the response status is closed', async () => {

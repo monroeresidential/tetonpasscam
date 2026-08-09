@@ -5,6 +5,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
 export const routes = sqliteTable('routes', {
@@ -140,6 +141,24 @@ export const bans = sqliteTable(
   ],
 );
 
+// Throttles the `POST /api/camera-error` beacon (camera onerror handler) to
+// one Resend email per camera per UTC calendar day. A UNIQUE(camera, day)
+// index makes "has today's beacon for this camera already fired" a single
+// INSERT OR IGNORE + changes-count check, with no separate SELECT needed and
+// no cross-request in-memory state (Workers isolates are not guaranteed to
+// persist between requests, so an in-memory Map would silently under- or
+// over-throttle).
+export const cameraErrors = sqliteTable(
+  'camera_errors',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    camera: text('camera').notNull(),
+    day: text('day').notNull(), // UTC yyyy-mm-dd
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('camera_errors_camera_day_idx').on(table.camera, table.day)],
+);
+
 export const schema = {
   routes,
   travelTimes,
@@ -151,4 +170,5 @@ export const schema = {
   alerts,
   feedback,
   bans,
+  cameraErrors,
 };
