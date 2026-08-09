@@ -52,10 +52,11 @@ describe('fetchId33Events', () => {
         JSON.stringify([
           event({ ID: '5', RoadwayName: 'SH-33' }),
           event({ ID: '6', RoadwayName: 'State Highway 33' }),
+          event({ ID: 'bare', RoadwayName: '33' }),
         ]),
       );
     const result = await fetchId33Events('k', stub);
-    expect(result?.map((e) => e.eventId).sort()).toEqual(['5', '6']);
+    expect(result?.map((e) => e.eventId).sort()).toEqual(['5', '6', 'bare']);
   });
 
   it('maps IsFullClosure true through to isFullClosure', async () => {
