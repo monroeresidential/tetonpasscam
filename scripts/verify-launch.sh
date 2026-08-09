@@ -40,6 +40,11 @@ done
 # Strip a trailing slash so `${BASE_URL}/path` never doubles up.
 BASE_URL="${BASE_URL%/}"
 
+# Applied to every curl call below so a dead/unreachable URL fails fast
+# (curl's own defaults are to wait indefinitely) rather than hanging the
+# script -- 10s to establish the connection, 30s total per request.
+CURL_TIMEOUT_OPTS=(--connect-timeout 10 --max-time 30)
+
 PASS_COUNT=0
 FAIL_COUNT=0
 
@@ -58,7 +63,7 @@ fail() {
 # may terminate at Cloudflare in front of a scheme/host redirect.
 fetch() {
   local url="$1"
-  curl -sS -L -w '\n%{http_code}' "$url" 2>/dev/null
+  curl -sS -L "${CURL_TIMEOUT_OPTS[@]}" -w '\n%{http_code}' "$url" 2>/dev/null
 }
 
 status_of() {
@@ -141,7 +146,7 @@ else
   ALERT_PAYLOAD='{"type":"other","deviceId":"'"${DEVICE_ID}"'","note":"[verify-launch.sh test - ignore/delete via admin]"}'
 
   post_alert() {
-    curl -sS -o /dev/null -w '%{http_code}' -X POST "${BASE_URL}/api/alerts" \
+    curl -sS "${CURL_TIMEOUT_OPTS[@]}" -o /dev/null -w '%{http_code}' -X POST "${BASE_URL}/api/alerts" \
       -H 'Content-Type: application/json' \
       -d "$ALERT_PAYLOAD" 2>/dev/null
   }
@@ -166,7 +171,7 @@ else
 fi
 
 # --- Check 4: GET /robots.txt returns 200 -----------------------------------
-ROBOTS_STATUS="$(curl -sS -L -o /dev/null -w '%{http_code}' "${BASE_URL}/robots.txt" 2>/dev/null)"
+ROBOTS_STATUS="$(curl -sS -L "${CURL_TIMEOUT_OPTS[@]}" -o /dev/null -w '%{http_code}' "${BASE_URL}/robots.txt" 2>/dev/null)"
 if [ "$ROBOTS_STATUS" = "200" ]; then
   pass "GET /robots.txt returned 200"
 else
@@ -174,7 +179,7 @@ else
 fi
 
 # --- Check 5: GET /sitemap.xml returns 200 ----------------------------------
-SITEMAP_STATUS="$(curl -sS -L -o /dev/null -w '%{http_code}' "${BASE_URL}/sitemap.xml" 2>/dev/null)"
+SITEMAP_STATUS="$(curl -sS -L "${CURL_TIMEOUT_OPTS[@]}" -o /dev/null -w '%{http_code}' "${BASE_URL}/sitemap.xml" 2>/dev/null)"
 if [ "$SITEMAP_STATUS" = "200" ]; then
   pass "GET /sitemap.xml returned 200"
 else
@@ -182,7 +187,7 @@ else
 fi
 
 # --- Check 6: GET /manifest.webmanifest returns 200 -------------------------
-MANIFEST_STATUS="$(curl -sS -L -o /dev/null -w '%{http_code}' "${BASE_URL}/manifest.webmanifest" 2>/dev/null)"
+MANIFEST_STATUS="$(curl -sS -L "${CURL_TIMEOUT_OPTS[@]}" -o /dev/null -w '%{http_code}' "${BASE_URL}/manifest.webmanifest" 2>/dev/null)"
 if [ "$MANIFEST_STATUS" = "200" ]; then
   pass "GET /manifest.webmanifest returned 200"
 else

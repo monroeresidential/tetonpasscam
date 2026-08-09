@@ -38,6 +38,20 @@ Cloudflare account first.
    `route_typicals`, `detour_snapshots`, `camera_errors`) per
    `migrations/0000_polite_blur.sql` and `migrations/0001_mysterious_masked_marvel.sql`.
 
+   > **⚠️ Migrations are FROZEN once applied to remote D1.** The instant this
+   > step has run against production, `0000_polite_blur.sql` and
+   > `0001_mysterious_masked_marvel.sql` are permanent history — **never**
+   > edit either file in place or regenerate them, even to fix a typo.
+   > `wrangler d1 migrations apply` tracks which migration files it has
+   > already run by name/hash in a `d1_migrations` table on the database
+   > itself; editing an already-applied file desyncs that bookkeeping from
+   > what's actually in the live schema, and re-running `db:generate` on top
+   > of edited history can produce a migration wrangler thinks is already
+   > applied when it isn't (or vice versa). **Every future schema change is a
+   > new migration file**: edit `src/worker/db/schema.ts`, then run
+   > `npm run db:generate` to emit `0002_*.sql` (etc.), then apply it the same
+   > way as step 2 (`--local` while developing, `--remote` to ship it).
+
 3. **Seed the 12 route rows remotely** (origin/destination lat-lng pairs for
    Victor/Driggs ↔ Jackson/Teton Village/Airport). There is no code path that
    calls `seedRoutes()` (`src/worker/db/seed-routes.ts`) in production — it's
@@ -253,13 +267,16 @@ redeploy, there's no separate "just update the schedule" command.
 Run monthly (or before any risky migration/rotation):
 
 ```
-npx wrangler d1 export tetonpasscam --remote --output=backups/tetonpasscam-$(date +%Y%m%d).sql
+npx wrangler d1 export tetonpasscam --remote --output=~/tetonpasscam-backups/tetonpasscam-$(date +%Y%m%d).sql
 ```
 
-Store the resulting `.sql` dump somewhere outside the repo (it contains real
-user-submitted `feedback` text and hashed device/IP identifiers — not raw
-PII, but still not something to commit to git). There's no automated backup
-cron configured; this is a manual/scheduled-externally task.
+The `--output` path above is deliberately **outside** this repo (adjust the
+directory to wherever backups should actually live — a private bucket, a
+password manager's file storage, etc.) — the dump contains real
+user-submitted `feedback` text and hashed device/IP identifiers, so it must
+never land inside a path that gets `git add`ed or committed. There's no
+automated backup cron configured; this is a manual/scheduled-externally
+task.
 
 ---
 

@@ -13,6 +13,9 @@ npm run dev             # vite build, then wrangler dev (local Worker + local D1
 npm run build            # vite build only (outputs dist/)
 npm run deploy            # vite build, then wrangler deploy (real Cloudflare account required)
 npm run db:generate       # drizzle-kit generate (schema -> migrations/*.sql, after editing src/worker/db/schema.ts)
+                          #   NOTE: once a migration has been applied to remote D1, it's frozen -- never edit
+                          #   0000_polite_blur.sql/0001_mysterious_masked_marvel.sql in place, always generate
+                          #   a new 000N_*.sql for the next schema change (see docs/RUNBOOK.md §1).
 npm run db:migrate:local  # wrangler d1 migrations apply tetonpasscam --local
 npm run test              # vitest run --config vitest.config.ts    (test/parsers/** -- WYDOT HTML parsers, no DOM/Workers runtime)
 npm run test:worker       # vitest run --config vitest.workers.config.ts (test/worker/** -- Hono routes + D1, real Workers runtime via @cloudflare/vitest-pool-workers)
