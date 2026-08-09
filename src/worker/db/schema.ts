@@ -126,11 +126,19 @@ export const feedback = sqliteTable('feedback', {
   email: text('email'),
 });
 
-export const bans = sqliteTable('bans', {
-  deviceHash: text('device_hash').primaryKey(),
-  ipHash: text('ip_hash'),
-  createdAt: text('created_at').notNull(),
-});
+export const bans = sqliteTable(
+  'bans',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    deviceHash: text('device_hash'),
+    ipHash: text('ip_hash'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('bans_device_hash_idx').on(table.deviceHash),
+    index('bans_ip_hash_idx').on(table.ipHash),
+  ],
+);
 
 export const schema = {
   routes,

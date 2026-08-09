@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "58e968dd-5704-4fe2-841b-f82b4d3d4158",
+  "id": "40dcf0f8-54c1-4b5a-b352-b94647961ebd",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "alerts": {
@@ -90,11 +90,18 @@
     "bans": {
       "name": "bans",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
         "device_hash": {
           "name": "device_hash",
           "type": "text",
-          "primaryKey": true,
-          "notNull": true,
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "ip_hash": {
@@ -112,7 +119,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "bans_device_hash_idx": {
+          "name": "bans_device_hash_idx",
+          "columns": [
+            "device_hash"
+          ],
+          "isUnique": false
+        },
+        "bans_ip_hash_idx": {
+          "name": "bans_ip_hash_idx",
+          "columns": [
+            "ip_hash"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

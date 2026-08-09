@@ -12,11 +12,14 @@ CREATE TABLE `alerts` (
 --> statement-breakpoint
 CREATE INDEX `alerts_expires_status_idx` ON `alerts` (`expires_at`,`status`);--> statement-breakpoint
 CREATE TABLE `bans` (
-	`device_hash` text PRIMARY KEY NOT NULL,
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`device_hash` text,
 	`ip_hash` text,
 	`created_at` text NOT NULL
 );
 --> statement-breakpoint
+CREATE INDEX `bans_device_hash_idx` ON `bans` (`device_hash`);--> statement-breakpoint
+CREATE INDEX `bans_ip_hash_idx` ON `bans` (`ip_hash`);--> statement-breakpoint
 CREATE TABLE `detour_snapshots` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`captured_at` text NOT NULL,
