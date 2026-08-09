@@ -120,3 +120,53 @@ which is why a single page capture alone couldn't show it). That same
 stylesheet does not declare a `.lowtitle` rule, so `parseStatewide`'s 'low'
 branch is believed dead in practice; it's kept defensively rather than
 dropped (see the code comment in `wydot-status.ts`).
+
+## sensors-tetonpass*.html
+
+Source page: https://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Teton+Pass
+
+`sensors-tetonpass.html` is a live capture, taken 2026-08-09, 11:10 AM
+Denver-local (air 70°F, surface 95°F, wind average 1.9 mph, wind gust
+6.2 mph, wind direction SW, visibility 6562 ft), via:
+
+```bash
+curl -s -A "tetonpasscam.com poller (drew@monroeresidential.com)" \
+  "https://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Teton+Pass" > test/fixtures/sensors-tetonpass.html
+```
+
+Unlike RoadClosures/RoutesResults/Statewide, this page has no CSS-class
+taxonomy at all: it's one plain two-column `<table>`, one `<tr>` per sensor,
+with a bare `<td>Label</td>` / `<td>Value</td>` pair (each wrapped in a
+`<font size="-1">` tag, occasionally with a `bgcolor` banding attribute).
+Confirmed real labels (verbatim): "Air temperature", "Relative humidity"
+(unused by `WeatherReading`), "Dew point" (unused), "Visibility", "Surface
+temperature", "Wind gust", "Wind average", "Wind direction". There is
+exactly one row per label in this capture -- no duplicate/multiple sensor
+groups, despite the brief's defensive warning about e.g. two surface
+sensors. Every value cell reports the US unit first with the metric
+conversion following in parens (e.g. `70&#176F (21&#176C)`,
+`6.2 mph (10.0 km/h)`), so `parseSensorPage` takes the first number in the
+cell's text. Visibility is already reported in feet on this page
+(`6562 ft (2000 m)`) -- no miles-to-feet conversion was needed or added.
+The report timestamp (`Aug 9, 2026, 11:10 AM`) sits as plain text before
+the table, not in any cell, in the same Denver-local no-explicit-TZ format
+RoadClosures/RoutesResults's "Last Report Time" uses, so it reuses
+`denverToUtcIso` from `wydot-status.ts` rather than duplicating that logic.
+
+A gotcha this capture revealed: every real value `<td>` is immediately
+preceded by a commented-out `<!--<td>...</td>-->` holding a *different,
+stale* example reading for that same sensor (e.g. `<!--...25°F...-->`
+right before the real `70°F` air-temperature cell) -- apparently a template
+leftover WYDOT never strips from the served page. `parseSensorPage` strips
+HTML comments before extracting any row/cell, so it can't accidentally
+prefer the stale commented value over the real one.
+
+`sensors-tetonpass-blank-air.html` is a hand-edited copy: only the Air
+temperature row's real value cell content changed from
+`70&#176F (21&#176C)` to empty (`<font size="-1"></font>`), simulating a
+single sensor going offline/blank. Everything else, including that row's
+stale commented-out `<!--...25°F...-->` value (which must NOT be picked up
+as a fallback), is untouched. Exercises the "an individual missing sensor
+value comes back as a null field without failing the rest of the reading"
+contract: `airF` is `null`, every other field on this fixture still parses
+normally.
