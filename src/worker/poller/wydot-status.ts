@@ -44,14 +44,18 @@ const CLOSURE_RX = /closed|closure/i;
 const RESTRICTION_RX = /chain law|no unnecessary travel|no (light )?trailers|high profile/i;
 const ADVISORY_RX = /^\s*none\s*$/i;
 
-const UNKNOWN_RESULT: StatusResult = {
-  status: 'unknown',
-  conditionText: null,
-  advisories: [],
-  restrictions: [],
-  wydotReportTime: null,
-  source: 'primary',
-};
+/** A fresh 'unknown' StatusResult. A function, not a shared constant, so callers
+ *  can never mutate one call's arrays and have that leak into another's. */
+function freshUnknown(): StatusResult {
+  return {
+    status: 'unknown',
+    conditionText: null,
+    advisories: [],
+    restrictions: [],
+    wydotReportTime: null,
+    source: 'primary',
+  };
+}
 
 /** Strip HTML tags/entities and collapse whitespace down to a single trimmed string. */
 function strip(html: string): string {
@@ -85,6 +89,22 @@ function extractClassCells(rowBlock: string): ClassifiedCell[] {
 }
 
 /**
+ * A genuine WYDOT data row for a segment carries all four semantic cells
+ * (status, advisory, restrictions, report time) alongside the plain segment
+ * <td> -- every one of the ~80 rows on the live page has this shape. A block
+ * that merely contains SEGMENT_TEXT (e.g. a decoy/duplicate fragment
+ * elsewhere on the page) but lacks this full shape is not a real data row
+ * and must not be treated as authoritative for the segment's status.
+ */
+function isCompleteDataRow(cells: ClassifiedCell[]): boolean {
+  const hasCond = cells.some((c) => /cond$/i.test(c.className));
+  const hasAdvisory = cells.some((c) => /impact$/i.test(c.className) && !/restrict$/i.test(c.className));
+  const hasRestrict = cells.some((c) => /restrict$/i.test(c.className));
+  const hasRptTime = cells.some((c) => c.className === 'rpttime');
+  return hasCond && hasAdvisory && hasRestrict && hasRptTime;
+}
+
+/**
  * Parse the WYDOT RoadClosures.html page and classify the Teton Pass
  * status. Never throws. Every failure path (missing row, empty page,
  * unrecognized shape) returns status 'unknown' -- there is no path that
@@ -92,12 +112,25 @@ function extractClassCells(rowBlock: string): ClassifiedCell[] {
  */
 export function parseRoadClosures(html: string): StatusResult {
   try {
-    if (!html) return { ...UNKNOWN_RESULT };
+    if (!html) return freshUnknown();
 
-    const row = html.split(/<tr[\s>]/i).find((block) => block.includes(SEGMENT_TEXT));
-    if (!row) return { ...UNKNOWN_RESULT };
-
-    const classCells = extractClassCells(row);
+    // Find the *first complete data row* whose block contains SEGMENT_TEXT.
+    // Filtering on SEGMENT_TEXT alone is not enough: an earlier fragment
+    // that merely mentions the segment (a decoy, a stray duplicate, a
+    // caching artifact) but isn't a real table row would otherwise win by
+    // being first, silently overriding the actual status.
+    const candidates = html.split(/<tr[\s>]/i).filter((block) => block.includes(SEGMENT_TEXT));
+    let row: string | undefined;
+    let classCells: ClassifiedCell[] = [];
+    for (const candidate of candidates) {
+      const cells = extractClassCells(candidate);
+      if (isCompleteDataRow(cells)) {
+        row = candidate;
+        classCells = cells;
+        break;
+      }
+    }
+    if (!row) return freshUnknown();
 
     const condCell = classCells.find((c) => /cond$/i.test(c.className));
     const impactCell = classCells.find((c) => /impact$/i.test(c.className) && !/restrict$/i.test(c.className));
@@ -110,10 +143,20 @@ export function parseRoadClosures(html: string): StatusResult {
 
     const advisories = impactCell && impactCell.text && !ADVISORY_RX.test(impactCell.text) ? [impactCell.text] : [];
 
+    // A cond cell is only unambiguous when it EITHER reads exactly "Road
+    // Open" (allowing for other lines from a <br />-joined cell, e.g. a
+    // camera/sensor note) OR contains closure language, but not both. A
+    // cell that says "Road Open" on one line and something closure-like on
+    // another (e.g. "Road Open<br />Closures expected 8pm") is an
+    // unrecognized/ambiguous shape and must not be resolved either way.
+    const lines = conditionText ? conditionText.split('\n').map((l) => l.trim()) : [];
+    const hasRoadOpenLine = lines.some((l) => /^road open$/i.test(l));
+    const hasClosureText = conditionText !== null && CLOSURE_RX.test(conditionText);
+
     let status: PassStatus = 'unknown';
-    if (conditionText && /^road open$/i.test(conditionText)) {
+    if (hasRoadOpenLine && !hasClosureText) {
       status = restrictions.length > 0 ? 'restricted' : 'open';
-    } else if (conditionText && CLOSURE_RX.test(conditionText)) {
+    } else if (hasClosureText && !hasRoadOpenLine) {
       status = 'closed';
     }
 
@@ -128,7 +171,7 @@ export function parseRoadClosures(html: string): StatusResult {
       source: 'primary',
     };
   } catch {
-    return { ...UNKNOWN_RESULT };
+    return freshUnknown();
   }
 }
 
@@ -160,10 +203,20 @@ export function denverToUtcIso(dateText: string): string | null {
     if (!Number.isFinite(year) || !Number.isFinite(day)) return null;
 
     // First guess: treat the Denver wall-clock time as if it were UTC, to
-    // find which side of any DST boundary this date falls on.
+    // find which side of any DST boundary this date falls on. That guess
+    // instant can itself land on the wrong side of the transition (its UTC
+    // clock reading differs from the actual UTC instant by ~6-7 hours), so
+    // re-derive the offset at the corrected instant and re-apply once more
+    // if it changed -- this converges correctly across DST transition days,
+    // both spring-forward (a skipped local hour) and fall-back (a repeated
+    // one).
     const guessUtcMs = Date.UTC(year, monthIdx, day, hour, minute);
-    const offsetMinutes = getDenverOffsetMinutes(new Date(guessUtcMs));
-    const actualUtcMs = guessUtcMs - offsetMinutes * 60_000;
+    const firstOffset = getDenverOffsetMinutes(new Date(guessUtcMs));
+    let actualUtcMs = guessUtcMs - firstOffset * 60_000;
+    const secondOffset = getDenverOffsetMinutes(new Date(actualUtcMs));
+    if (secondOffset !== firstOffset) {
+      actualUtcMs = guessUtcMs - secondOffset * 60_000;
+    }
     const iso = new Date(actualUtcMs).toISOString();
     return Number.isNaN(new Date(iso).getTime()) ? null : iso;
   } catch {

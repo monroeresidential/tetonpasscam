@@ -55,14 +55,50 @@ describe('parseRoadClosures', () => {
   });
 
   it('valley segment (Between Jackson and Wilson) is NOT matched', () => {
-    // fixture contains both segments; assert conditionText comes from the Wilson-Stateline row
+    // The valley row (Between Jackson and Wilson) and the pass row (Between
+    // Wilson and the Idaho State Line) both read "Road Open" in their cond
+    // cell, so asserting only on conditionText would pass even if the parser
+    // grabbed the wrong row. Use the free discriminator instead: only the
+    // Wilson-Stateline row carries the standing "Falling Rock" advisory: the
+    // valley row's advisory is "None".
     const r = parseRoadClosures(load('roadclosures-open.html'));
     expect(r.conditionText).not.toMatch(/Jackson and Wilson/i);
+    expect(r.advisories).toContain('Falling Rock');
   });
 
   it('converts Last Report Time from America/Denver to UTC ISO', () => {
     const r = parseRoadClosures(load('roadclosures-open.html'));
     expect(r.wydotReportTime).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  });
+
+  it('a decoy row containing SEGMENT_TEXT before the real row does not override it', () => {
+    // A minimal fragment that merely mentions the segment text and has a
+    // cond cell, but is missing the advisory/restriction/report-time cells
+    // every real data row has, must not be treated as authoritative --
+    // otherwise an earlier decoy/duplicate could flip a real closure to
+    // "open".
+    const decoy = '<tr><td>Between Wilson and the Idaho State Line</td><td class="noimpactcond">Road Open</td></tr>\n';
+    const real = load('roadclosures-closed.html');
+    const r = parseRoadClosures(decoy + real);
+    expect(r.status).toBe('closed');
+  });
+
+  it('unknown results never share array instances across calls', () => {
+    const a = parseRoadClosures('');
+    a.advisories.push('mutated');
+    a.restrictions.push('mutated');
+    const b = parseRoadClosures('<html><body>oops</body></html>');
+    expect(b.advisories).toEqual([]);
+    expect(b.restrictions).toEqual([]);
+  });
+
+  it('a cond cell asserting both "Road Open" and closure language is unrecognized ⇒ unknown, never closed or open', () => {
+    const ambiguous = load('roadclosures-closed.html').replace(
+      'Road Closed due to winter conditions',
+      'Road Open<br />Closures expected 8pm',
+    );
+    const r = parseRoadClosures(ambiguous);
+    expect(r.status).toBe('unknown');
   });
 });
 
@@ -79,5 +115,25 @@ describe('denverToUtcIso', () => {
 
   it('returns null for unparseable input', () => {
     expect(denverToUtcIso('not a date')).toBeNull();
+  });
+
+  describe('DST transition days (2026: spring-forward Mar 8, fall-back Nov 1)', () => {
+    it('a post-transition spring-forward wall-clock time converts using the new (MDT) offset', () => {
+      // Clocks jump 2:00 AM MST -> 3:00 AM MDT, so 3:30 AM local is already
+      // MDT (UTC-6): 03:30 + 6h = 09:30 UTC.
+      expect(denverToUtcIso('Mar 8, 2026, 03:30 AM')).toBe('2026-03-08T09:30:00.000Z');
+    });
+
+    it('a later spring-forward-day wall-clock time also uses MDT', () => {
+      // 08:00 AM MDT === 14:00 UTC.
+      expect(denverToUtcIso('Mar 8, 2026, 08:00 AM')).toBe('2026-03-08T14:00:00.000Z');
+    });
+
+    it('a post-transition fall-back wall-clock time converts using the new (MST) offset', () => {
+      // Clocks fall back 2:00 AM MDT -> 1:00 AM MST; by 3:00 AM local
+      // (unambiguous, post-transition) Denver is back on MST (UTC-7):
+      // 03:00 + 7h = 10:00 UTC.
+      expect(denverToUtcIso('Nov 1, 2026, 03:00 AM')).toBe('2026-11-01T10:00:00.000Z');
+    });
   });
 });
