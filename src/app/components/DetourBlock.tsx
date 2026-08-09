@@ -10,7 +10,7 @@ import type { ApiStatus } from '../../shared/types';
  */
 export default function DetourBlock({ detours }: { detours: ApiStatus['detours'] }) {
   return (
-    <div className="mt-4 rounded-md bg-black/10 dark:bg-white/10 p-3 text-sm">
+    <div className="mt-4 rounded-card bg-card p-3 text-sm text-ink">
       <p className="font-semibold">Detour: US-26 / US-89 via Swan Valley–Alpine</p>
       <p>~85 mi / ~1h40 typical, plus current detour conditions below.</p>
       {detours && detours.length > 0 && (

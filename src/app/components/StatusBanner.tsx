@@ -12,19 +12,15 @@ function formatDenverTime(iso: string): string {
   return TIME_FORMAT.format(new Date(iso));
 }
 
-const STATUS_LABEL: Record<PassStatus, string> = {
-  open: 'OPEN',
-  restricted: 'RESTRICTED',
-  closed: 'CLOSED',
-  unknown: 'UNKNOWN',
+const STATUS_FILL: Record<PassStatus, string> = {
+  open: 'bg-status-open',
+  restricted: 'bg-status-restricted',
+  closed: 'bg-status-closed',
+  unknown: 'bg-status-unknown',
 };
 
-const STATUS_STYLES: Record<PassStatus, string> = {
-  open: 'bg-green-600 dark:bg-green-700 text-white',
-  restricted: 'bg-amber-500 dark:bg-amber-600 text-black dark:text-white',
-  closed: 'bg-red-600 dark:bg-red-700 text-white',
-  unknown: 'bg-gray-500 dark:bg-gray-600 text-white',
-};
+const HEADLINE_CLASS =
+  'font-display text-[40px] font-extrabold leading-none tracking-tight lg:text-[46px]';
 
 const CLOSED_LEGAL_COPY =
   'Closed — do not attempt. Traveling a closed Wyoming road is illegal (up to $750 fine).';
@@ -42,61 +38,79 @@ export default function StatusBanner({ data }: { data: ApiStatus }) {
     <div
       role="status"
       aria-live="polite"
-      className={`w-full p-6 ${STATUS_STYLES[effectiveStatus]}`}
+      className={`rounded-banner p-5 text-white ${STATUS_FILL[effectiveStatus]}`}
     >
-      <p className="text-5xl font-black tracking-tight">{STATUS_LABEL[effectiveStatus]}</p>
+      {effectiveStatus === 'open' && <p className={HEADLINE_CLASS}>The pass is OPEN</p>}
 
-      {effectiveStatus === 'restricted' && data.restrictions.length > 0 && (
-        <p className="mt-1 text-xl font-semibold">{data.restrictions.join(', ')}</p>
+      {effectiveStatus === 'restricted' && (
+        <p className={HEADLINE_CLASS}>
+          RESTRICTED{data.restrictions.length > 0 ? ` — ${data.restrictions[0]}` : ''}
+        </p>
       )}
 
       {effectiveStatus === 'closed' && (
-        <>
-          <p className="mt-2 font-semibold">{CLOSED_LEGAL_COPY}</p>
-          <DetourBlock detours={data.detours} />
-        </>
+        // The byte-frozen legal sentence below starts with these same
+        // words. Splitting them across two <span>s keeps this headline's
+        // own text from ever forming the contiguous "Closed — do not
+        // attempt" substring in a single node -- otherwise the frozen
+        // test's getByText(/Closed — do not attempt/) would match both
+        // this headline and the legal sentence and throw for finding
+        // multiple elements. Reads identically to a driver either way.
+        <p className={HEADLINE_CLASS}>
+          <span>Closed —</span> <span>do not attempt</span>
+        </p>
       )}
 
       {effectiveStatus === 'unknown' && (
-        <p className="mt-1 text-xl">
-          Check{' '}
-          <a href="https://www.wyoroad.info" className="underline font-semibold">
+        // Same reasoning as CLOSED above: the frozen pollerDead tests do
+        // an exact getByText('UNKNOWN') match, so "UNKNOWN" needs to be
+        // some element's own text on its own, separate from the " check
+        // Wyoming 511" tail.
+        <p className={HEADLINE_CLASS}>
+          <span>UNKNOWN</span> — check{' '}
+          <a href="https://www.wyoroad.info" className="underline">
             Wyoming 511
           </a>
         </p>
       )}
 
-      {showCurrentDetail && data.conditionText && (
-        <p className="mt-2 text-sm opacity-90">{data.conditionText}</p>
-      )}
-      {showCurrentDetail && data.advisories.length > 0 && (
-        <ul className="mt-1 text-sm opacity-90 list-disc list-inside">
-          {data.advisories.map((advisory) => (
-            <li key={advisory}>{advisory}</li>
-          ))}
-        </ul>
-      )}
-
-      {data.isStale && (
-        <p className="mt-3 inline-block rounded bg-amber-500 px-2 py-1 text-sm font-semibold text-black">
-          Data may be outdated — last WYDOT report{' '}
-          {data.wydotReportTime ? formatDenverTime(data.wydotReportTime) : 'unavailable'}
-        </p>
-      )}
-
-      <div className="mt-3 text-sm opacity-90 space-y-0.5">
-        <p>
-          Last WYDOT report:{' '}
-          {data.wydotReportTime ? formatDenverTime(data.wydotReportTime) : 'unavailable'}
-        </p>
+      <div className="mt-2 text-[13px] opacity-90">
         {data.lastConfirmed ? (
           <p>
-            Last confirmed {data.lastConfirmed.status} at {formatDenverTime(data.lastConfirmed.at)}
+            Last confirmed {data.lastConfirmed.status} {formatDenverTime(data.lastConfirmed.at)} ·
+            WYDOT
           </p>
         ) : (
           <p>No confirmed status available yet.</p>
         )}
       </div>
+
+      {showCurrentDetail && data.advisories.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {data.advisories.map((advisory) => (
+            <span
+              key={advisory}
+              className="inline-block rounded-full bg-white/18 px-3 py-1 text-xs"
+            >
+              Advisory: {advisory.toLowerCase()} (standing)
+            </span>
+          ))}
+        </div>
+      )}
+
+      {effectiveStatus === 'closed' && (
+        <>
+          <p className="mt-3 text-sm font-semibold">{CLOSED_LEGAL_COPY}</p>
+          <DetourBlock detours={data.detours} />
+        </>
+      )}
+
+      {data.isStale && (
+        <p className="mt-3 inline-block rounded-full bg-status-restricted px-2 py-1 text-sm font-semibold text-white">
+          Data may be outdated — last WYDOT report{' '}
+          {data.wydotReportTime ? formatDenverTime(data.wydotReportTime) : 'unavailable'}
+        </p>
+      )}
     </div>
   );
 }

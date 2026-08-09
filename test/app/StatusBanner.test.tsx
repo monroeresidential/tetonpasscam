@@ -144,4 +144,49 @@ describe('StatusBanner', () => {
     render(<StatusBanner data={{ ...base, isStale: true }} />);
     expect(screen.getByText(/data may be outdated/i)).toBeInTheDocument();
   });
+
+  it('OPEN headline reads "The pass is OPEN"', () => {
+    const { container } = render(<StatusBanner data={base} />);
+    expect(container.textContent).toContain('The pass is OPEN');
+  });
+
+  it('RESTRICTED headline leads with the first restriction', () => {
+    const { container } = render(
+      <StatusBanner
+        data={{
+          ...base,
+          status: 'restricted',
+          restrictions: ['Chain Law Level 1', 'High-profile vehicles'],
+        }}
+      />,
+    );
+    expect(container.textContent).toContain('RESTRICTED — Chain Law Level 1');
+  });
+
+  it('UNKNOWN headline reads "UNKNOWN — check Wyoming 511"', () => {
+    const { container } = render(<StatusBanner data={{ ...base, status: 'unknown' }} />);
+    expect(container.textContent).toContain('UNKNOWN — check Wyoming 511');
+  });
+
+  // Split across markup (see StatusBanner's headline comment) so the
+  // frozen assertions above -- which query the loose substrings
+  // "Closed — do not attempt" and "up to $750 fine" -- keep matching a
+  // single element each; this test checks the two pieces still read
+  // correctly back-to-back when flattened.
+  it('CLOSED headline is followed by the complete byte-frozen legal sentence', () => {
+    const { container } = render(<StatusBanner data={{ ...base, status: 'closed' }} />);
+    expect(container.textContent).toContain(
+      'Closed — do not attempt. Traveling a closed Wyoming road is illegal (up to $750 fine).',
+    );
+  });
+
+  it('renders a standing advisory as an "Advisory: ... (standing)" pill', () => {
+    render(<StatusBanner data={{ ...base, advisories: ['Falling Rock'] }} />);
+    expect(screen.getByText('Advisory: falling rock (standing)')).toBeInTheDocument();
+  });
+
+  it('last-confirmed line uses the "<status> <time> · WYDOT" format', () => {
+    render(<StatusBanner data={base} />);
+    expect(screen.getByText('Last confirmed open 5:48 PM · WYDOT')).toBeInTheDocument();
+  });
 });

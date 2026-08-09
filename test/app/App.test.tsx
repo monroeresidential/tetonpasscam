@@ -65,7 +65,7 @@ describe('App', () => {
     render(<App />);
 
     // Initial mount fetch has resolved once the banner renders.
-    await screen.findByText('OPEN');
+    await screen.findByText('The pass is OPEN');
     expect(statusFetchCount(fetchMock)).toBe(1);
 
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
@@ -98,7 +98,7 @@ describe('App', () => {
       expect(banner).toHaveTextContent(/showing last known status from/i);
       // Cached status still renders -- the cache is only 5 minutes old,
       // well under the 2h "force unknown" cutoff.
-      expect(await screen.findByText('CLOSED')).toBeInTheDocument();
+      expect(await screen.findByText(/Closed — do not attempt/)).toBeInTheDocument();
     });
 
     it('forces the UNKNOWN presentation instead of a stale OPEN when the cached payload is more than 2h old', async () => {
@@ -122,7 +122,7 @@ describe('App', () => {
     it('renders the cameras section exactly once (not duplicated by the grid restructure)', async () => {
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('OPEN');
+      await screen.findByText('The pass is OPEN');
 
       expect(screen.getAllByRole('region', { name: 'Teton Pass cameras' })).toHaveLength(1);
     });
@@ -130,7 +130,7 @@ describe('App', () => {
     it('renders exactly one report-conditions trigger button (the fixed pill, in default jsdom)', async () => {
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('OPEN');
+      await screen.findByText('The pass is OPEN');
 
       expect(screen.getAllByRole('button', { name: /report conditions/i })).toHaveLength(1);
     });
@@ -138,7 +138,7 @@ describe('App', () => {
     it('renders the header wordmark', async () => {
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('OPEN');
+      await screen.findByText('The pass is OPEN');
 
       expect(screen.getByText('Teton Pass Cam')).toBeInTheDocument();
     });
