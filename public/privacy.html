@@ -42,9 +42,10 @@
 
     <h2>Community reports</h2>
     <p>
-      When you submit a road report (crash, slick conditions, wildlife, etc.), we store a
-      one-way cryptographic hash of your device identifier and IP address — not the raw
-      values themselves. These hashes exist only to enforce a per-device/per-IP rate limit and
+      When you submit a road report (crash, slick conditions, wildlife, etc.), your device
+      identifier and IP address are hashed with a one-way cryptographic hash before storage —
+      we never store the raw values themselves. These hashes exist only to enforce a
+      per-device/per-IP rate limit and
       to let us block abusive submitters; they cannot be reversed back into your device ID or
       IP address, and reports themselves are never published with any identifying information
       attached.

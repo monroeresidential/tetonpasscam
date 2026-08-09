@@ -4,7 +4,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**Pre-implementation.** This repo currently contains only `TETONPASSCAM-SPEC.md` — the full product spec plus a build prompt at the bottom. Read that file before doing anything; it is the source of truth. There is no build system, test suite, or code yet. Once implementation starts, update this file with the actual commands.
+**Implemented (P1 complete as of 2026-08-09).** React + Vite + Hono-on-Workers app, deployed to Cloudflare Workers with a D1 database, per `TETONPASSCAM-SPEC.md` (still the source of truth for product intent — read it before making product decisions). See `docs/RUNBOOK.md` for deploying from scratch, launch verification, secret rotation, and other operational tasks.
+
+### Commands
+
+```
+npm run dev             # vite build, then wrangler dev (local Worker + local D1)
+npm run build            # vite build only (outputs dist/)
+npm run deploy            # vite build, then wrangler deploy (real Cloudflare account required)
+npm run db:generate       # drizzle-kit generate (schema -> migrations/*.sql, after editing src/worker/db/schema.ts)
+npm run db:migrate:local  # wrangler d1 migrations apply tetonpasscam --local
+npm run test              # vitest run --config vitest.config.ts    (test/parsers/** -- WYDOT HTML parsers, no DOM/Workers runtime)
+npm run test:worker       # vitest run --config vitest.workers.config.ts (test/worker/** -- Hono routes + D1, real Workers runtime via @cloudflare/vitest-pool-workers)
+npm run test:app          # vitest run --config vitest.app.config.ts   (test/app/** -- React components, jsdom)
+scripts/verify-launch.sh [base-url] [--skip-writes]   # curl-based DoD check against a running deploy or `wrangler dev`
+```
+
+All three test suites are separate configs (different environments: node/parsers, Workers runtime/worker, jsdom/app) rather than one `vitest.config.ts`, so the fast parser suite stays dependency-free of jsdom and the Workers runtime.
+
+### Repo map
+
+```
+src/worker/          Cloudflare Worker (Hono) -- the only thing with DB/secret access
+  index.ts             fetch()/scheduled() entrypoint; routes /api/* to Hono, everything else to ASSETS
+  env.ts               Env interface (bindings + secrets)
+  api/                 router.ts (mounts all routes) + status.ts, alerts.ts, feedback.ts, history.ts, admin.ts
+  poller/              run.ts (poll cycle orchestration), wydot-status.ts, wydot-weather.ts, google-routes.ts,
+                       idaho511.ts (per-source fetch+parse), aggregate.ts (nightly typicals job)
+  db/                  schema.ts (drizzle schema), index.ts (db() helper), seed-routes.ts (ROUTES data + one-off seeder)
+  notify.ts            Resend email helper (used by alerts/feedback/camera-error)
+  profanity.ts         alert-note filter
+  tz.ts                America/Denver weekday-class/hour/season derivation (shared by status.ts and google-routes.ts)
+
+src/app/             React SPA (client-render only, no SSR)
+  main.tsx             createRoot().render() into #root only -- never touches the static SEO shell in index.html
+  App.tsx, useStatus.ts, api.ts, deviceId.ts, cameras.ts, components/
+  admin.html           separate, framework-free static entry point (multi-page vite build) for the admin page
+
+src/shared/types.ts   Types shared between worker and app (PassStatus, ApiStatus, PublicAlert, CameraId, etc.)
+
+migrations/           drizzle-kit-generated D1 migrations (0000_polite_blur.sql, 0001_mysterious_masked_marvel.sql)
+scripts/              verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts), generate-icons.mjs
+docs/                 RUNBOOK.md (ops), superpowers/ (spec + plan + SDD task artifacts)
+
+test/
+  parsers/             WYDOT HTML parser tests (pure functions, fixture-driven)
+  worker/               Hono route + D1 tests (real Workers runtime)
+  app/                  React component tests (jsdom)
+  fixtures/             captured WYDOT/Idaho 511 HTML/JSON samples used by parser + worker tests
+
+index.html            Vite entry + the static SEO shell (#seo-shell, sibling of #root -- see its own comment for why)
+wrangler.toml          Worker config: D1 binding, [assets], cron triggers, ADMIN_EMAIL var
+```
 
 ## What this is
 
@@ -13,7 +64,7 @@ tetonpasscam.com — a Teton Pass (WY-22) status app: official WYDOT open/closed
 ## Intended architecture (from the spec)
 
 - **One codebase, three targets:** React + Vite responsive web app, wrapped later with Capacitor for iOS/Android. No SSR in app code (keep a prerendered landing shell for SEO). Keep the core UI framework-agnostic enough that `npx cap sync` works.
-- **Backend:** one scheduled poller (seasonal cadence, 5–15 min, never faster than 5 min) fetches WYDOT HTML pages, Google Routes API, and Idaho 511, and writes to Postgres/D1. **Clients only ever read our own API** — never WYDOT or Google directly. Public API: `GET /api/status`, `GET /api/history`, `GET/POST /api/alerts`, `POST /api/feedback`.
+- **Backend:** one scheduled poller (seasonal cadence, 5–15 min, never faster than 5 min) fetches WYDOT HTML pages, Google Routes API, and Idaho 511, and writes to Cloudflare D1 (the spec's Postgres/D1 either-or was settled on D1 — see "hosting/DB vendor" below). **Clients only ever read our own API** — never WYDOT or Google directly. Public API: `GET /api/status`, `GET /api/history`, `GET/POST /api/alerts`, `POST /api/feedback`.
 - **DB schema** is specified in the spec (`routes`, `travel_times`, `status_snapshots`, `weather_snapshots`, `alerts`, `feedback`). A nightly job aggregates `travel_times` into typical-by-(route, weekday-class, hour, season) medians and p25/p75.
 
 ## Hard rules (trust + liability — do not relax these)
@@ -29,9 +80,9 @@ tetonpasscam.com — a Teton Pass (WY-22) status app: official WYDOT open/closed
 
 ## Ask Drew (the user) before
 
-- Finalizing route origins/destinations and exact coordinates for drive-time routes.
-- Choosing the hosting/DB vendor.
-- Anything requiring paid account setup.
+- Changing route origins/destinations or coordinates from what's seeded in `src/worker/db/seed-routes.ts` (already finalized for P1 — Victor/Driggs ↔ Jackson/Teton Village/Airport).
+- Hosting/DB vendor is decided (Cloudflare Workers + D1) — ask before switching.
+- Anything requiring paid account setup or touching the live Cloudflare account/DNS (see `docs/RUNBOOK.md` and `docs/superpowers/sdd-handoff-deploy.md` for what that entails).
 
 ## Definition of done (P1, from the spec)
 
