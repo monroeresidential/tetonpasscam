@@ -27,6 +27,13 @@ export interface ApiStatus {
   restrictions: string[];
   wydotReportTime: string | null;
   weather: WeatherReading | null;
+  // One entry per route-direction that has at least one travel_times row.
+  // A route with zero recorded travel times (e.g. the poller has never
+  // successfully reached it) is OMITTED here, not included with a null/0
+  // durationSec -- durationSec is a real, non-nullable reading, so there is
+  // no valid placeholder value for "no data yet". In steady-state operation
+  // this holds all 12 seeded route-directions; a shorter array only means
+  // some routes have no travel-time history yet.
   travelTimes: {
     slug: string;
     name: string;

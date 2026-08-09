@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { api } from '../../src/worker/api/router';
-import { denverTypicalsKey } from '../../src/worker/api/status';
+import { denverTypicalsKey, setTestNowMs } from '../../src/worker/api/status';
 import { seedRoutes } from '../../src/worker/db/seed-routes';
 import type { ApiStatus } from '../../src/shared/types';
 
@@ -122,6 +122,32 @@ describe('GET /api/status', () => {
     expect(body.lastConfirmed).toEqual({ status: 'open', at: olderOpenAt });
   });
 
+  it('omits routes with no travel_times history and includes exactly the ones seeded', async () => {
+    // Placed before any other test in this file touches travel_times, so
+    // the table is guaranteed to hold only what this test itself inserts --
+    // otherwise "exactly N routes" couldn't be asserted against a table
+    // that accumulates rows across tests within the same D1 instance (this
+    // file's D1 is fresh only once per FILE, per apply-migrations.ts).
+    const seededSlugs = ['victor-tetonvillage-eb', 'driggs-tetonvillage-eb', 'victor-airport-eb'];
+    const capturedAt = new Date().toISOString();
+    for (const slug of seededSlugs) {
+      const id = await routeId(slug);
+      await env.DB.prepare(
+        `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1234)`,
+      )
+        .bind(id, capturedAt)
+        .run();
+    }
+
+    const { body } = await getStatus();
+    expect(body.travelTimes).toHaveLength(seededSlugs.length);
+    expect(body.travelTimes.map((t) => t.slug).sort()).toEqual([...seededSlugs].sort());
+    // A route that was seeded with routes but never given a travel_times
+    // row must not appear -- there's no valid placeholder for a
+    // non-nullable durationSec.
+    expect(body.travelTimes.some((t) => t.slug === 'driggs-airport-wb')).toBe(false);
+  });
+
   it('travel time typical: < 14 days of history ⇒ typicalSec null', async () => {
     // Fresh open snapshot so this request isn't degraded to pollerDead by an
     // earlier test's stale row.
@@ -186,6 +212,51 @@ describe('GET /api/status', () => {
     expect(entry).toBeTruthy();
     expect(entry!.durationSec).toBe(1650);
     expect(entry!.typicalSec).toBe(1800);
+  });
+
+  it('derives weekday-class/hour/season from America/Denver, not UTC, at a day-boundary instant', async () => {
+    // Sat Jan 17 2026 23:30 MST (America/Denver, standard time, UTC-7) is
+    // Sun Jan 18 2026 06:30 UTC -- a UTC-vs-Denver day-of-week mismatch. If
+    // the typicals lookup ever computed weekday/hour/season from UTC fields
+    // instead of America/Denver ones, it would derive weekday='Sun'/hour=6
+    // (weekday, not weekend) instead of the correct weekend/hour=23, miss
+    // the seeded route_typicals row below, and this test would see
+    // typicalSec:null instead of the seeded value.
+    const FIXED_NOW_MS = Date.parse('2026-01-18T06:30:00.000Z');
+    const slug = 'driggs-airport-wb';
+    const id = await routeId(slug);
+
+    await env.DB.prepare(
+      `INSERT INTO route_typicals (route_id, weekday_class, hour, season, median_sec, p25_sec, p75_sec)
+       VALUES (?, 'weekend', 23, 'winter', 2222, 2100, 2300)`,
+    )
+      .bind(id)
+      .run();
+
+    const oldestAt = new Date(FIXED_NOW_MS - 20 * DAY_MS).toISOString(); // ≥ 14 days before FIXED_NOW_MS
+    const latestAt = new Date(FIXED_NOW_MS - 60_000).toISOString();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1500)`,
+    )
+      .bind(id, oldestAt)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1700)`,
+    )
+      .bind(id, latestAt)
+      .run();
+
+    setTestNowMs(FIXED_NOW_MS);
+    try {
+      const { body } = await getStatus();
+      const entry = body.travelTimes.find((t) => t.slug === slug);
+      expect(entry).toBeTruthy();
+      expect(entry!.typicalSec).toBe(2222);
+    } finally {
+      // MUST clear: this is a module-level override shared by every
+      // subsequent test in this file/worker instance.
+      setTestNowMs(undefined);
+    }
   });
 
   it('alerts is always [] (Task 10 wires this up)', async () => {

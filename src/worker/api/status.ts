@@ -17,6 +17,28 @@ export const STALE_HOURS = 12;
  *  its `route_typicals` lookup is trusted enough to surface as `typicalSec`. */
 export const MIN_HISTORY_DAYS = 14;
 
+/**
+ * Test-only clock override for `GET /status`'s "now". There is no
+ * request-triggerable way to reach this (no query param, no header) --
+ * it's a plain module-level slot only reachable by importing this module
+ * directly, which only test code ever does, so it's un-abusable from an
+ * actual HTTP request in production. Tests pin an exact instant (e.g. to
+ * exercise the America/Denver weekday/season derivation at a UTC-day
+ * boundary) via `setTestNowMs()`, then MUST clear it again (`setTestNowMs
+ * (undefined)`) so it doesn't leak into later tests in the same file/worker
+ * instance.
+ */
+let testNowMsOverride: number | undefined;
+
+/** Test-only: see `testNowMsOverride`. */
+export function setTestNowMs(ms: number | undefined): void {
+  testNowMsOverride = ms;
+}
+
+function effectiveNowMs(): number {
+  return testNowMsOverride ?? Date.now();
+}
+
 /** Parse a JSON-array-of-strings column (status_snapshots.advisories /
  *  .restrictions) defensively: malformed/absent JSON, or JSON that isn't an
  *  array of strings, resolves to `[]` rather than throwing. */
@@ -86,13 +108,16 @@ interface DetourRow {
 }
 
 /**
- * Assemble the GET /api/status response. Reads Date.now() at call time
- * (overridable via `nowMs` for tests, which seed capturedAt/wydotReportTime
- * values relative to whatever "now" resolves to when the handler actually
- * runs -- no fake timers needed since vitest-pool-workers runs in a real
- * Workers runtime).
+ * Assemble the GET /api/status response. Reads Date.now() at call time by
+ * default (overridable per-call via `nowMs`; most tests instead seed
+ * capturedAt/wydotReportTime values relative to whatever "now" resolves to
+ * when the handler actually runs -- no fake timers needed since
+ * vitest-pool-workers runs in a real Workers runtime). The one exception is
+ * `effectiveNowMs()`'s test-only override (`setTestNowMs`), used when a test
+ * needs to pin an exact instant rather than "whenever this test happens to
+ * run" -- e.g. to exercise a specific UTC-vs-Denver day/hour boundary.
  */
-export async function getStatus(env: Env, nowMs: number = Date.now()): Promise<ApiStatus> {
+export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Promise<ApiStatus> {
   const database = db(env);
 
   const [newest] = await database
