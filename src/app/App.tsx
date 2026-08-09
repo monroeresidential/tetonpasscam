@@ -1,6 +1,11 @@
 import StatusBanner from './components/StatusBanner';
 import DriveTimes from './components/DriveTimes';
 import WeatherStrip from './components/WeatherStrip';
+import AlertsStrip from './components/AlertsStrip';
+import Cameras from './components/Cameras';
+import ReportModal from './components/ReportModal';
+import Sponsor from './components/Sponsor';
+import Footer from './components/Footer';
 import { useStatus } from './useStatus';
 
 function App() {
@@ -22,16 +27,16 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-white dark:bg-neutral-900">
+    <main className="min-h-screen bg-white pb-24 dark:bg-neutral-900">
       <h1 className="sr-only">Teton Pass Cam</h1>
       <StatusBanner data={data} />
       <DriveTimes travelTimes={data.travelTimes} />
+      <AlertsStrip alerts={data.alerts} id33Advisory={data.id33Advisory} />
+      <Cameras />
       <WeatherStrip weather={data.weather} />
-      {/* TODO (Task 15): community alerts strip */}
-      {/* TODO (Task 15): camera strip (wilson/summit/stateline) */}
-      {/* TODO (Task 15): report-conditions button + modal */}
-      {/* TODO (Task 15): Teton Flats sponsor block */}
-      {/* TODO (Task 15): footer (511 Notify link, feedback, history link) */}
+      <ReportModal />
+      <Sponsor />
+      <Footer />
     </main>
   );
 }

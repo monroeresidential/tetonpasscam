@@ -9,7 +9,7 @@ export type PassStatus = 'open' | 'restricted' | 'closed' | 'unknown';
  *  set before it ever reaches the per-day throttle table, which caps the
  *  worst-case email-flood surface at exactly `CAMERA_IDS.length` emails per
  *  UTC day regardless of how many distinct bogus ids an attacker submits. */
-export const CAMERA_IDS = ['wilson', 'summit', 'stateline'] as const;
+export const CAMERA_IDS = ['valley', 'east', 'west'] as const;
 export type CameraId = (typeof CAMERA_IDS)[number];
 
 /** The `alerts.type` schema enum (see `src/worker/db/schema.ts`) -- the full

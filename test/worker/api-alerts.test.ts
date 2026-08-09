@@ -399,7 +399,7 @@ describe('GET /api/alerts', () => {
 describe('POST /api/camera-error', () => {
   it('first beacon for a camera today ⇒ sends one email; a second the same day sends none', async () => {
     const calls = stubEmailFetcher();
-    const camera = 'wilson'; // canonical allowlisted id
+    const camera = 'valley'; // canonical allowlisted id
 
     const first = await postCameraError({ camera });
     expect(first.status).toBe(200);
@@ -413,7 +413,7 @@ describe('POST /api/camera-error', () => {
 
   it('a beacon for a NEW day (prior day already recorded) ⇒ sends an email again', async () => {
     const calls = stubEmailFetcher();
-    const camera = 'summit'; // canonical allowlisted id
+    const camera = 'east'; // canonical allowlisted id
     const yesterday = new Date(Date.now() - 24 * 3_600_000);
     const yesterdayDay = yesterday.toISOString().slice(0, 10);
 
@@ -446,9 +446,9 @@ describe('POST /api/camera-error', () => {
     expect(row).toBeFalsy();
   });
 
-  it('each of the three canonical camera ids (wilson, summit, stateline) is accepted', async () => {
+  it('each of the three canonical camera ids (valley, east, west) is accepted', async () => {
     stubEmailFetcher();
-    for (const camera of ['wilson', 'summit', 'stateline']) {
+    for (const camera of ['valley', 'east', 'west']) {
       const res = await postCameraError({ camera });
       expect(res.status).toBe(200);
     }
