@@ -18,6 +18,13 @@ export const STALE_HOURS = 12;
 /** A route's travel-time history must span at least this many days before
  *  its `route_typicals` lookup is trusted enough to surface as `typicalSec`. */
 export const MIN_HISTORY_DAYS = 14;
+/** A detour row is only included if its `captured_at` is within this many
+ *  minutes of the newest status snapshot's `captured_at` -- without this
+ *  bound, a global `MAX(captured_at)` over `detour_snapshots` would keep
+ *  surfacing a previous closure's detour rows as current if the pass later
+ *  reopens and then closes again before the poller records a fresh detour
+ *  cycle (e.g. a poller hiccup on the second closure). */
+export const DETOUR_FRESHNESS_MIN = 30;
 
 /**
  * Test-only clock override for `GET /status`'s "now". There is no
@@ -233,13 +240,19 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
   // Detours only accompany a 'closed' response status, and only the most
   // recent poll cycle's detour rows (not every closure ever recorded).
   let detours: { route: string; conditionText: string }[] | null = null;
-  if (status === 'closed') {
+  if (status === 'closed' && newest) {
+    const freshnessCutoff = new Date(
+      Date.parse(newest.capturedAt) - DETOUR_FRESHNESS_MIN * 60_000,
+    ).toISOString();
     const detourRows = (
       await env.DB.prepare(
         `SELECT route, condition_text AS conditionText
            FROM detour_snapshots
-          WHERE captured_at = (SELECT MAX(captured_at) FROM detour_snapshots)`,
-      ).all()
+          WHERE captured_at = (SELECT MAX(captured_at) FROM detour_snapshots)
+            AND captured_at >= ?`,
+      )
+        .bind(freshnessCutoff)
+        .all()
     ).results as unknown as DetourRow[];
     detours = detourRows
       .filter((r): r is { route: string; conditionText: string } => r.route !== null && r.conditionText !== null)
@@ -255,6 +268,7 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     status,
     isStale,
     pollerDead,
+    generatedAt: new Date(nowMs).toISOString(),
     lastConfirmed,
     conditionText,
     advisories,

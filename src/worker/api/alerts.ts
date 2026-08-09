@@ -72,7 +72,7 @@ async function sha256Hex(input: string): Promise<string> {
  * the brief; if `ADMIN_TOKEN` rotation is ever automated, this coupling
  * should be revisited (e.g. a dedicated `HASH_SALT` secret).
  */
-async function hashIdentifier(env: Env, kind: 'device' | 'ip', value: string): Promise<string> {
+export async function hashIdentifier(env: Env, kind: 'device' | 'ip', value: string): Promise<string> {
   return sha256Hex(`${env.ADMIN_TOKEN}:${kind}:${value}`);
 }
 

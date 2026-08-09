@@ -87,6 +87,36 @@ function isOfflineError(err: unknown): boolean {
   return !navigator.onLine || !(err instanceof HttpStatusError);
 }
 
+/** True if `payload.generatedAt` (the server's own "produced at" timestamp,
+ *  see `ApiStatus.generatedAt`) is more than `OFFLINE_FORCE_UNKNOWN_MS` old.
+ *  Unlike a client-side write timestamp, `generatedAt` travels inside the
+ *  payload itself, so it still reflects the true origin time even after a
+ *  stale Service-Worker-cached response resolves as an ordinary successful
+ *  200 (see vite.config.ts's `api-status` runtimeCaching entry) -- that
+ *  response's bytes, `generatedAt` included, are exactly what the worker
+ *  produced back when the cache entry was written, however recently it was
+ *  just re-served. Missing/unparseable `generatedAt` (a pre-upgrade cached
+ *  payload, or a test fixture that omits it) is treated as "not stale" here;
+ *  that gap is covered by the cache-age guard in the initializer/catch path
+ *  below instead. */
+function isGeneratedAtStale(payload: ApiStatus, nowMs: number): boolean {
+  const generatedMs = Date.parse(payload.generatedAt);
+  return Number.isFinite(generatedMs) && nowMs - generatedMs > OFFLINE_FORCE_UNKNOWN_MS;
+}
+
+/** Applies the forced-unknown presentation (`pollerDead: true`, everything
+ *  else left alone) when `payload` is stale by either measure this hook
+ *  tracks: its own `generatedAt` (`isGeneratedAtStale`, above) or
+ *  `cacheAgeMs` (how long ago the client itself last wrote/received this
+ *  data -- `Infinity` when unknown). Returns the same object reference when
+ *  no forcing is needed or `pollerDead` was already true, so callers can use
+ *  reference equality to skip a redundant state update. */
+function withStaleGuard(payload: ApiStatus, nowMs: number, cacheAgeMs: number): ApiStatus {
+  const forced = payload.pollerDead || isGeneratedAtStale(payload, nowMs) || cacheAgeMs > OFFLINE_FORCE_UNKNOWN_MS;
+  if (forced === payload.pollerDead) return payload;
+  return { ...payload, pollerDead: forced };
+}
+
 /**
  * Fetches `/api/status` on mount, every `POLL_MS`, and whenever the tab
  * becomes visible again. The mount effect issues exactly one fetch;
@@ -96,7 +126,19 @@ function isOfflineError(err: unknown): boolean {
  * flips while a poll is still in flight.
  */
 export function useStatus(): UseStatusResult {
-  const [data, setData] = useState<ApiStatus | null>(() => readCached());
+  const [data, setData] = useState<ApiStatus | null>(() => {
+    // Cold start: render a cached payload only through the same staleness
+    // guard the offline path applies, rather than showing it raw. Without
+    // this, a hanging/never-resolving first fetch (e.g. a dead connection
+    // that neither succeeds nor rejects) would leave a stale cached 'open'
+    // presented as current indefinitely -- the >2h forced-unknown check
+    // previously only ran once a fetch actually FAILED.
+    const cached = readCached();
+    if (!cached) return null;
+    const cachedAt = readCachedAt();
+    const cacheAgeMs = cachedAt ? Date.now() - cachedAt.getTime() : Infinity;
+    return withStaleGuard(cached, Date.now(), cacheAgeMs);
+  });
   const [error, setError] = useState<Error | null>(null);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [offline, setOffline] = useState(false);
@@ -113,13 +155,22 @@ export function useStatus(): UseStatusResult {
     inFlight.current = true;
     try {
       const next = await getStatus();
-      setData(next);
+      const now = new Date();
+      // Guard even a successful, resolved fetch: a stale Service-Worker
+      // cache entry resolves as an ordinary 200 (no rejection, so the catch
+      // path below never runs), but `next.generatedAt` still reflects
+      // whenever the worker actually produced it -- `cacheAgeMs: 0` here
+      // since this data was, from the client's perspective, just obtained.
+      setData(withStaleGuard(next, now.getTime(), 0));
       setError(null);
       setOffline(false);
       setOfflineSince(null);
-      const now = new Date();
       setRefreshedAt(now);
       lastKnownAt.current = now;
+      // Cache the raw payload, not the guarded presentation -- staleness is
+      // re-derived from `generatedAt`/cache-age on every read rather than
+      // baked into storage, so a later read of this same entry re-evaluates
+      // correctly as more real time passes.
       writeCached(next);
       writeCachedAt(now);
     } catch (err) {
@@ -130,16 +181,16 @@ export function useStatus(): UseStatusResult {
         setData((prev) => {
           const source = prev ?? readCached();
           if (!source) return prev;
-          const ageMs = lastKnownAt.current
+          const cacheAgeMs = lastKnownAt.current
             ? Date.now() - lastKnownAt.current.getTime()
             : Infinity;
-          const forcedPollerDead = source.pollerDead || ageMs > OFFLINE_FORCE_UNKNOWN_MS;
+          const presented = withStaleGuard(source, Date.now(), cacheAgeMs);
           // `prev` already holds this exact data (same reference) unless
           // this is a cold start reading straight from cache -- only skip
           // the update in the former case, so the cold-start read always
           // actually lands in state once.
-          if (prev && forcedPollerDead === prev.pollerDead) return prev;
-          return { ...source, pollerDead: forcedPollerDead };
+          if (prev && presented === prev) return prev;
+          return presented;
         });
       }
     } finally {

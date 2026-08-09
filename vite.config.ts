@@ -108,6 +108,19 @@ export default defineConfig({
               cacheName: 'api-status-cache',
               networkTimeoutSeconds: 10,
               cacheableResponse: { statuses: [0, 200] },
+              // Without this, a cached 200 never expires -- an
+              // installed-PWA device that's offline or on a hanging
+              // connection would get the stale cached response resolved as
+              // a normal 200 (NetworkFirst falls back to cache once the
+              // network attempt fails or times out), which then re-primes
+              // useStatus's own localStorage cache as "fresh" via
+              // writeCached/writeCachedAt(now) -- silently defeating the
+              // client's >2h stale-OPEN offline protection forever. Capping
+              // the entry at 2h (matching DEAD_HOURS/OFFLINE_FORCE_UNKNOWN_MS)
+              // makes Workbox treat an entry past that age as a cache miss,
+              // so the fetch instead rejects and the tested offline/stale
+              // path in useStatus engages as designed.
+              expiration: { maxEntries: 1, maxAgeSeconds: 7200 },
             },
           },
         ],

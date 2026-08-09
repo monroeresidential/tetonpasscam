@@ -9,6 +9,7 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
     status: 'open',
     isStale: false,
     pollerDead: false,
+    generatedAt: new Date().toISOString(),
     lastConfirmed: null,
     conditionText: null,
     advisories: [],
@@ -141,6 +142,58 @@ describe('useStatus', () => {
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
     expect(result.current.error).toBeInstanceOf(Error);
     expect(result.current.data?.status).toBe('open');
+  });
+
+  describe('cold-start and generatedAt staleness guards (final review fix wave #2)', () => {
+    it('cold start renders UNKNOWN immediately when the cached payload is >2h old and the first fetch never resolves', async () => {
+      const cached = makeStatus({ status: 'open', pollerDead: false });
+      localStorage.setItem('last-status', JSON.stringify(cached));
+      const threeHoursAgo = new Date(Date.now() - 3 * 3_600_000).toISOString();
+      localStorage.setItem('last-status-at', threeHoursAgo);
+      // A fetch that never settles -- simulates a hanging/dead connection,
+      // the scenario the >2h forced-unknown check previously missed since
+      // it only ran once a fetch had actually FAILED.
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+
+      const { result } = renderHook(() => useStatus());
+
+      // No `waitFor`/`act` needed -- the initializer itself must already
+      // apply the staleness guard, synchronously, before the pending fetch
+      // has any chance to resolve or reject.
+      expect(result.current.data?.pollerDead).toBe(true);
+      expect(result.current.data?.status).toBe('open'); // underlying status preserved
+    });
+
+    it('a resolved-but-stale 200 (simulating a stale Service-Worker cache entry) is forced to the UNKNOWN presentation via generatedAt, even though the fetch genuinely succeeded', async () => {
+      const staleGeneratedAt = new Date(Date.now() - 3 * 3_600_000).toISOString();
+      const stalePayload = makeStatus({ status: 'open', pollerDead: false, generatedAt: staleGeneratedAt });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify(stalePayload), { status: 200 }),
+      );
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.data).not.toBeNull());
+
+      // This is NOT the offline path -- the fetch resolved successfully, so
+      // only the generatedAt guard (not the offline/cache-age one) can be
+      // responsible for the forced presentation below.
+      expect(result.current.error).toBeNull();
+      expect(result.current.offline).toBe(false);
+      expect(result.current.data?.pollerDead).toBe(true);
+      expect(result.current.data?.status).toBe('open');
+    });
+
+    it('a resolved 200 with a recent generatedAt is NOT forced to UNKNOWN', async () => {
+      const recentPayload = makeStatus({ status: 'open', pollerDead: false });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify(recentPayload), { status: 200 }),
+      );
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.data).not.toBeNull());
+
+      expect(result.current.data?.pollerDead).toBe(false);
+    });
   });
 
   describe('offline fallback (Task 16)', () => {

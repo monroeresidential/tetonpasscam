@@ -81,6 +81,15 @@ describe('GET /api/status', () => {
     expect(body.pollerDead).toBe(false);
     expect(body.isStale).toBe(false);
     expect(res.headers.get('Cache-Control')).toBe('public, max-age=60');
+
+    // generatedAt (final review fix wave #2): present, well-formed, and
+    // recent -- it's the server's own "produced at" timestamp, stamped from
+    // request-time `Date.now()` rather than any snapshot column, so it
+    // should always read as "now" regardless of snapshot age.
+    expect(body.generatedAt).toBeTruthy();
+    const generatedAgeMs = Date.now() - Date.parse(body.generatedAt);
+    expect(generatedAgeMs).toBeGreaterThanOrEqual(0);
+    expect(generatedAgeMs).toBeLessThan(5_000);
   });
 
   it('newest snapshot 3h old ⇒ status forced unknown, pollerDead true, lastConfirmed preserves the open row', async () => {
@@ -347,6 +356,26 @@ describe('GET /api/status', () => {
     const { body: openBody } = await getStatus();
     expect(openBody.status).toBe('open');
     expect(openBody.detours).toBeNull();
+  });
+
+  it('detour rows more than 30 minutes older than the newest status snapshot are excluded, even though they are still the global MAX(captured_at) (a previous closure the poller never refreshed)', async () => {
+    // Anchor well clear of real "now" so this test's detour row is
+    // unambiguously the global MAX(captured_at) regardless of what earlier
+    // tests in this file already inserted.
+    const anchor = Date.now() + 10 * HOUR_MS;
+    const staleDetourAt = new Date(anchor - 90 * 60_000).toISOString(); // 90 min before the closure below
+    await env.DB.prepare(
+      `INSERT INTO detour_snapshots (captured_at, route, condition_text) VALUES (?, 'US26', 'stale prior closure, should not appear')`,
+    )
+      .bind(staleDetourAt)
+      .run();
+
+    // The pass closes again later without the poller recording a fresh
+    // detour cycle -- e.g. it briefly reopened and closed again.
+    await insertStatusSnapshot({ capturedAt: new Date(anchor).toISOString(), status: 'closed' });
+    const { body } = await getStatus();
+    expect(body.status).toBe('closed');
+    expect(body.detours).toEqual([]); // empty, not the stale rows, per existing "[] vs null" contract
   });
 
   it('id33Advisory reports the newest active event, preferring a full closure', async () => {

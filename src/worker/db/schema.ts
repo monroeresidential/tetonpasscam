@@ -125,6 +125,7 @@ export const feedback = sqliteTable('feedback', {
   createdAt: text('created_at').notNull(),
   body: text('body').notNull(),
   email: text('email'),
+  ipHash: text('ip_hash'),
 });
 
 export const bans = sqliteTable(
@@ -159,6 +160,18 @@ export const cameraErrors = sqliteTable(
   (table) => [uniqueIndex('camera_errors_camera_day_idx').on(table.camera, table.day)],
 );
 
+// Caps `POST /api/feedback` notification emails at `FEEDBACK_EMAIL_DAILY_CAP`
+// (see feedback.ts) per UTC calendar day. One row per day, atomically
+// incremented via `INSERT ... ON CONFLICT(day) DO UPDATE SET count = count +
+// 1 RETURNING count` -- same "no cross-request in-memory state" reasoning as
+// `cameraErrors` above, but this throttle counts *all* feedback posts toward
+// one shared daily total rather than one row per (key, day), since the cap
+// is global rather than per-camera.
+export const feedbackEmailCounter = sqliteTable('feedback_email_counter', {
+  day: text('day').primaryKey(), // UTC yyyy-mm-dd
+  count: integer('count').notNull().default(0),
+});
+
 export const schema = {
   routes,
   travelTimes,
@@ -171,4 +184,5 @@ export const schema = {
   feedback,
   bans,
   cameraErrors,
+  feedbackEmailCounter,
 };

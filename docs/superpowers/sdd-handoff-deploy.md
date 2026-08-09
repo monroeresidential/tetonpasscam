@@ -47,8 +47,9 @@ running.
   `tetonpasscam.com`'s nameservers to Cloudflare or add it as a zone.
 
 - [ ] **Pick an `ADMIN_TOKEN` value**: any long random string (e.g.
-  `openssl rand -hex 32`). This gates `/api/admin/*` and `/admin.html` — keep
-  it secret, it's not stored anywhere in this repo.
+  `openssl rand -hex 32`). This gates `/api/admin/*` — `/admin.html` itself
+  is a public static page by design, but every API call it makes requires
+  this token. Keep it secret, it's not stored anywhere in this repo.
 
 ---
 

@@ -10,6 +10,7 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
     status: 'open',
     isStale: false,
     pollerDead: false,
+    generatedAt: new Date().toISOString(),
     lastConfirmed: { status: 'open', at: '2026-08-09T17:00:00.000Z' },
     conditionText: null,
     advisories: [],

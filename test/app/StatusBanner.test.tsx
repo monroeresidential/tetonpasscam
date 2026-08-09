@@ -13,6 +13,7 @@ const base: ApiStatus = {
   status: 'open',
   isStale: false,
   pollerDead: false,
+  generatedAt: REPORT_AT,
   lastConfirmed: { status: 'open', at: REPORT_AT },
   conditionText: 'Road Open',
   advisories: [],

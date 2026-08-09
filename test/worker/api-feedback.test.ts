@@ -32,12 +32,21 @@ afterEach(() => {
   setTestEmailFetcher(undefined);
 });
 
-async function postFeedback(bodyObj: unknown): Promise<Response> {
+// Each call defaults to a fresh IP (a distinct TEST-NET-2 address per test,
+// mirroring api-alerts.test.ts's convention) so that unrelated tests never
+// collide in the per-IP rate limit below -- tests that specifically exercise
+// the rate limit pass an explicit, shared `ip`.
+let nextTestIp = 1;
+function freshTestIp(): string {
+  return `198.51.100.${nextTestIp++}`;
+}
+
+async function postFeedback(bodyObj: unknown, ip: string = freshTestIp()): Promise<Response> {
   return api.request(
     '/feedback',
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip },
       body: JSON.stringify(bodyObj),
     },
     env as any,
@@ -167,5 +176,83 @@ describe('POST /api/feedback', () => {
     // Row should still be created
     const row = await feedbackRowByBody(body);
     expect(row).toBeTruthy();
+  });
+
+  describe('per-IP rate limit (Task 17 final review #3)', () => {
+    it('4th post from the same IP within an hour ⇒ 429, no row, no email', async () => {
+      const calls = stubEmailFetcher();
+      const ip = '198.51.100.200';
+
+      const first = await postFeedback({ body: 'rate limit post 1' }, ip);
+      const second = await postFeedback({ body: 'rate limit post 2' }, ip);
+      const third = await postFeedback({ body: 'rate limit post 3' }, ip);
+      expect([first.status, second.status, third.status]).toEqual([201, 201, 201]);
+      expect(calls).toHaveLength(3);
+
+      const fourthBody = 'rate limit post 4 -- should be blocked';
+      const fourth = await postFeedback({ body: fourthBody }, ip);
+      expect(fourth.status).toBe(429);
+      expect(calls).toHaveLength(3); // unchanged -- no email for the blocked post
+
+      const row = await feedbackRowByBody(fourthBody);
+      expect(row).toBeFalsy(); // no row written for the blocked post
+    });
+
+    it('different IPs are rate-limited independently', async () => {
+      stubEmailFetcher();
+      const ipA = '198.51.100.210';
+      const ipB = '198.51.100.211';
+
+      for (let i = 0; i < 3; i++) {
+        const res = await postFeedback({ body: `ip A post ${i}` }, ipA);
+        expect(res.status).toBe(201);
+      }
+      // ipA is now at its limit, but ipB has made no posts yet.
+      const res = await postFeedback({ body: 'ip B post' }, ipB);
+      expect(res.status).toBe(201);
+    });
+  });
+
+  describe('daily email cap (Task 17 final review #3)', () => {
+    it('11th feedback email of the UTC day ⇒ 201, row created, but NO email sent', async () => {
+      const calls = stubEmailFetcher();
+      const today = new Date().toISOString().slice(0, 10);
+
+      // Seed the counter directly rather than making 10 real HTTP posts --
+      // same "pre-seed the throttle table" convention used for
+      // camera_errors's "prior day already recorded" test. Upserts (rather
+      // than a plain INSERT) since earlier tests in this shared-D1-per-file
+      // suite have already incremented today's row via their own posts.
+      await env.DB.prepare(
+        `INSERT INTO feedback_email_counter (day, count) VALUES (?, 10)
+           ON CONFLICT(day) DO UPDATE SET count = excluded.count`,
+      )
+        .bind(today)
+        .run();
+
+      const body = 'the 11th feedback email today';
+      const res = await postFeedback({ body });
+      expect(res.status).toBe(201);
+      expect(calls).toHaveLength(0); // capped -- no email sent
+
+      const row = await feedbackRowByBody(body);
+      expect(row).toBeTruthy(); // row is still written past the email cap
+    });
+
+    it('10th feedback email of the UTC day is still under the cap ⇒ email sent', async () => {
+      const calls = stubEmailFetcher();
+      const today = new Date().toISOString().slice(0, 10);
+
+      await env.DB.prepare(
+        `INSERT INTO feedback_email_counter (day, count) VALUES (?, 9)
+           ON CONFLICT(day) DO UPDATE SET count = excluded.count`,
+      )
+        .bind(today)
+        .run();
+
+      const res = await postFeedback({ body: 'the 10th feedback email today' });
+      expect(res.status).toBe(201);
+      expect(calls).toHaveLength(1);
+    });
   });
 });

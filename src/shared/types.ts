@@ -43,6 +43,15 @@ export interface ApiStatus {
   status: PassStatus;
   isStale: boolean; // wydotReportTime older than STALE_HOURS (12)
   pollerDead: boolean; // newest snapshot > 2h old ⇒ status forced 'unknown'
+  // ISO timestamp of when the WORKER produced this exact response (server
+  // `Date.now()` at request time, not derived from any snapshot). Embedded
+  // in the payload itself so staleness survives round-trips through storage
+  // that would otherwise look "fresh" -- a Service-Worker- or
+  // localStorage-cached copy of this response carries its original
+  // `generatedAt` forever, even if something re-writes the bytes to a cache
+  // at a later, more recent-looking time. See `useStatus.ts`'s
+  // `isGeneratedAtStale` for the client-side guard this enables.
+  generatedAt: string;
   lastConfirmed: { status: Exclude<PassStatus, 'unknown'>; at: string } | null; // newest non-unknown snapshot
   conditionText: string | null;
   advisories: string[];

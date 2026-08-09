@@ -238,6 +238,30 @@ describe('POST /api/alerts', () => {
     expect(res.status).toBe(400);
   });
 
+  it('word-bounded profanity entries ("crap", "arse") do not false-positive on benign words containing them as a substring', async () => {
+    stubEmailFetcher();
+    const res = await postAlert(
+      { type: 'other', note: 'sparse traffic on the scrap heap, coarse pavement too', deviceId: 'device-word-bound-ok' },
+      { 'CF-Connecting-IP': '203.0.113.81' },
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it('word-bounded profanity entries still block when they actually appear as a whole word', async () => {
+    stubEmailFetcher();
+    const crapRes = await postAlert(
+      { type: 'other', note: 'this road is crap right now', deviceId: 'device-word-bound-crap' },
+      { 'CF-Connecting-IP': '203.0.113.82' },
+    );
+    expect(crapRes.status).toBe(400);
+
+    const arseRes = await postAlert(
+      { type: 'other', note: 'what an arse move by that driver', deviceId: 'device-word-bound-arse' },
+      { 'CF-Connecting-IP': '203.0.113.83' },
+    );
+    expect(arseRes.status).toBe(400);
+  });
+
   it('missing deviceId ⇒ 400', async () => {
     stubEmailFetcher();
     const res = await postAlert({ type: 'other' }, { 'CF-Connecting-IP': '203.0.113.9' });

@@ -35,7 +35,8 @@ api.post('/camera-error', async (c) => {
 
 api.post('/feedback', async (c) => {
   const body: unknown = await c.req.json().catch(() => ({}));
-  const result = await postFeedback(c.env, body);
+  const ip = c.req.header('CF-Connecting-IP') ?? null;
+  const result = await postFeedback(c.env, body, ip);
   return c.json(result.body, result.status);
 });
 
