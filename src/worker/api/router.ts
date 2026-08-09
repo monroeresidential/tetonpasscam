@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../env';
 import { getActiveAlerts, postAlert, postCameraError } from './alerts';
+import { postFeedback } from './feedback';
 import { getStatus } from './status';
 
 export const api = new Hono<{ Bindings: Env }>();
@@ -26,5 +27,11 @@ api.post('/alerts', async (c) => {
 api.post('/camera-error', async (c) => {
   const body: unknown = await c.req.json().catch(() => ({}));
   const result = await postCameraError(c.env, body);
+  return c.json(result.body, result.status);
+});
+
+api.post('/feedback', async (c) => {
+  const body: unknown = await c.req.json().catch(() => ({}));
+  const result = await postFeedback(c.env, body);
   return c.json(result.body, result.status);
 });
