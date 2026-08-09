@@ -36,11 +36,14 @@ import { denverToUtcIso } from './wydot-status';
 // any row/cell extraction below.
 //
 // Units: Visibility is reported directly in feet on this page (e.g. "6562
-// ft (2000 m)") -- no miles-to-feet conversion is needed in practice; if
-// WYDOT ever reports it in miles instead, extractNumber's plain numeric
-// match would silently misinterpret a mile value as feet, so this is
-// intentionally left undone (documented risk) rather than guessed at
-// without a real "mi" example to test against.
+// ft (2000 m)"), so extractVisibilityFt is a passthrough for the live
+// shape. It also detects a "mi"/"ft" unit token in the cell text and
+// converts miles -> feet (x5280) if the cell ever reports miles instead --
+// WeatherReading.visibilityFt is a typed contract (always feet), so a
+// reshaped page reporting miles must not be allowed to silently store a
+// value 5280x too small. Absent either unit token, the number is assumed
+// to already be feet (matches every real capture), so behavior for the
+// live page shape is unchanged.
 //
 // Separator rows: a bare `<tr><td>&nbsp;</td></tr>` (one cell, not two)
 // appears between the humidity/visibility/surface group and the wind
@@ -86,6 +89,26 @@ function stripTags(html: string): string {
 function extractNumber(text: string): number | null {
   const m = NUMBER_RX.exec(text);
   return m ? parseFloat(m[0]) : null;
+}
+
+const FEET_UNIT_RX = /\bft\b/i;
+const MILES_UNIT_RX = /\bmi\b/i;
+
+/**
+ * Extract the visibility number from its value cell's text and normalize it
+ * to feet -- WeatherReading.visibilityFt's typed contract. The real page
+ * always reports feet first (e.g. "6562 ft (2000 m)"), so this is a
+ * passthrough for the live shape; if the cell text instead reports miles
+ * (contains a standalone "mi" but not "ft"), the number is multiplied by
+ * 5280 so a page reshape can't silently store a mile value as if it were
+ * feet. Absent either unit token, the number is assumed to already be feet.
+ */
+function extractVisibilityFt(text: string): number | null {
+  const value = extractNumber(text);
+  if (value === null) return null;
+  if (FEET_UNIT_RX.test(text)) return value;
+  if (MILES_UNIT_RX.test(text)) return value * 5280;
+  return value;
 }
 
 type NumericField = 'airF' | 'surfaceF' | 'windAvgMph' | 'windGustMph' | 'visibilityFt';
@@ -148,7 +171,7 @@ export function parseSensorPage(html: string): WeatherReading | null {
       if (!field) continue; // e.g. "Relative humidity" / "Dew point" -- not in WeatherReading
       if (resolved.has(field)) continue;
       resolved.add(field);
-      reading[field] = extractNumber(valueText);
+      reading[field] = field === 'visibilityFt' ? extractVisibilityFt(valueText) : extractNumber(valueText);
     }
 
     if (resolved.size === 0) return null;

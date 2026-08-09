@@ -147,7 +147,13 @@ sensors. Every value cell reports the US unit first with the metric
 conversion following in parens (e.g. `70&#176F (21&#176C)`,
 `6.2 mph (10.0 km/h)`), so `parseSensorPage` takes the first number in the
 cell's text. Visibility is already reported in feet on this page
-(`6562 ft (2000 m)`) -- no miles-to-feet conversion was needed or added.
+(`6562 ft (2000 m)`), so `extractVisibilityFt` is a passthrough for the
+live shape here; it also detects a standalone "mi" vs "ft" unit token in
+the cell text and converts miles -> feet (x5280) if a page reshape ever
+reports visibility in miles instead, since `visibilityFt` is a typed feet
+contract that must never silently store a mile value 5280x too small
+(covered by a synthetic-HTML-string test in `weather.test.ts`, no fixture
+file needed since no live "mi" example exists to capture).
 The report timestamp (`Aug 9, 2026, 11:10 AM`) sits as plain text before
 the table, not in any cell, in the same Denver-local no-explicit-TZ format
 RoadClosures/RoutesResults's "Last Report Time" uses, so it reuses

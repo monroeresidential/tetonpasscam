@@ -63,6 +63,18 @@ describe('parseSensorPage', () => {
     expect(r?.airF).toBe(-5);
   });
 
+  it('converts visibility reported in miles to feet, if the cell text ever says "mi" instead of "ft"', () => {
+    // The real Teton Pass page always reports visibility in feet (see
+    // sensors-tetonpass.html), but visibilityFt is a typed feet contract --
+    // a future page reshape reporting miles instead must not silently be
+    // stored 5280x too small.
+    const html = `
+      <table><tbody>
+        <tr><td><font size="-1">Visibility</font></td><td><font size="-1">1.5 mi (2.4 km)</font></td></tr>
+      </tbody></table>`;
+    expect(parseSensorPage(html)?.visibilityFt).toBe(1.5 * 5280);
+  });
+
   it('a duplicate sensor-group label (e.g. two Air temperature rows): the FIRST occurrence wins, deterministically', () => {
     // The real Teton Pass page never has duplicate labels, but the brief
     // flags multi-group pages as a real possibility on other stations --
