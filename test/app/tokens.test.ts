@@ -34,6 +34,14 @@ if (!darkMatch) throw new Error('tokens.test.ts: could not find dark :root overr
 const lightTheme = themeMatch[1];
 const darkTheme = darkMatch[1];
 
+// index.html's <meta name="theme-color"> drives browser-chrome tinting for
+// a plain tab view, same as the PWA manifest's theme_color drives it for an
+// installed view -- the two must agree or the accent color visibly jumps
+// depending on how the site is opened. Pinned here (not in
+// test/parsers/index-html.test.ts, which stays byte-frozen to the SEO-shell
+// strings) since this is a design-token consistency check, not SEO content.
+const html = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
+
 describe('design tokens (src/app/index.css)', () => {
   it('pins the light-mode status colors', () => {
     expect(lightTheme).toMatch(/--color-status-open:\s*oklch\(0\.55 0\.13 150\);/);
@@ -50,5 +58,9 @@ describe('design tokens (src/app/index.css)', () => {
     expect(darkTheme).not.toMatch(/--color-status-restricted:/);
     expect(darkTheme).not.toMatch(/--color-status-closed:/);
     expect(darkTheme).not.toMatch(/--color-status-unknown:/);
+  });
+
+  it("index.html's theme-color meta matches the manifest and --color-ink", () => {
+    expect(html).toContain('<meta name="theme-color" content="#2b2620" />');
   });
 });
