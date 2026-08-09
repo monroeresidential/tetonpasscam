@@ -4,5 +4,5 @@ export default defineConfig({
   dialect: 'sqlite',
   driver: 'd1-http',
   schema: './src/worker/db/schema.ts',
-  out: './drizzle',
+  out: './migrations',
 });
