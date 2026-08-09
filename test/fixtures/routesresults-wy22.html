@@ -1,0 +1,965 @@
+<!doctype html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en">
+<head>
+    <title>WYDOT 511 Service</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="Keyword" content="roads, highways, conditions, Restrictions, Distances">
+    <meta name="Description" content="WYDOT 511 Service">
+    <!-- header image, work for WYDOT - start -->
+    <meta property="og:image" content="https://wyoroad.info/images/Work-for-WYDOT.png" />
+    <meta property="og:image:secure_url" content="https://wyoroad.info/images/Work-for-WYDOT.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="950" />
+    <meta property="og:image:height" content="200" />
+    <meta property="og:image:alt" content="Index image for WYOROAD main website" />
+    <meta property="og:image:url" content="https://wyoroad.info/images/Work-for-WYDOT.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="WYDOT Travel Information Service" />
+    <meta property="og:description" content="Wyoming Department of Transportation Travel Information Service" />
+    <!--<meta property="fb:app_id" content="" />-->
+    <!-- header image, work for WYDOT - end -->    <link href="/css/body2.css" rel="stylesheet" type="text/css">
+    <link href="/css/Header.css" rel="stylesheet" type="text/css">
+    <link href="/css/header-in-results.css" rel="stylesheet" type="text/css">
+    <link href="/css/restrictions.css" rel="stylesheet" type="text/css">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="expires" content="-1">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <meta http-equiv="cache-control" content="no-store">
+    <script language="JavaScript">
+        function popUpSSI(URL) {
+            window.open(URL, 'Popup', 'toolbar=0,scrollbars=1,location=0,statusbar=0,menubar=0,resizable=1,width=400,height=300,left=100,top=100');
+        }
+    </script>
+    <script language="JavaScript">
+        function popUpbig(URL) {
+            window.open(URL, 'Popup', 'toolbar=0,scrollbars=1,location=0,statusbar=0,menubar=0,resizable=1,width=750,height=620,left=100,top=100');
+        }
+    </script>
+    <script language="JavaScript">
+
+        function popUpsmall(URL) {
+            day = new Date();
+            id = day.getTime();
+            eval("page" + id + " = window.open(URL, '" + id + "', 'toolbar=0,scrollbars=1,location=0,statusbar=0,menubar=0,resizable=1,width=400,height=340,left = 100,top = 100'); ");
+        }
+
+        //-->
+    </script>
+    <!--[if !IE]><!-->
+    <style>
+
+      thead tr th.route, thead tr th.citylocation, thead tr th.conditions, thead tr th.advisory, thead tr th.restrictions, thead tr th.rpttime, thead tr th.cameras, thead tr th.sensors{
+              text-align:center;
+            }
+        /*
+        Max width before this PARTICULAR table gets nasty
+        This query will take effect for any screen smaller than 760px
+        and also iPads specifically.
+        */
+
+             a {
+    color: #000080 !important;  /* Navy blue — very dark, contrasts well on white/light bg (~10:1+) */
+    /* Alternatives: #0000CC (darker blue), #006400 (dark green), or #000000 (black) */
+}
+
+a:visited {
+    color: #4B0082 !important;  /* Dark purple for visited — still high contrast */
+}
+
+/* Target specifically the problematic links if needed (by text or parent class) */
+td.left a,
+a[href*="chainlaw"],
+a[href*="ChainLaw"] {
+    color: #000080 !important;
+} 
+
+    td.left,
+table,  /* or .your-table-class */
+body {
+    background-color: #ffffff !important;  /* Pure white — safest */
+    /* If the page has a subtle bg image, add: background-image: none; */
+}
+
+    a {
+    text-decoration: underline;  /* WCAG recommends underlines for links in body text */
+}
+
+a:focus {
+    outline: 3px solid #000000;  /* Thick black outline on focus for keyboard users */
+    outline-offset: 2px;
+}
+
+
+        @media only screen and (max-width: 760px),
+        (min-device-width: 600px) and (max-device-width: 800px) {
+            /* Force table to not be like tables anymore */
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            /* Hide table headers (but not display: none;, for accessibility)*/
+            thead tr th.links, thead tr th.route, thead tr th.citylocation, thead tr th.reason, thead tr th.conditions, thead tr th.advisory, thead tr th.restrictions, thead tr th.rpttime, thead tr th.cameras, thead tr th.sensors, thead tr th.projectname, thead tr th.projectnum, thead tr th.wydot, thead tr th.contractor, thead tr th.startdate, thead tr th.completedate, thead tr th.description, thead tr th.road, thead tr th.mileposts, thead tr th.surface, thead tr th.delays, thead tr th.lastupdate, thead tr th.impact, thead tr th.recommendation {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+
+            .pageheader {
+                border: 0px;
+            }
+
+            #header {
+                display: none;
+            }
+
+            tr {
+                border: 1px solid #000000;
+            }
+
+            .pageheader tr, .linktable tr {
+                border: 0px;
+            }
+
+            .linktable tr td.left, .linktable tr td.right {
+                text-align: left;
+            }
+
+            td.region, td.comments {
+                /* Behave  like a "row" */
+                border: none;
+                position: relative;
+                padding-left: 1%;
+                text-align: left;
+            }
+
+            td.region {
+                white-space: nowrap;
+            }
+
+            td.comments {
+                white-space: wrap;
+            }
+
+            td.route, td.projectname {
+                /* Behave  like a "row" */
+                border: none;
+                border-bottom: 3px solid #000000;
+                background-color: #D1D1D1;
+                position: relative;
+                text-align: center;
+                font-weight: bold;
+                font-size: 18px;
+                text-decoration: underline;
+            }
+
+            td.citylocation, td.closedcond, td.lowimpactcond, td.modimpactcond, td.highimpactcond, td.extendedcond, td.noimpact, td.lowimpact, td.modimpact, td.highimpact, td.extendedimpact, td.noimpactrestrict, td.lowimpactrestrict, td.modimpactrestrict, td.highimpactrestrict, td.closedrestrict, td.rpttime, td.cameras, td.sensors, td.projectnum, td.wydot, td.contractor, td.startdate, td.completedate, td.description, td.road, td.mileposts, td.surface, td.delays, td.lastupdate {
+                /* Behave  like a "row" */
+                border: none;
+                border-bottom: 1px solid #eee;
+                position: relative;
+                padding-left: 50%;
+                text-align: left;
+            }
+
+            td.citylocation:before, td.closedcond:before, td.lowimpactcond:before, td.modimpactcond:before, td.highimpactcond:before, td.extendedcond:before, td.noimpact:before, td.lowimpact:before, td.modimpact:before, td.highimpact:before, td.extendedimpact:before, td.noimpactrestrict:before, td.lowimpactrestrict:before, td.modimpactrestrict:before, td.highimpactrestrict:before, td.closedrestrict:before, td.rpttime:before, td.cameras:before, td.sensors:before, td.projectnum:before, td.wydot:before, td.contractor:before, td.startdate:before, td.completedate:before, td.description:before, td.road:before, td.mileposts:before, td.surface:before, td.delays:before, td.lastupdate:before {
+                /* Now like a table header */
+                position: absolute;
+                /* Top/left values mimic padding */
+                top: 6px;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: normal;
+            }
+
+            /* Label the data */
+            td.citylocation:before {
+                content: "Location";
+            }
+
+            td.closedcond:before {
+                content: "Conditions";
+            }
+
+            td.lowimpactcond:before {
+                content: "Conditions";
+            }
+
+            td.modimpactcond:before {
+                content: "Conditions";
+            }
+
+            td.highimpactcond:before {
+                content: "Conditions";
+            }
+
+            td.extendedcond:before {
+                content: "Conditions";
+            }
+
+            td.noimpact:before {
+                content: "Advisories";
+            }
+
+            td.lowimpact:before {
+                content: "Advisories";
+            }
+
+            td.modimpact:before {
+                content: "Advisories";
+            }
+
+            td.highimpact:before {
+                content: "Advisories";
+            }
+
+            td.extendedimpact:before {
+                content: "Advisories";
+            }
+
+            td.noimpactrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.lowimpactrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.modimpactrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.highimpactrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.closedrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.rpttime:before {
+                content: "Last Report Time";
+            }
+
+            td.cameras:before {
+                content: "Cameras";
+            }
+
+            td.sensors:before {
+                content: "Sensors";
+            }
+
+            td.projectnum:before {
+                content: "Project Number";
+            }
+
+            td.wydot:before {
+                content: "WYDOT Contact";
+            }
+
+            td.contractor:before {
+                content: "Contractor Contact";
+            }
+
+            td.startdate:before {
+                content: "Start Date";
+            }
+
+            td.completedate:before {
+                content: "Completion Date";
+            }
+
+            td.description:before {
+                content: "Description";
+            }
+
+            td.road:before {
+                content: "Town(s)";
+            }
+
+            td.mileposts:before {
+                content: "Milepost(s)";
+            }
+
+            td.surface:before {
+                content: "Surface";
+            }
+
+            td.delays:before {
+                content: "Delays";
+            }
+
+            td.lastupdate:before {
+                content: "Last Updated";
+            }
+        }
+
+        /* Smartphones (portrait and landscape) ----------- */
+        @media only screen
+        and (min-device-width: 320px)
+        and (max-device-width: 480px) {
+            body {
+                padding: 0;
+                margin: 0;
+                width: 320px;
+            }
+        }
+
+        /* iPads (portrait and landscape) ----------- */
+        @media only screen and (width: 768px) {
+            body {
+                width: 495px;
+            }
+        }
+             @media only screen and (min-width: 768px) {
+    .mobile-only {
+        display: none;
+    }
+}
+
+    </style>
+
+     <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var originalCSS = '';
+
+        function clearStyle() {
+            var styleTag = document.querySelector('style');
+            if (styleTag) {
+                // Store original CSS if it's not already stored
+                if (!originalCSS) {
+                    originalCSS = styleTag.innerHTML;
+                }
+                // Clear the content of the <style> tag
+                styleTag.innerHTML = '';
+            }
+        }
+
+        function restoreOriginalCSS() {
+            var styleTag = document.querySelector('style');
+            if (styleTag && originalCSS) {
+                // Restore original CSS
+                styleTag.innerHTML = originalCSS;
+            }
+        }
+
+        // Attach click event to the button to clear and restore CSS
+        var desktopButton = document.querySelector('.desktop');
+        if (desktopButton) {
+            desktopButton.addEventListener('click', function() {
+                if (desktopButton.textContent.trim() === 'Switch to Desktop version') {
+                    clearStyle();
+                    desktopButton.textContent = 'Switch to Mobile version';
+                } else if (desktopButton.textContent.trim() === 'Switch to Mobile version') {
+                    restoreOriginalCSS();
+                    desktopButton.textContent = 'Switch to Desktop version';
+                }
+            });
+        }
+    });
+</script>
+</head>
+<body>
+<center>
+    <div id="flag">
+        <!--
+        <table class="" style="width: 650px; margin-left: auto; margin-right: auto;">
+                 <tbody>
+                    <tr>
+                       <td class="hdrText" colspan="3">&nbsp;&nbsp;Wyoming State Government:&nbsp;&nbsp;&nbsp;&nbsp;
+                          <a href="https://www.wyo.gov/resources/citizen">Citizen</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                          <a href="https://www.wyo.gov/resources/business">Business</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                          <a href="https://www.wyo.gov/">Government</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                          <a href="https://travelwyoming.com/">Visitor</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                          <a href="https://wyoming.attract.neogov.com/wydot">Apply for WYDOT jobs</a>
+                       </td>
+                    </tr>
+
+                    <tr>
+                       <td>
+                          <img src="/Images/HeaderImage.gif" height="60px" width="100%">
+                       </td>
+                    </tr>
+                 </tbody>
+        </table>
+        -->
+        <table class="" style="width: auto; margin-left: auto; margin-right: auto;" role="presentation">
+           <tbody>
+              <tr>
+                 <td class="hdrText">
+                      <a href="https://wyoming.attract.neogov.com/wydot" aria-label="Work for WYDOT - Employment opportunities with the Wyoming Department of Transportation">
+            <img src="/images/Work-for-WYDOT.png" height="" width="100%" alt="Work for WYDOT - Employment opportunities with the Wyoming Department of Transportation">
+        </a>
+                  </td>
+              </tr>
+           </tbody>
+        </table>    </div>
+
+
+        <!--The following section of code is for the breadcrumbs at the top of the body-->
+        <div class="breadcrumbs"><a href="http://www.dot.state.wy.us/">WYDOT</a> &gt;<a href="/Index.html">WYOROAD</a>
+            &gt;Route Results<br><br></div>
+
+    <form action="/pls/Browse/WRR.RoutesResults" method="GET">
+    <label for="selectedRoute"><strong>Search another route:</strong></label>
+    &nbsp;&nbsp;&nbsp;
+    <select name="SelectedRoute" id="selectedRoute" style="font-family: Verdana;">
+            <option>I25</option>
+            <option>I80</option>
+            <option>I90</option>
+            <option>I90B</option>
+            <option>I180</option>
+            <option>US14</option>
+            <option>US14A</option>
+            <option>US16</option>
+            <option>US16P</option>
+            <option>US18</option>
+            <option>US20</option>
+            <option>US20P</option>
+            <option>US26</option>
+            <option>US26P</option>
+            <option>US30</option>
+            <option>US30P</option>
+            <option>US85</option>
+            <option>US87</option>
+            <option>US89</option>
+            <option>US189</option>
+            <option>US191</option>
+            <option>US212</option>
+            <option>US287</option>
+            <option>US287P</option>
+            <option>US310</option>
+            <option>WY10</option>
+            <option>WY11</option>
+            <option>WY12</option>
+            <option>WY13</option>
+            <option>WY14</option>
+            <option>WY22</option>
+            <option>WY24</option>
+            <option>WY28</option>
+            <option>WY30</option>
+            <option>WY31</option>
+            <option>WY32</option>
+            <option>WY33</option>
+            <option>WY34</option>
+            <option>WY35</option>
+            <option>WY36</option>
+            <option>WY37</option>
+            <option>WY50</option>
+            <option>WY51</option>
+            <option>WY59</option>
+            <option>WY70</option>
+            <option>WY71</option>
+            <option>WY72</option>
+            <option>WY73</option>
+            <option>WY74</option>
+            <option>WY76</option>
+            <option>WY77</option>
+            <option>WY78</option>
+            <option>WY89</option>
+            <option>WY90</option>
+            <option>WY91</option>
+            <option>WY92</option>
+            <option>WY93</option>
+            <option>WY94</option>
+            <option>WY95</option>
+            <option>WY96</option>
+            <option>WY110</option>
+            <option>WY111</option>
+            <option>WY112</option>
+            <option>WY113</option>
+            <option>WY114</option>
+            <option>WY116</option>
+            <option>WY120</option>
+            <option>WY130</option>
+            <option>WY131</option>
+            <option>WY132</option>
+            <option>WY133</option>
+            <option>WY134</option>
+            <option>WY135</option>
+            <option>WY136</option>
+            <option>WY137</option>
+            <option>WY139</option>
+            <option>WY150</option>
+            <option>WY151</option>
+            <option>WY152</option>
+            <option>WY153</option>
+            <option>WY154</option>
+            <option>WY156</option>
+            <option>WY157</option>
+            <option>WY158</option>
+            <option>WY159</option>
+            <option>WY160</option>
+            <option>WY161</option>
+            <option>WY170</option>
+            <option>WY171</option>
+            <option>WY172</option>
+            <option>WY173</option>
+            <option>WY174</option>
+            <option>WY175</option>
+            <option>WY190</option>
+            <option>WY191</option>
+            <option>WY192</option>
+            <option>WY193</option>
+            <option>WY194</option>
+            <option>WY196</option>
+            <option>WY210</option>
+            <option>WY211</option>
+            <option>WY212</option>
+            <option>WY213</option>
+            <option>WY214</option>
+            <option>WY215</option>
+            <option>WY216</option>
+            <option>WY217</option>
+            <option>WY218</option>
+            <option>WY219</option>
+            <option>WY220</option>
+            <option>WY221</option>
+            <option>WY222</option>
+            <option>WY223</option>
+            <option>WY224</option>
+            <option>WY225</option>
+            <option>WY230</option>
+            <option>WY231</option>
+            <option>WY232</option>
+            <option>WY233</option>
+            <option>WY235</option>
+            <option>WY236</option>
+            <option>WY237</option>
+            <option>WY238</option>
+            <option>WY239</option>
+            <option>WY240</option>
+            <option>WY241</option>
+            <option>WY251</option>
+            <option>WY252</option>
+            <option>WY253</option>
+            <option>WY254</option>
+            <option>WY255</option>
+            <option>WY256</option>
+            <option>WY257</option>
+            <option>WY258</option>
+            <option>WY259</option>
+            <option>WY270</option>
+            <option>WY271</option>
+            <option>WY272</option>
+            <option>WY273</option>
+            <option>WY290</option>
+            <option>WY291</option>
+            <option>WY294</option>
+            <option>WY295</option>
+            <option>WY296</option>
+            <option>WY310</option>
+            <option>WY311</option>
+            <option>WY312</option>
+            <option>WY313</option>
+            <option>WY314</option>
+            <option>WY315</option>
+            <option>WY316</option>
+            <option>WY317</option>
+            <option>WY318</option>
+            <option>WY319</option>
+            <option>WY320</option>
+            <option>WY321</option>
+            <option>WY330</option>
+            <option>WY331</option>
+            <option>WY332</option>
+            <option>WY333</option>
+            <option>WY334</option>
+            <option>WY335</option>
+            <option>WY336</option>
+            <option>WY337</option>
+            <option>WY338</option>
+            <option>WY339</option>
+            <option>WY340</option>
+            <option>WY341</option>
+            <option>WY342</option>
+            <option>WY343</option>
+            <option>WY345</option>
+            <option>WY350</option>
+            <option>WY351</option>
+            <option>WY352</option>
+            <option>WY353</option>
+            <option>WY354</option>
+            <option>WY370</option>
+            <option>WY371</option>
+            <option>WY372</option>
+            <option>WY374</option>
+            <option>WY375</option>
+            <option>WY376</option>
+            <option>WY377</option>
+            <option>WY387</option>
+            <option>WY390</option>
+            <option>WY391</option>
+            <option>WY410</option>
+            <option>WY411</option>
+            <option>WY412</option>
+            <option>WY413</option>
+            <option>WY414</option>
+            <option>WY430</option>
+            <option>WY431</option>
+            <option>WY432</option>
+            <option>WY433</option>
+            <option>WY434</option>
+            <option>WY435</option>
+            <option>WY436</option>
+            <option>WY450</option>
+            <option>WY451</option>
+            <option>WY487</option>
+            <option>WY530</option>
+            <option>WY585</option>
+            <option>WY789</option>
+    </select>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="submit" value="Go">
+    <br>
+    <br>
+</form>
+
+    <br>
+    <h1>Travel information for <u>Wyoming Highway 22</u> is as follows:</h1>
+
+    <!--
+    <center>
+        <div title="Generated at: Aug 9, 2026, 10:48 AM [36]">Last update at: Aug 9, 2026, 08:51 AM</div>
+    </center>
+    -->
+     <h3 class="mobile-only"><img style="border: 0px solid; width: 34px; height: 16px;" src="/images/newicon.gif" alt="New Feature" /> <button class="desktop" style="color:blue">Switch to Desktop version</button><br> </h3>
+    <div style="font-family: arial;">
+        <br>
+        <table class="linktable" role="presentation">
+            <tbody>
+            <tr>
+                <td class="left" style="font-weight: bold">
+                    <a href="/highway/FAQ.html">Frequently Asked Questions</a>
+                </td>
+                <td class="right" style="font-weight: bold">
+                    <a href="/highway/conditions/RoadClosures.html">Closures &amp; Advisories</a><br>
+                    <a href="http://map.wyoroad.info/">Search Conditions By Map</a><br>
+                    <a href="/pls/Browse/WRR.ConditionsQuery">Search By City</a><br>
+                    <a href="/Highway/text_road.html">Search By District</a><br>
+                    <a href="/highway/conditions/VSL.html"> Variable Speed Limits</a><br>
+                    <a href="/highway/conditions/ChainLaw.html"> Chain Law</a><br>
+                    <a href="/Highway/rti_other.html">Neighboring States</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <br>
+
+        <table class="grid" role="presentation">
+            <thead>
+            <tr>
+                <th class="title" colspan="2" scope="colgroup">
+                    District Comments
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="region">District 3 (Southwest)</td>
+                    <td class="comments">WY22: Weight limit of 60,000 GVW is in effect over Teton Pass between Jackson and the Idaho state line from milepost 7 to 17.  <p></td>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+
+        <!-- conditions -->
+        <br>
+        <table class="grid">
+
+            <thead>
+            <tr>
+                <th class="title" colspan="8" scope="colgroup">
+                    Conditions
+                </th>
+            </tr>
+            <tr>
+                <th class="route">
+                    Route
+                </th>
+                <th class="citylocation">
+                    Location
+                </th>
+                <th class="conditions">
+                    Conditions
+                </th>
+                <th class="advisory">
+                    Advisories
+                </th>
+                <th class="restrictions">
+                    Restrictions
+                </th>
+                <th class="rpttime">
+                    Last Report Time
+                </th>
+                <th class="cameras">
+                    Cameras
+                </th>
+                <th class="sensors">
+                    Sensors
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Jackson
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.47995448044043&amp;lon&#x3D;-110.76261520385742" target="_blank" aria-label="NWS Forecast for Jackson">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Jackson and Wilson
+                    </td>
+                        <td class="lowimpactcond" colspan="">
+                            Dry
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 22 from milepost 6.000 to 17.490<br />Weight restriction: 60000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Aug 9, 2026, 08:51 AM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22WYO390Jct&popUp=true')" class="noDecoration tooltip"
+                               aria-label="Camera: WYO 22 / WYO 390 Junction" title="WYO 22 / WYO 390 Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px" alt="WYO 22 / WYO 390 Junction">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22Wilson&popUp=true')" class="noDecoration tooltip"
+                               aria-label="Camera: Wilson" title="Wilson">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px" alt="Wilson">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Wilson and the Idaho State Line
+                    </td>
+                        <td class="lowimpactcond" colspan="">
+                            Dry
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 22 from milepost 6.000 to 17.490<br />Weight restriction: 60000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Aug 9, 2026, 08:51 AM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22Wilson&popUp=true')" class="noDecoration tooltip"
+                               aria-label="Camera: Wilson" title="Wilson">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px" alt="Wilson">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22TetonPass&popUp=true')" class="noDecoration tooltip"
+                               aria-label="Camera: Teton Pass" title="Teton Pass">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px" alt="Teton Pass">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22IDStateLine&popUp=true')" class="noDecoration tooltip"
+                               aria-label="Camera: Idaho State Line" title="Idaho State Line">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px" alt="Idaho State Line">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Teton+Pass')" class="noDecoration tooltip"
+                               aria-label="Weather sensor: Teton Pass" title="Teton Pass">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px" alt="Teton Pass">
+                            </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- construction -->
+        <br>
+        <table class="grid" role="presentation">
+            <thead>
+            <tr>
+                <th class="title" colspan="12" scope="colgroup">
+                    Construction Projects
+                </th>
+            </tr>
+            <tr>
+                <th class="projectname">
+                    Project Name
+                </th>
+                <th class="projectnum">
+                    Project Number
+                </th>
+                <th class="wydot">
+                    WYDOT Contact
+                </th>
+                <th class="contractor">
+                    Contractor Contact
+                </th>
+                <th class="startdate">
+                    Start Date
+                </th>
+                <th class="completedate">
+                    Completion Date
+                </th>
+                <th class="description">
+                    Description
+                </th>
+                <th class="road">
+                    Road
+                </th>
+                <th class="mileposts">
+                    Milepost(s)
+                </th>
+                <th class="surface">
+                    Surface
+                </th>
+                <th class="delays">
+                    Delays
+                </th>
+                <th class="lastupdate">
+                    Last Updated
+                </th>
+            </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td colspan=12>
+                        <center><b>No active construction projects reported at this time.</b></center>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="linktable" role="presentation">
+            <tr>
+                <td class="left">
+                    <a href="&#x2F;ext&#x2F;chainlaw.html">*Chain Law - Level 1 Definition</a>
+                </td>
+            </tr>
+            <tr>
+                <td class="left">
+                    <a href="&#x2F;ext&#x2F;chainlaw.html">**Chain Law - Level 2 Definition</a>
+                </td>
+            </tr>
+            <tr>
+                <td class="left">
+                    <a href="&#x2F;Highway&#x2F;definitions.html">Other Definitions</a>
+                </td>
+            </tr>
+        </table>
+        <br>
+
+        <table class="grid">
+            <thead>
+            <tr>
+                <th class="impact">
+                    Impact Levels
+                </th>
+                <th class="recommendation">
+                    Description / Recommended Action
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="low">
+                    Low
+                </td>
+                <td>
+                    Minimal impacts expected, use general caution.
+                </td>
+            </tr>
+            <tr>
+                <td class="moderate">
+                    Moderate
+                </td>
+                <td>
+                    Some impacts expected, use extra caution. Stay alert for changing road and weather conditions.
+                </td>
+            </tr>
+            <tr>
+                <td class="high">
+                    High
+                </td>
+                <td>
+                    Dangerous impacts expected, use extreme caution, delay travel or consider alternate route. If travel
+                    is necessary, slow down and allow extra time.
+                </td>
+            </tr>
+            <tr>
+                <td class="closed">
+                    CLOSED
+                </td>
+                <td>Per <a href="javascript:popUpbig('http:&#x2F;&#x2F;legisweb.state.wy.us&#x2F;statutes&#x2F;statutes.aspx?file&#x3D;titles&#x2F;Title24&#x2F;T24CH1.htm')">W.S. 24-1-109</a>,
+                    motorists
+                    traveling on a closed road without permission from WYDOT or WHP may be subject to a fine of up to
+                    $750
+                    and/or up to 30 days imprisonment.
+                </td>
+            </tr>
+            <tr>
+                <td class="extended">Seasonal / Long-Duration Event</td>
+                <td>Impact level used to distinguish long-duration events from emergent events.</td>
+            </tr>
+            <tr>
+                <td colspan="2" style="font-weight: bold">
+                    <center>
+                        All travelers are encouraged to check present conditions and forecasts before departing.
+                    </center>
+                </td>
+            </tr>
+        </table>
+
+        <br>
+        <br>
+        <div>
+            <!--<table class="linktable" style="width: 650px">-->
+            <table class="linktable footer" style="" role="presentation">
+                <tbody>
+                <tr>
+                    <td><a href="https://www.wyo.gov/resources/citizen">Citizen</a></td>
+                    <td><a href="https://www.wyo.gov/resources/business">Business</a></td>
+                    <td><a href="https://www.wyo.gov/">Government</a></td>
+                    <td><a href="https://travelwyoming.com/">Visitor</a></td>
+                    <td>
+                        <a href="#contactpopup">Contact Us</a>
+                        <div id="contactpopup" class="overlay">
+                            <div class="popup">
+                                <a class="close" href="#">&times;</a>
+                                <div class="content">To contact WYDOT please send an email to wyoroad@wyo.gov.</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        Copyright &copy; 2026 State of Wyoming
+                    </td>
+                    <td>
+                        <a href="/disclaimer.html">Disclaimer</a>
+                    </td>
+                    <td>
+                        <a href="https://ag.wyo.gov/privacy">Privacy Policy</a>
+                    </td>
+                    <td>
+                        <a href="/pls/Browse/MEDIA.Statewide">Media</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9" style="text-align: center;">
+                        Production Laramie v. 1.2.0.2746-20260728&nbsp;
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+
+        </div>
+    </div>
+</center>
+
+</body>
+</html>

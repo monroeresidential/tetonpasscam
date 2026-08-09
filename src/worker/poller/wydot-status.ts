@@ -46,14 +46,14 @@ const ADVISORY_RX = /^\s*none\s*$/i;
 
 /** A fresh 'unknown' StatusResult. A function, not a shared constant, so callers
  *  can never mutate one call's arrays and have that leak into another's. */
-function freshUnknown(): StatusResult {
+function freshUnknown(source: StatusResult['source'] = 'primary'): StatusResult {
   return {
     status: 'unknown',
     conditionText: null,
     advisories: [],
     restrictions: [],
     wydotReportTime: null,
-    source: 'primary',
+    source,
   };
 }
 
@@ -173,6 +173,221 @@ export function parseRoadClosures(html: string): StatusResult {
   } catch {
     return freshUnknown();
   }
+}
+
+// REAL LAYOUT: RoutesResults (captured 2026-08-09 from
+// wyoroad.info/pls/Browse/WRR.RoutesResults?SelectedRoute=WY22):
+//
+// Shares the exact *cond / *impact / *restrict / rpttime CSS-class column
+// scheme with RoadClosures (confirmed via this page's own CSS legend, e.g.
+// td.closedcond, td.noimpactrestrict), so the same extractClassCells /
+// isCompleteDataRow row-location technique applies unchanged. Two
+// differences from RoadClosures:
+//
+//   1. The segment cell is `<td class="closurelocation">...</td>`, not
+//      classless -- irrelevant to us since we still locate the row by
+//      SEGMENT_TEXT match, not by that cell's class.
+//   2. The `*cond` cell holds a raw surface-condition report (e.g. "Dry"),
+//      never a "Road Open" phrase. There is no "open" phrase on this page
+//      to assert on, so classification follows the brief's stated rule:
+//      closed iff the word "closed" appears in the *cond text (e.g. a live
+//      closure reads "CLOSED"); any other non-empty *cond text is this
+//      page's equivalent open evidence. A cell naming both is unrecognized
+//      -> unknown, same ambiguity philosophy as parseRoadClosures.
+//
+// This page also carries a "District Comments" table
+// (<td class="region">District 3 (Southwest)</td><td class="comments">...)
+// -- same shape reused by Statewide -- from which we pull the District 3
+// comment when it mentions WY22/WY 22/Teton Pass.
+
+const ROUTESRESULTS_CLOSED_RX = /\bclosed\b/i;
+
+/**
+ * Find the District 3 (Southwest) row in a District Comments table
+ * (`<td class="region">...</td><td class="comments">...</td>`, the shape
+ * shared by RoutesResults and Statewide) and return its comment text only
+ * when it mentions the Teton Pass / WY22 segment; null otherwise, including
+ * when no District 3 row exists at all. Never throws.
+ */
+function extractDistrict3Comments(html: string): string | null {
+  try {
+    const rowRx = /<td\s+class="region"[^>]*>([\s\S]*?)<\/td>\s*<td\s+class="comments"[^>]*>([\s\S]*?)<\/td>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = rowRx.exec(html)) !== null) {
+      const region = strip(m[1]);
+      if (!/district\s*3/i.test(region)) continue;
+      const comment = strip(m[2]);
+      return /WY\s?22|Teton Pass/i.test(comment) ? comment : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse the WYDOT RoutesResults?SelectedRoute=WY22 page (a fallback source
+ * consulted when the primary RoadClosures parser fails or is ambiguous).
+ * Never throws; every failure path returns 'unknown', never 'open'.
+ */
+export function parseRoutesResults(html: string): StatusResult & { district3Comments: string | null } {
+  try {
+    if (!html) return { ...freshUnknown('fallback'), district3Comments: null };
+
+    // Same decoy-guard as parseRoadClosures: only a *complete* data row
+    // (all four semantic cells present) for SEGMENT_TEXT is authoritative.
+    // This page's own generic CLOSED-legend row (explaining impact levels,
+    // near the page footer) has no closurelocation/cond/impact/restrict/
+    // rpttime cells at all and is naturally excluded by this filter.
+    const candidates = html.split(/<tr[\s>]/i).filter((block) => block.includes(SEGMENT_TEXT));
+    let row: string | undefined;
+    let classCells: ClassifiedCell[] = [];
+    for (const candidate of candidates) {
+      const cells = extractClassCells(candidate);
+      if (isCompleteDataRow(cells)) {
+        row = candidate;
+        classCells = cells;
+        break;
+      }
+    }
+    const district3Comments = extractDistrict3Comments(html);
+    if (!row) return { ...freshUnknown('fallback'), district3Comments };
+
+    const condCell = classCells.find((c) => /cond$/i.test(c.className));
+    const impactCell = classCells.find((c) => /impact$/i.test(c.className) && !/restrict$/i.test(c.className));
+    const restrictCell = classCells.find((c) => /restrict$/i.test(c.className));
+    const rpttimeCell = classCells.find((c) => c.className === 'rpttime');
+
+    const conditionText = condCell ? condCell.text : null;
+
+    const restrictions = restrictCell && RESTRICTION_RX.test(restrictCell.text) ? [restrictCell.text] : [];
+
+    const advisories = impactCell && impactCell.text && !ADVISORY_RX.test(impactCell.text) ? [impactCell.text] : [];
+
+    // Mirrors parseRoadClosures's mutual-exclusivity guard: a cell is only
+    // unambiguous when it EITHER carries closure language ("closed") OR
+    // some other non-empty condition report, but not both -- a cell naming
+    // both (e.g. a stray "CLOSED<br />Dry" during a page reshape) is an
+    // unrecognized shape and must resolve to unknown, never open or closed.
+    const hasClosedWord = conditionText !== null && ROUTESRESULTS_CLOSED_RX.test(conditionText);
+    const hasOtherConditionText = conditionText !== null && conditionText.replace(ROUTESRESULTS_CLOSED_RX, '').trim().length > 0;
+
+    let status: PassStatus = 'unknown';
+    if (hasClosedWord && !hasOtherConditionText) {
+      status = 'closed';
+    } else if (!hasClosedWord && conditionText !== null && conditionText.length > 0) {
+      status = restrictions.length > 0 ? 'restricted' : 'open';
+    }
+
+    const wydotReportTime = rpttimeCell ? denverToUtcIso(rpttimeCell.text) : null;
+
+    return {
+      status,
+      conditionText,
+      advisories,
+      restrictions,
+      wydotReportTime,
+      source: 'fallback',
+      district3Comments,
+    };
+  } catch {
+    return { ...freshUnknown('fallback'), district3Comments: null };
+  }
+}
+
+// REAL LAYOUT: Statewide (captured 2026-08-09 from
+// wyoroad.info/pls/Browse/MEDIA.Statewide):
+//
+// Segments are NOT grouped under literal "Open"/"Closed" headings as an
+// earlier sketch of this parser assumed. Each group is one
+// `<table class="mediagrid">` headed by `<th class="XXXtitle">NAME</th>`,
+// e.g. `<th class="modtitle">Falling Rock</th>` -- the class prefix
+// (low/mod/high/extended/closed) reuses the same impact-severity scheme
+// confirmed on RoadClosures/RoutesResults's *cond/*impact classes, but the
+// heading TEXT names the specific advisory/event ("Falling Rock"), not a
+// generic status word. The Wilson-Stateline row in the live capture reads
+// exactly `<td>Wilson</td><td>the Idaho State Line</td>`, confirming the
+// brief's "match on Wilson + State Line" instruction.
+//
+// Mapping heading -> PassStatus:
+//   - closedtitle             -> 'closed' (only unambiguous closure signal)
+//   - low/mod/high/extended   -> 'restricted' (an active advisory is not
+//                                 proof of closure, but also not proof of
+//                                 "open" -- 'restricted' is the only value
+//                                 consistent with "no open without explicit
+//                                 open evidence")
+//   - no heading match at all -> 'unknown' (absence is not proof of open;
+//                                 this page only ever lists problem
+//                                 segments, it has no explicit "open" list)
+// If the segment is found under more than one heading, the most severe
+// wins (closed > restricted).
+//
+// No live closedtitle example exists to capture (the pass is open), so
+// that class name is inferred from the confirmed low/mod/high/extended
+// naming convention rather than directly observed -- see fixtures/README.md.
+
+const HEADING_TABLE_RX = /<table class="mediagrid"[^>]*>([\s\S]*?)<\/table>/gi;
+const HEADING_TH_RX = /<th\s+class="([a-zA-Z]+)title"[^>]*>([\s\S]*?)<\/th>/i;
+
+function headingStatus(className: string): PassStatus | null {
+  if (className === 'closed') return 'closed';
+  if (['low', 'mod', 'high', 'extended'].includes(className)) return 'restricted';
+  return null;
+}
+
+/**
+ * Parse the WYDOT Statewide Conditions for Media page (a cross-check source)
+ * and report which condition-severity heading the Wilson-Stateline segment
+ * sits under. Never throws; absence or any unrecognized shape -> 'unknown',
+ * never 'open'.
+ */
+export function parseStatewide(html: string): PassStatus {
+  try {
+    if (!html) return 'unknown';
+
+    let best: PassStatus | null = null;
+    let m: RegExpExecArray | null;
+    HEADING_TABLE_RX.lastIndex = 0;
+    while ((m = HEADING_TABLE_RX.exec(html)) !== null) {
+      const tableBlock = m[1];
+      const headingMatch = HEADING_TH_RX.exec(tableBlock);
+      if (!headingMatch) continue; // not a severity-heading table (e.g. District Comments, Impact Levels legend)
+
+      const status = headingStatus(headingMatch[1].toLowerCase());
+      if (!status) continue;
+
+      // Match within a single <tr>, not anywhere in the table: other rows
+      // in the same group can separately mention "Wilson" or "State Line"
+      // (e.g. the unrelated "US 89 / the Idaho State Line / Afton" row),
+      // and matching across the whole block could false-positive on a
+      // segment that never actually shares its own row with both terms.
+      const hasSegment = tableBlock
+        .split(/<tr[\s>]/i)
+        .some((rowBlock) => /wilson/i.test(rowBlock) && /state line/i.test(rowBlock));
+      if (!hasSegment) continue;
+
+      if (status === 'closed') return 'closed'; // most severe possible match, no need to keep scanning
+      best = status;
+    }
+    return best ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
+ * Compare a previous and current advisory list and report which entries
+ * appeared/disappeared. A plain set difference: an advisory present in both
+ * lists (e.g. the standing "Falling Rock" advisory, active all summer 2026)
+ * is naturally absent from both `added` and `removed` -- it is NOT an event.
+ */
+export function diffAdvisories(prev: string[], curr: string[]): { added: string[]; removed: string[] } {
+  const prevSet = new Set(prev);
+  const currSet = new Set(curr);
+  return {
+    added: curr.filter((a) => !prevSet.has(a)),
+    removed: prev.filter((a) => !currSet.has(a)),
+  };
 }
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
