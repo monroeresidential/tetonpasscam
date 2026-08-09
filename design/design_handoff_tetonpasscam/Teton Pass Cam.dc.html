@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500;700&family=Public+Sans:wght@400;500;600;700&family=Libre+Franklin:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"><style>body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}a{color:inherit}a:hover{color:#2a78d6}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}</style></helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Trailhead (<a class="dv-oid" href="#1a">1a</a>) built out — desktop, dark mode, History, report modal, feedback</span></div>
+<div class="dv-opts">
+
+<!-- ============ 2a Desktop home, light ============ -->
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Home — desktop, light</div>
+<div class="dv-card" style="width:1080px;background:#faf7f0;font-family:'Atkinson Hyperlegible',sans-serif;color:#2b2620">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px">
+    <div style="display:flex;align-items:baseline;gap:14px"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px;letter-spacing:-0.02em">Teton Pass Cam</div><div style="font-size:12px;color:#8a8072">Live cams &amp; conditions · Sat 6:12 AM</div></div>
+    <div style="display:flex;gap:10px;align-items:center"><div style="font-size:13px;font-weight:700;color:#8a8072">History</div><div style="background:#2b2620;color:#fff;border-radius:99px;padding:9px 18px;font-weight:700;font-size:13px;font-family:'Bricolage Grotesque',sans-serif">⚠ Report conditions</div></div>
+  </div>
+  <div style="margin:0 22px;background:oklch(0.55 0.13 150);border-radius:18px;padding:24px 26px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:46px;letter-spacing:-0.02em;line-height:1">The pass is OPEN</div>
+      <div style="margin-top:8px;font-size:14px;opacity:0.9">Last confirmed open 5:48 AM · WYDOT · Wilson to Idaho state line</div>
+    </div>
+    <div style="display:inline-block;background:rgba(255,255,255,0.18);border-radius:99px;padding:6px 14px;font-size:13px">Advisory: falling rock (standing)</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:20px;padding:20px 22px 0">
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px">Drive times right now</div><div style="font-size:12px;color:oklch(0.55 0.13 60);font-weight:700">⇄ Flip direction</div></div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+        <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:15px">Victor → Jackson</div><div style="font-size:12px;color:#8a8072">Town Square</div></div><div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px">38 min</div><div style="font-size:12px;color:oklch(0.50 0.13 150);font-weight:700">2 min faster than usual</div></div></div>
+        <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:15px">Driggs → Jackson</div><div style="font-size:12px;color:#8a8072">Town Square</div></div><div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px">54 min</div><div style="font-size:12px;color:#8a8072">about usual</div></div></div>
+        <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:15px">Victor → Teton Village</div><div style="font-size:12px;color:#8a8072">JHMR</div></div><div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px">51 min</div><div style="font-size:12px;color:oklch(0.55 0.15 30);font-weight:700">8 min slower than usual</div></div></div>
+      </div>
+      <div style="margin-top:18px;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px">From the road</div>
+      <div style="margin-top:8px;background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px 16px;display:flex;gap:10px;align-items:flex-start">
+        <div style="width:34px;height:34px;border-radius:10px;background:oklch(0.93 0.04 60);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none">❄</div>
+        <div style="flex:1"><div style="font-weight:700;font-size:14px">Slick/Ice · westbound to Victor</div><div style="font-size:12.5px;color:#8a8072;margin-top:2px">"Glare ice near the summit turnout" · 18 min ago</div><div style="font-size:10.5px;color:#b0a690;margin-top:3px">Unverified community report</div></div>
+      </div>
+      <div style="margin-top:18px;background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;text-align:center">
+        <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px">21°F</div><div style="font-size:11px;color:#8a8072">air</div></div>
+        <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px">18°F</div><div style="font-size:11px;color:#8a8072">road surface</div></div>
+        <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px">24 mph</div><div style="font-size:11px;color:#8a8072">gust W</div></div>
+        <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px">10 mi</div><div style="font-size:11px;color:#8a8072">visibility</div></div>
+      </div>
+      <div style="margin-top:18px;background:oklch(0.95 0.03 60);border:1px solid oklch(0.88 0.05 60);border-radius:14px;padding:16px 18px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:oklch(0.55 0.11 60);text-transform:uppercase">Sponsored by Teton Flats</div>
+        <div style="margin-top:4px;font-size:14px;line-height:1.5">Modern 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson. <strong>Live here, check this page less.</strong></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px">Cameras</div>
+      <div style="aspect-ratio:16/9;border-radius:14px;background:repeating-linear-gradient(45deg,#e8e2d4,#e8e2d4 8px,#efe9dc 8px,#efe9dc 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#8a8072">WYDOT cam — summit · 6:10 AM</div>
+      <div style="aspect-ratio:16/9;border-radius:14px;background:repeating-linear-gradient(45deg,#e8e2d4,#e8e2d4 8px,#efe9dc 8px,#efe9dc 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#8a8072">cam — Wilson</div>
+      <div style="aspect-ratio:16/9;border-radius:14px;background:repeating-linear-gradient(45deg,#e8e2d4,#e8e2d4 8px,#efe9dc 8px,#efe9dc 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#8a8072">cam — state line</div>
+      <div style="font-size:10.5px;color:#b0a690">Imagery: WYDOT Wyoming 511 · tap any cam for Wyoming 511</div>
+    </div>
+  </div>
+  <div style="margin:20px 22px 20px;padding-top:14px;border-top:1px solid #eae4d8;font-size:11.5px;color:#b0a690;display:flex;gap:18px;flex-wrap:wrap">
+    <span>Wyoming 511</span><span>Idaho 511</span><span>START bus</span><span>511 Notify alerts</span><span>Privacy</span><span>Feedback</span><span style="margin-left:auto">Not affiliated with WYDOT</span>
+  </div>
+</div>
+</div>
+
+<!-- ============ 2b Phone home, dark ============ -->
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Home — phone, dark mode (pre-dawn winter check)</div>
+<div class="dv-card" style="width:390px;background:#211d17;font-family:'Atkinson Hyperlegible',sans-serif;color:#f0ebe1">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px">
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;letter-spacing:-0.02em">Teton Pass Cam</div>
+    <div style="font-size:11px;color:#a39880">Sat 6:12 AM</div>
+  </div>
+  <div style="margin:6px 14px;background:oklch(0.45 0.11 150);border-radius:16px;padding:20px 18px;color:#fff">
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.02em;line-height:1">The pass is OPEN</div>
+    <div style="margin-top:8px;font-size:13px;opacity:0.9">Last confirmed open 5:48 AM · WYDOT</div>
+    <div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,0.15);border-radius:99px;padding:4px 12px;font-size:12px">Advisory: falling rock (standing)</div>
+  </div>
+  <div style="margin:14px 14px 0;display:flex;align-items:baseline;justify-content:space-between">
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px">Drive times right now</div>
+    <div style="font-size:12px;color:oklch(0.75 0.11 60);font-weight:700">⇄ Flip direction</div>
+  </div>
+  <div style="margin:8px 14px;display:flex;flex-direction:column;gap:8px">
+    <div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:14px">Victor → Jackson</div><div style="font-size:11.5px;color:#a39880">Town Square</div></div><div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px">38 min</div><div style="font-size:11.5px;color:oklch(0.72 0.12 150);font-weight:700">2 min faster than usual</div></div></div>
+    <div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:14px">Driggs → Jackson</div><div style="font-size:11.5px;color:#a39880">Town Square</div></div><div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px">54 min</div><div style="font-size:11.5px;color:#a39880">about usual</div></div></div>
+    <div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:14px">Victor → Teton Village</div><div style="font-size:11.5px;color:#a39880">JHMR</div></div><div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px">51 min</div><div style="font-size:11.5px;color:oklch(0.72 0.14 30);font-weight:700">8 min slower than usual</div></div></div>
+  </div>
+  <div style="margin:16px 14px 0;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px">Cameras</div>
+  <div style="margin:8px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div style="grid-column:1/-1;aspect-ratio:16/8;border-radius:14px;background:repeating-linear-gradient(45deg,#2b2620,#2b2620 8px,#312b23 8px,#312b23 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#a39880">WYDOT cam — summit</div>
+    <div style="aspect-ratio:16/10;border-radius:14px;background:repeating-linear-gradient(45deg,#2b2620,#2b2620 8px,#312b23 8px,#312b23 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#a39880">cam — Wilson</div>
+    <div style="aspect-ratio:16/10;border-radius:14px;background:repeating-linear-gradient(45deg,#2b2620,#2b2620 8px,#312b23 8px,#312b23 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#a39880">cam — state line</div>
+  </div>
+  <div style="margin:4px 14px 0;font-size:10.5px;color:#6e6553">Imagery: WYDOT Wyoming 511 · updated 6:10 AM</div>
+  <div style="margin:14px 14px 0;background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px 14px;display:flex;gap:14px;justify-content:space-between;text-align:center">
+    <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px">21°F</div><div style="font-size:10.5px;color:#a39880">air</div></div>
+    <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px">18°F</div><div style="font-size:10.5px;color:#a39880">road</div></div>
+    <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px">24 mph</div><div style="font-size:10.5px;color:#a39880">gust W</div></div>
+    <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px">10 mi</div><div style="font-size:10.5px;color:#a39880">visibility</div></div>
+  </div>
+  <div style="margin:14px 14px 0;background:oklch(0.30 0.03 60);border:1px solid oklch(0.38 0.04 60);border-radius:14px;padding:14px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:oklch(0.75 0.09 60);text-transform:uppercase">Sponsored by Teton Flats</div>
+    <div style="margin-top:4px;font-size:13px;line-height:1.45;color:#e7dfd0">Modern 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson. <strong>Live here, check this page less.</strong></div>
+  </div>
+  <div style="margin:14px 14px 18px;font-size:11px;color:#6e6553;line-height:1.6">Wyoming 511 · Idaho 511 · START bus · Privacy<br>Not affiliated with WYDOT</div>
+  <div style="position:sticky;bottom:0;padding:10px 14px;background:linear-gradient(#211d1700,#211d17 40%)">
+    <div style="background:#f0ebe1;color:#211d17;border-radius:99px;padding:14px;text-align:center;font-weight:700;font-size:15px;font-family:'Bricolage Grotesque',sans-serif">⚠ Report conditions</div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 2c History, desktop ============ -->
+<div class="dv-opt" id="2c">
+<div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>History — desktop, today vs typical band</div>
+<div class="dv-card" style="width:1080px;background:#faf7f0;font-family:'Atkinson Hyperlegible',sans-serif;color:#2b2620">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px">
+    <div style="display:flex;align-items:baseline;gap:14px"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px;letter-spacing:-0.02em">Teton Pass Cam</div><div style="font-size:12px;color:#8a8072">History</div></div>
+    <div style="font-size:13px;font-weight:700;color:#8a8072">← Back to live conditions</div>
+  </div>
+  <div style="padding:0 28px 24px">
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:30px;letter-spacing:-0.02em">When should you leave?</div>
+    <div style="margin-top:4px;font-size:14px;color:#8a8072">Travel time by hour of day — today's line against the typical band for a winter Saturday.</div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <div style="background:#2b2620;color:#fff;border-radius:99px;padding:7px 16px;font-size:13px;font-weight:700">Victor → Jackson</div>
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:99px;padding:7px 16px;font-size:13px;color:#8a8072">Driggs → Jackson</div>
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:99px;padding:7px 16px;font-size:13px;color:#8a8072">Victor → Teton Village</div>
+    </div>
+    <div style="margin-top:16px;background:#fff;border:1px solid #eae4d8;border-radius:16px;padding:20px 22px">
+      <div style="display:flex;gap:16px;font-size:11.5px;color:#8a8072;margin-bottom:10px">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;height:3px;background:oklch(0.55 0.13 60);border-radius:2px;display:inline-block"></span>Today</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;height:10px;background:oklch(0.55 0.13 150 / 0.18);border-radius:2px;display:inline-block"></span>Typical band (p25–p75)</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:18px;height:3px;background:oklch(0.55 0.13 150);border-radius:2px;display:inline-block"></span>Typical median</span>
+      </div>
+      <svg viewBox="0 0 940 260" style="width:100%;height:auto;display:block">
+        <line x1="40" y1="20" x2="40" y2="220" stroke="#eae4d8"></line>
+        <line x1="40" y1="220" x2="930" y2="220" stroke="#eae4d8"></line>
+        <line x1="40" y1="150" x2="930" y2="150" stroke="#f3efe6"></line><text x="34" y="154" text-anchor="end" font-size="10" fill="#b0a690">45m</text>
+        <line x1="40" y1="80" x2="930" y2="80" stroke="#f3efe6"></line><text x="34" y="84" text-anchor="end" font-size="10" fill="#b0a690">60m</text>
+        <text x="34" y="224" text-anchor="end" font-size="10" fill="#b0a690">30m</text>
+        <polygon points="40,205 130,200 220,175 310,140 400,155 490,180 580,185 670,165 760,130 850,160 930,190 930,215 850,190 760,165 670,195 580,210 490,205 400,185 310,170 220,200 130,215 40,218" fill="oklch(0.55 0.13 150 / 0.16)"></polygon>
+        <polyline points="40,212 130,208 220,188 310,155 400,170 490,193 580,198 670,180 760,148 850,175 930,203" fill="none" stroke="oklch(0.55 0.13 150)" stroke-width="2"></polyline>
+        <polyline points="40,214 130,210 220,196 310,142 400,150 490,186" fill="none" stroke="oklch(0.55 0.13 60)" stroke-width="3" stroke-linecap="round"></polyline>
+        <circle cx="490" cy="186" r="5" fill="oklch(0.55 0.13 60)"></circle>
+        <text x="490" y="172" text-anchor="middle" font-size="11" font-weight="700" fill="oklch(0.5 0.12 60)">now · 38m</text>
+        <text x="40" y="242" font-size="10" fill="#b0a690">4 AM</text><text x="310" y="242" font-size="10" fill="#b0a690">7 AM</text><text x="580" y="242" font-size="10" fill="#b0a690">10 AM</text><text x="850" y="242" font-size="10" fill="#b0a690">1 PM</text>
+      </svg>
+      <div style="margin-top:8px;padding:10px 14px;background:oklch(0.96 0.02 150);border-radius:10px;font-size:13px">The data says: on winter Saturdays, leaving <strong>before 6:40 AM</strong> beats the 7–8 AM peak by a median of <strong>14 minutes</strong>.</div>
+    </div>
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:16px;padding:18px 20px">
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px">Worst days this season</div>
+        <div style="margin-top:10px;font-size:13px">
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3efe6"><span>Fri Jan 16 — storm + crash</span><strong>1 h 52 peak</strong></div>
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3efe6"><span>Mon Dec 8 — closure 5–9 AM</span><strong>detour only</strong></div>
+          <div style="display:flex;justify-content:space-between;padding:7px 0"><span>Thu Feb 5 — chain law</span><strong>1 h 18 peak</strong></div>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:16px;padding:18px 20px">
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px">Winter vs summer</div>
+        <div style="margin-top:10px;font-size:13px">
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3efe6"><span>Median Victor → Jackson, summer</span><strong>34 min</strong></div>
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3efe6"><span>Median, winter</span><strong>41 min</strong></div>
+          <div style="display:flex;justify-content:space-between;padding:7px 0"><span>Closure days last winter (WYDOT)</span><strong>11</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 2d Report modal, phone ============ -->
+<div class="dv-opt" id="2d">
+<div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Report conditions — 2-tap modal</div>
+<div class="dv-card" style="width:390px;background:rgba(33,29,23,0.55);padding:60px 0 0">
+  <div style="background:#faf7f0;border-radius:22px 22px 0 0;padding:18px 18px 22px;font-family:'Atkinson Hyperlegible',sans-serif;color:#2b2620">
+    <div style="width:40px;height:4px;border-radius:2px;background:#d8d0c0;margin:0 auto 14px"></div>
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.01em">What are you seeing?</div>
+    <div style="margin-top:2px;font-size:12.5px;color:#8a8072">No account needed. Reports show as unverified and expire on their own.</div>
+    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">💥</span><span style="font-weight:700;font-size:14px">Crash</span></div>
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">🛞</span><span style="font-weight:700;font-size:14px">Slide-off</span></div>
+      <div style="background:#fff;border:2px solid #2b2620;border-radius:14px;padding:14px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">❄</span><span style="font-weight:700;font-size:14px">Slick / Ice</span></div>
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">🦌</span><span style="font-weight:700;font-size:14px">Wildlife</span></div>
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">🚗</span><span style="font-weight:700;font-size:14px">Stopped traffic</span></div>
+      <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">🚧</span><span style="font-weight:700;font-size:14px">Closure</span></div>
+      <div style="grid-column:1/-1;background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:12px 14px;font-weight:700;font-size:14px;color:#8a8072;text-align:center">Other</div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <div style="flex:1;background:#fff;border:2px solid #2b2620;border-radius:99px;padding:10px;text-align:center;font-weight:700;font-size:13px">WB → Victor</div>
+      <div style="flex:1;background:#fff;border:1px solid #eae4d8;border-radius:99px;padding:10px;text-align:center;font-size:13px;color:#8a8072">EB → Jackson</div>
+    </div>
+    <div style="margin-top:10px;background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:12px 14px;font-size:13.5px;color:#b0a690">Add a note (optional, 140 chars)…</div>
+    <div style="margin-top:14px;background:#2b2620;color:#fff;border-radius:99px;padding:15px;text-align:center;font-weight:700;font-size:15px;font-family:'Bricolage Grotesque',sans-serif">Send report</div>
+    <div style="margin-top:10px;font-size:10.5px;color:#b0a690;text-align:center;line-height:1.5">Reports never change the official OPEN/CLOSED banner — only WYDOT does. Limit 2 reports per 30 min.</div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 2e Feedback, phone ============ -->
+<div class="dv-opt" id="2e">
+<div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Feedback — one form</div>
+<div class="dv-card" style="width:390px;background:#faf7f0;font-family:'Atkinson Hyperlegible',sans-serif;color:#2b2620;padding:18px 18px 22px">
+  <div style="font-size:12px;font-weight:700;color:#8a8072">← Back</div>
+  <div style="margin-top:12px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px;letter-spacing:-0.01em">Tell us what's broken<br>(or what you'd love)</div>
+  <div style="margin-top:4px;font-size:13px;color:#8a8072">Goes straight to a human in Teton Valley.</div>
+  <div style="margin-top:14px;background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:14px;min-height:110px;font-size:13.5px;color:#b0a690">Your message…</div>
+  <div style="margin-top:10px;background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:13px 14px;font-size:13.5px;color:#b0a690">Email (optional — only if you want a reply)</div>
+  <div style="margin-top:14px;background:#2b2620;color:#fff;border-radius:99px;padding:14px;text-align:center;font-weight:700;font-size:15px;font-family:'Bricolage Grotesque',sans-serif">Send feedback</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "show <a class="dv-oid" href="#2a">2a</a> in CLOSED and RESTRICTED states" · "make the dark mode the default" · "turn <a class="dv-oid" href="#2b">2b</a> into a working prototype"</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Home screen — three divergent directions (phone). Pick one; I'll build out all 4 screens, desktop + light/dark.</span></div>
+<div class="dv-opts">
+
+<!-- ============ 1a TRAILHEAD — local & friendly ============ -->
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Trailhead — local &amp; friendly, warm, rounded. Bricolage Grotesque + Atkinson Hyperlegible.</div>
+<div class="dv-card" style="width:390px;background:#faf7f0;font-family:'Atkinson Hyperlegible',sans-serif;color:#2b2620">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px">
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;letter-spacing:-0.02em">Teton Pass Cam</div>
+    <div style="font-size:11px;color:#8a8072">Sat 6:12 AM</div>
+  </div>
+  <div style="margin:6px 14px;background:oklch(0.55 0.13 150);border-radius:16px;padding:20px 18px;color:#fff">
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.02em;line-height:1">The pass is OPEN</div>
+    <div style="margin-top:8px;font-size:13px;opacity:0.9">Last confirmed open 5:48 AM · WYDOT</div>
+    <div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,0.18);border-radius:99px;padding:4px 12px;font-size:12px">Advisory: falling rock (standing)</div>
+  </div>
+  <div style="margin:14px 14px 0;display:flex;align-items:baseline;justify-content:space-between">
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px">Drive times right now</div>
+    <div style="font-size:12px;color:oklch(0.55 0.13 60);font-weight:700">⇄ Flip direction</div>
+  </div>
+  <div style="margin:8px 14px;display:flex;flex-direction:column;gap:8px">
+    <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:700;font-size:14px">Victor → Jackson</div><div style="font-size:11.5px;color:#8a8072">Town Square</div></div>
+      <div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px">38 min</div><div style="font-size:11.5px;color:oklch(0.50 0.13 150);font-weight:700">2 min faster than usual</div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:700;font-size:14px">Driggs → Jackson</div><div style="font-size:11.5px;color:#8a8072">Town Square</div></div>
+      <div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px">54 min</div><div style="font-size:11.5px;color:#8a8072">about usual</div></div>
+    </div>
+    <div style="background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:700;font-size:14px">Victor → Teton Village</div><div style="font-size:11.5px;color:#8a8072">JHMR</div></div>
+      <div style="text-align:right"><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px">51 min</div><div style="font-size:11.5px;color:oklch(0.55 0.15 30);font-weight:700">8 min slower than usual</div></div>
+    </div>
+  </div>
+  <div style="margin:16px 14px 0;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px">From the road</div>
+  <div style="margin:8px 14px;background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:12px 14px">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="width:32px;height:32px;border-radius:10px;background:oklch(0.93 0.04 60);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none">❄</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:13.5px">Slick/Ice · westbound to Victor</div><div style="font-size:12px;color:#8a8072;margin-top:2px">"Glare ice near the summit turnout" · 18 min ago</div><div style="font-size:10.5px;color:#b0a690;margin-top:3px">Unverified community report</div></div>
+    </div>
+  </div>
+  <div style="margin:16px 14px 0;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px">Cameras</div>
+  <div style="margin:8px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div style="grid-column:1/-1;aspect-ratio:16/8;border-radius:14px;background:repeating-linear-gradient(45deg,#e8e2d4,#e8e2d4 8px,#efe9dc 8px,#efe9dc 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#8a8072">WYDOT cam — summit</div>
+    <div style="aspect-ratio:16/10;border-radius:14px;background:repeating-linear-gradient(45deg,#e8e2d4,#e8e2d4 8px,#efe9dc 8px,#efe9dc 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#8a8072">cam — Wilson</div>
+    <div style="aspect-ratio:16/10;border-radius:14px;background:repeating-linear-gradient(45deg,#e8e2d4,#e8e2d4 8px,#efe9dc 8px,#efe9dc 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#8a8072">cam — state line</div>
+  </div>
+  <div style="margin:4px 14px 0;font-size:10.5px;color:#b0a690">Imagery: WYDOT Wyoming 511 · updated 6:10 AM</div>
+  <div style="margin:14px 14px 0;background:#fff;border:1px solid #eae4d8;border-radius:14px;padding:12px 14px;display:flex;gap:14px;justify-content:space-between;text-align:center">
+    <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px">21°F</div><div style="font-size:10.5px;color:#8a8072">air</div></div>
+    <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px">18°F</div><div style="font-size:10.5px;color:#8a8072">road</div></div>
+    <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px">24 mph</div><div style="font-size:10.5px;color:#8a8072">gust W</div></div>
+    <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px">10 mi</div><div style="font-size:10.5px;color:#8a8072">visibility</div></div>
+  </div>
+  <div style="margin:14px 14px 0;background:oklch(0.95 0.03 60);border:1px solid oklch(0.88 0.05 60);border-radius:14px;padding:14px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:oklch(0.55 0.11 60);text-transform:uppercase">Sponsored by Teton Flats</div>
+    <div style="margin-top:4px;font-size:13px;line-height:1.45">Modern 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson. <strong>Live here, check this page less.</strong></div>
+  </div>
+  <div style="margin:14px 14px 18px;font-size:11px;color:#b0a690;line-height:1.6">Wyoming 511 · Idaho 511 · START bus · Privacy<br>Not affiliated with WYDOT</div>
+  <div style="position:sticky;bottom:0;padding:10px 14px;background:linear-gradient(#faf7f000,#faf7f0 40%)">
+    <div style="background:#2b2620;color:#fff;border-radius:99px;padding:14px;text-align:center;font-weight:700;font-size:15px;font-family:'Bricolage Grotesque',sans-serif">⚠ Report conditions</div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 1b INSTRUMENT — alpine weather-station, dark ============ -->
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Instrument — dark weather-station panel. JetBrains Mono + Public Sans. Shown in RESTRICTED state.</div>
+<div class="dv-card" style="width:390px;background:#101411;font-family:'Public Sans',sans-serif;color:#e6ebe4">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #1f261f">
+    <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:0.04em">TETON PASS CAM</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6d7a6c">06:12 MST</div>
+  </div>
+  <div style="padding:22px 18px;border-bottom:1px solid #1f261f;background:linear-gradient(180deg,oklch(0.28 0.06 85 / 0.5),transparent)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:12px;height:12px;border-radius:50%;background:oklch(0.78 0.16 85);box-shadow:0 0 12px oklch(0.78 0.16 85)"></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:34px;letter-spacing:0.02em;color:oklch(0.85 0.14 85)">RESTRICTED</div>
+    </div>
+    <div style="margin-top:8px;font-size:14px;color:#c9d2c6;font-weight:600">Chain law in effect — WY-22 Wilson to state line</div>
+    <div style="margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6d7a6c">WYDOT LAST REPORT 05:48 · SOURCE WYOROAD.INFO</div>
+  </div>
+  <div style="padding:14px 18px;border-bottom:1px solid #1f261f">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#6d7a6c">TRAVEL TIME</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:oklch(0.78 0.16 130)">[⇄ REVERSE]</div></div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:2px;font-family:'JetBrains Mono',monospace">
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #1f261f"><span style="font-size:13px">VICTOR→JACKSON</span><span style="font-size:13px"><span style="color:oklch(0.78 0.16 130)">38m</span> <span style="color:#6d7a6c">typ 40m</span></span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #1f261f"><span style="font-size:13px">DRIGGS→JACKSON</span><span style="font-size:13px"><span style="color:#e6ebe4">54m</span> <span style="color:#6d7a6c">typ 53m</span></span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="font-size:13px">VICTOR→TETON VLG</span><span style="font-size:13px"><span style="color:oklch(0.75 0.16 60)">51m</span> <span style="color:#6d7a6c">typ 43m</span></span></div>
+    </div>
+  </div>
+  <div style="padding:14px 18px;border-bottom:1px solid #1f261f">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#6d7a6c">COMMUNITY REPORTS</div>
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:flex-start">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:oklch(0.75 0.16 60);border:1px solid oklch(0.4 0.08 60);padding:2px 6px;border-radius:3px;flex:none">ICE</div>
+      <div style="flex:1"><div style="font-size:13px">Glare ice near the summit turnout · WB</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6d7a6c;margin-top:3px">18 MIN AGO · UNVERIFIED COMMUNITY REPORT</div></div>
+    </div>
+  </div>
+  <div style="padding:14px 18px;border-bottom:1px solid #1f261f">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.14em;color:#6d7a6c">CAMERAS — WY-22</div>
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      <div style="aspect-ratio:4/3;border-radius:4px;background:repeating-linear-gradient(45deg,#181e18,#181e18 6px,#1d241d 6px,#1d241d 12px);display:flex;align-items:center;justify-content:center;font:9px 'JetBrains Mono',monospace;color:#6d7a6c;text-align:center">WILSON</div>
+      <div style="aspect-ratio:4/3;border-radius:4px;background:repeating-linear-gradient(45deg,#181e18,#181e18 6px,#1d241d 6px,#1d241d 12px);display:flex;align-items:center;justify-content:center;font:9px 'JetBrains Mono',monospace;color:#6d7a6c">SUMMIT</div>
+      <div style="aspect-ratio:4/3;border-radius:4px;background:repeating-linear-gradient(45deg,#181e18,#181e18 6px,#1d241d 6px,#1d241d 12px);display:flex;align-items:center;justify-content:center;font:9px 'JetBrains Mono',monospace;color:#6d7a6c;text-align:center">STATE LINE</div>
+    </div>
+    <div style="margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#4a544a">IMAGERY: WYDOT WYOMING 511 · 06:10</div>
+  </div>
+  <div style="padding:14px 18px;border-bottom:1px solid #1f261f;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;text-align:center">
+    <div><div style="font-size:17px;font-weight:700">21°F</div><div style="font-size:9px;color:#6d7a6c;letter-spacing:0.1em">AIR</div></div>
+    <div><div style="font-size:17px;font-weight:700;color:oklch(0.75 0.16 60)">18°F</div><div style="font-size:9px;color:#6d7a6c;letter-spacing:0.1em">ROAD</div></div>
+    <div><div style="font-size:17px;font-weight:700">24<span style="font-size:11px">mph</span></div><div style="font-size:9px;color:#6d7a6c;letter-spacing:0.1em">GUST W</div></div>
+    <div><div style="font-size:17px;font-weight:700">10<span style="font-size:11px">mi</span></div><div style="font-size:9px;color:#6d7a6c;letter-spacing:0.1em">VIS</div></div>
+  </div>
+  <div style="margin:14px 18px 0;border:1px solid #2a332a;border-radius:6px;padding:12px 14px;background:#141a14">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;color:#6d7a6c">SPONSORED BY TETON FLATS</div>
+    <div style="margin-top:5px;font-size:13px;line-height:1.5;color:#c9d2c6">Modern 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson. <span style="color:oklch(0.78 0.16 130)">Live here, check this page less.</span></div>
+  </div>
+  <div style="margin:14px 18px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#4a544a;line-height:1.8">WYOMING 511 · IDAHO 511 · START BUS · PRIVACY<br>NOT AFFILIATED WITH WYDOT</div>
+  <div style="padding:10px 18px 16px">
+    <div style="border:1px solid oklch(0.75 0.16 60);color:oklch(0.82 0.14 60);border-radius:6px;padding:13px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;letter-spacing:0.06em">⚠ REPORT CONDITIONS</div>
+  </div>
+</div>
+</div>
+
+<!-- ============ 1c ALMANAC — data-forward editorial ============ -->
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Almanac — data-forward, hairline rules, big numerals. Libre Franklin. Shown in CLOSED state.</div>
+<div class="dv-card" style="width:390px;background:#fcfcfa;font-family:'Libre Franklin',sans-serif;color:#191b18">
+  <div style="padding:18px 20px 12px;border-bottom:2px solid #191b18;display:flex;justify-content:space-between;align-items:baseline">
+    <div style="font-weight:800;font-size:17px;letter-spacing:-0.01em">Teton Pass Cam</div>
+    <div style="font-size:11px;color:#7a7d76">Saturday · 6:12 AM</div>
+  </div>
+  <div style="padding:22px 20px;border-bottom:1px solid #e3e4df;background:oklch(0.97 0.015 25)">
+    <div style="font-weight:300;font-size:13px;letter-spacing:0.18em;text-transform:uppercase;color:oklch(0.5 0.17 25)">Status</div>
+    <div style="font-weight:800;font-size:44px;letter-spacing:-0.03em;line-height:1.05;color:oklch(0.45 0.17 25)">Closed — do not attempt</div>
+    <div style="margin-top:10px;font-size:13px;line-height:1.5;color:#4a4d47">Traveling a closed Wyoming road is illegal (up to $750 fine). Last WYDOT report 5:48 AM. No reopening estimate is available.</div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid oklch(0.88 0.03 25)">
+      <div style="font-size:12px;font-weight:700">Detour: US-26 / US-89 via Swan Valley–Alpine</div>
+      <div style="font-size:12px;color:#7a7d76;margin-top:2px">~85 mi · ~1 h 40 typical · currently: wet, no restrictions</div>
+    </div>
+  </div>
+  <div style="padding:16px 20px;border-bottom:1px solid #e3e4df">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-weight:300;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#7a7d76">Drive times</div><div style="font-size:11px;font-weight:600;color:oklch(0.45 0.15 145)">⇄ Reverse</div></div>
+    <div style="margin-top:6px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid #eeefe9"><div style="font-size:14px">Victor → Jackson</div><div style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums">— <span style="font-size:11px;font-weight:400;color:#7a7d76">via detour 1:52</span></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid #eeefe9"><div style="font-size:14px">Driggs → Jackson</div><div style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums">— <span style="font-size:11px;font-weight:400;color:#7a7d76">via detour 2:05</span></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px 0"><div style="font-size:14px">Victor → Teton Village</div><div style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums">— <span style="font-size:11px;font-weight:400;color:#7a7d76">via detour 2:10</span></div></div>
+    </div>
+  </div>
+  <div style="padding:16px 20px;border-bottom:1px solid #e3e4df">
+    <div style="font-weight:300;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#7a7d76">Community reports</div>
+    <div style="margin-top:10px;font-size:13px;line-height:1.5"><strong>Closure</strong> · eastbound · 41 min ago — "Gate down at Wilson" <span style="color:#7a7d76">· unconfirmed, check 511</span></div>
+    <div style="margin-top:4px;font-size:10.5px;color:#a3a69e">Unverified community report · reports never change the official status above</div>
+  </div>
+  <div style="padding:16px 20px;border-bottom:1px solid #e3e4df">
+    <div style="font-weight:300;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#7a7d76">Cameras — WY-22</div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+      <div style="aspect-ratio:16/7;background:repeating-linear-gradient(45deg,#eeefe9,#eeefe9 8px,#f4f5f0 8px,#f4f5f0 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,monospace;color:#7a7d76">WYDOT cam — summit · 6:10 AM</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="aspect-ratio:16/9;background:repeating-linear-gradient(45deg,#eeefe9,#eeefe9 8px,#f4f5f0 8px,#f4f5f0 16px);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;color:#7a7d76">Wilson</div>
+        <div style="aspect-ratio:16/9;background:repeating-linear-gradient(45deg,#eeefe9,#eeefe9 8px,#f4f5f0 8px,#f4f5f0 16px);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;color:#7a7d76">State line</div>
+      </div>
+    </div>
+    <div style="margin-top:6px;font-size:10px;color:#a3a69e">Imagery: WYDOT Wyoming 511</div>
+  </div>
+  <div style="padding:16px 20px;border-bottom:1px solid #e3e4df;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+    <div><div style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">21°</div><div style="font-size:10px;color:#7a7d76">Air</div></div>
+    <div><div style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">18°</div><div style="font-size:10px;color:#7a7d76">Road surface</div></div>
+    <div><div style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">24</div><div style="font-size:10px;color:#7a7d76">Gust mph W</div></div>
+    <div><div style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">10</div><div style="font-size:10px;color:#7a7d76">Visibility mi</div></div>
+  </div>
+  <div style="margin:16px 20px 0;border:1px solid #e3e4df;padding:14px 16px">
+    <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#a3a69e">Sponsored by Teton Flats</div>
+    <div style="margin-top:5px;font-size:13px;line-height:1.5">Modern 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson. <em>Live here, check this page less.</em></div>
+  </div>
+  <div style="margin:16px 20px;font-size:11px;color:#a3a69e;line-height:1.7">Wyoming 511 · Idaho 511 · START bus · Privacy · Feedback<br>Not affiliated with WYDOT</div>
+  <div style="padding:0 20px 18px">
+    <div style="background:oklch(0.45 0.15 145);color:#fff;padding:14px;text-align:center;font-weight:700;font-size:14px">⚠ Report conditions</div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "build out <a class="dv-oid" href="#1b">1b</a> — all 4 screens, desktop + phone" · "mix <a class="dv-oid" href="#1a">1a</a>'s warmth with <a class="dv-oid" href="#1c">1c</a>'s numerals" · "show all three in the CLOSED state"</p>
+</section>
+</x-dc>
+</body>
+</html>
