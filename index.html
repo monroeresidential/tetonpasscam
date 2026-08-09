@@ -11,6 +11,30 @@
     <link rel="canonical" href="https://tetonpasscam.com/" />
     <link rel="icon" href="/icons/icon-192.png" type="image/png" />
     <meta name="theme-color" content="#1e293b" />
+    <!--
+      Trailhead token colors, hardcoded as literals for the static SEO shell
+      below (#seo-shell): this markup is a plain HTML sibling of the React
+      root (see the comment on #seo-shell), so it can't reference the
+      `--color-*`/`--font-*` custom properties src/app/index.css defines --
+      those only exist once that stylesheet has loaded. Scoped to
+      `#seo-shell` only, light values only (this is a no-JS/pre-hydration
+      fallback, not styled surface -- no dark-mode variant needed here).
+      Keep these literals in sync with the light `@theme` block in
+      src/app/index.css by hand; there is no build-time link between them.
+    -->
+    <style>
+      #seo-shell {
+        background: #faf7f0;
+      }
+      #seo-shell h1 {
+        font-family: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+        color: #2b2620;
+      }
+      #seo-shell p {
+        font-family: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+        color: #8a8072;
+      }
+    </style>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",

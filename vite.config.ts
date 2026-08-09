@@ -60,10 +60,10 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        // Tasteful dark slate (matches the app's dark-mode background and
-        // the generated icon glyph's own background) + white, per brief.
-        theme_color: '#1e293b',
-        background_color: '#ffffff',
+        // Trailhead palette (restyle task 1): dark ink for the OS chrome
+        // accent, warm-paper page background for the splash screen.
+        theme_color: '#2b2620',
+        background_color: '#faf7f0',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -71,12 +71,20 @@ export default defineConfig({
       },
       workbox: {
         // Precache the app shell only -- built JS/CSS, the HTML entry, the
-        // generated icons, and the manifest itself. `admin.html`/
-        // `privacy.html` are deliberately excluded: they're plain static
-        // pages outside the installable app shell, and admin.html in
-        // particular has no reason to be usable/cacheable offline (its
-        // whole purpose depends on live API calls anyway).
-        globPatterns: ['**/*.{js,css,html,png,svg,ico,webmanifest}'],
+        // generated icons, the manifest itself, and (restyle Task 1) the
+        // self-hosted woff2 font files the shell's CSS now depends on for
+        // its type. `woff2` only, not `woff`: @fontsource ships a `.woff`
+        // fallback per weight for non-woff2 browsers, but every browser
+        // capable of running this PWA already supports woff2, so those
+        // fallback bytes would never actually be fetched -- precaching them
+        // too would just inflate the precache for files that stay dead
+        // weight, working against the spec's "confirm total precache stays
+        // reasonable" guidance. `admin.html`/`privacy.html` are deliberately
+        // excluded: they're plain static pages outside the installable app
+        // shell, and admin.html in particular has no reason to be
+        // usable/cacheable offline (its whole purpose depends on live API
+        // calls anyway).
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,webmanifest,woff2}'],
         globIgnores: ['**/admin.html', '**/privacy.html'],
         // vite-plugin-pwa defaults `navigateFallback` to 'index.html' (an
         // SPA fallback for any navigation not otherwise precached), and

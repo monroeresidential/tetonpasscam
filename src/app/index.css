@@ -1,9 +1,97 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/* Self-hosted fonts (Trailhead restyle). @fontsource-variable ships a single
+ * variable-weight woff2 per script subset (200-800 in one file); @fontsource
+ * atkinson-hyperlegible ships static per-weight files, so only the two
+ * weights we actually use (400/700) are imported to keep the PWA precache
+ * lean. Both packages set font-display: swap already, so text stays visible
+ * with the fallback stack while the woff2 loads. */
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource/atkinson-hyperlegible/400.css';
+@import '@fontsource/atkinson-hyperlegible/700.css';
+
+/* Trailhead design tokens. Light values live directly in `@theme` (NOT
+ * `@theme inline`): Tailwind v4 compiles a plain `@theme` block into BOTH a
+ * `:root` custom-property declaration AND utilities that reference the
+ * variable, e.g. `--color-page: #faf7f0` here produces
+ * `.bg-page { background-color: var(--color-page) }` in the generated CSS
+ * (confirmed by inspecting the build output). `@theme inline` would instead
+ * bake the literal value straight into the utility, which would make the
+ * dark-mode override below a no-op. Because utilities reference the
+ * variable, the plain `@media (prefers-color-scheme: dark) { :root { ... } }`
+ * block further down -- which just reassigns the same custom properties --
+ * is enough for every `bg-page`/`text-ink`/etc. utility to repaint under
+ * dark mode with no extra Tailwind config, and this holds even if Tailwind's
+ * own `:root` assignment lives inside an internal `@layer`: our override
+ * block is unlayered, and unlayered CSS always wins over layered CSS
+ * regardless of source order or specificity, so it applies whenever the
+ * media query matches. */
+@theme {
+  --color-page: #faf7f0;
+  --color-ink: #2b2620;
+  --color-muted: #8a8072;
+  --color-faint: #b0a690;
+  --color-card: #fff;
+  --color-card-border: #eae4d8;
+
+  --color-status-open: oklch(0.55 0.13 150);
+  --color-status-restricted: oklch(0.62 0.13 60);
+  --color-status-closed: oklch(0.5 0.17 25);
+  --color-status-unknown: #8a8072;
+
+  --color-delta-pos: oklch(0.5 0.13 150);
+  --color-delta-neg: oklch(0.55 0.15 30);
+
+  --color-accent: oklch(0.55 0.13 60);
+
+  --color-sponsor-bg: oklch(0.95 0.03 60);
+  --color-sponsor-border: oklch(0.88 0.05 60);
+  --color-sponsor-label: oklch(0.55 0.11 60);
+
+  --color-btn-bg: #2b2620;
+  --color-btn-ink: #fff;
+
+  --radius-card: 14px;
+  --radius-banner: 18px;
+
+  --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-page: #211d17;
+    --color-ink: #f0ebe1;
+    --color-muted: #a39880;
+    --color-faint: #6e6553;
+    --color-card: #2b2620;
+    --color-card-border: #3a342b;
+
+    /* status-restricted/closed/unknown are unchanged in dark mode -- not
+     * listed in the spec's dark override set, so they keep their light
+     * values (already legible against the dark page/card backgrounds). */
+    --color-status-open: oklch(0.45 0.11 150);
+
+    --color-delta-pos: oklch(0.72 0.12 150);
+    --color-delta-neg: oklch(0.72 0.14 30);
+
+    --color-accent: oklch(0.75 0.11 60);
+
+    --color-sponsor-bg: oklch(0.3 0.03 60);
+    --color-sponsor-border: oklch(0.38 0.04 60);
+    --color-sponsor-label: oklch(0.75 0.09 60);
+
+    --color-btn-bg: #f0ebe1;
+    --color-btn-ink: #211d17;
+  }
+}
 
 :root {
   color-scheme: light dark;
 }
 
 body {
-  @apply bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-body);
 }
