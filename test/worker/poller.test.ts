@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:test';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { seedRoutes } from '../../src/worker/db/seed-routes';
 import { fetchDetours, resolveStatus, runPollCycle } from '../../src/worker/poller/run';
@@ -19,18 +19,33 @@ import roadclosuresClosed from '../fixtures/roadclosures-closed.html?raw';
 import roadclosuresOpen from '../fixtures/roadclosures-open.html?raw';
 import routesresultsWy22Open from '../fixtures/routesresults-wy22.html?raw';
 import sensorsTetonpass from '../fixtures/sensors-tetonpass.html?raw';
+import statewideClosed from '../fixtures/statewide-closed.html?raw';
 
-// Minimal synthetic RoutesResults-shaped fragments for the two detour
-// routes (US26, US89). These are different highway segments than the WY22
-// Wilson-Stateline row the real parseRoutesResults hardcodes, so no live
-// fixture from Task 4 applies here -- fetchDetours does its own minimal
-// "*cond" cell extraction (see run.ts), which only needs this much shape.
-const us26ClosedHtml =
-  '<html><body><table><tr><td class="closurelocation">Between Alpine Jct and Hoback Jct</td>' +
-  '<td class="closedcond">CLOSED due to Avalanche Control</td></tr></table></body></html>';
-const us89ClosedHtml =
-  '<html><body><table><tr><td class="closurelocation">Between the Idaho State Line and Afton</td>' +
-  '<td class="closedcond">CLOSED due to High Water</td></tr></table></body></html>';
+// Synthetic, multi-segment RoutesResults-shaped fragments for the two
+// detour routes (US26, US89). Deliberately NOT single-row: a real
+// SelectedRoute=US26/US89 page can list several segments statewide for that
+// route number (mirroring the two-row WY22 fixture from Task 4), and an
+// extraction that only ever looked at the first "*cond" cell on the page
+// would silently report an arbitrary, possibly unrelated, segment. These
+// fixtures put the meaningful row SECOND (or omit a closure entirely) so a
+// regression back to "first cell wins" fails the assertions below.
+//
+// US26: a decoy first segment that's open, then the real closure.
+const us26MultiSegmentHtml =
+  '<html><body><table>' +
+  '<tr><td class="closurelocation">Between Jackson and Hoback Jct</td>' +
+  '<td class="lowimpactcond">Dry</td></tr>' +
+  '<tr><td class="closurelocation">Between Alpine Jct and Hoback Jct</td>' +
+  '<td class="closedcond">CLOSED due to Avalanche Control</td></tr>' +
+  '</table></body></html>';
+// US89: no closure at all -- multiple non-closed segments, expect a joined summary.
+const us89MultiSegmentHtml =
+  '<html><body><table>' +
+  '<tr><td class="closurelocation">Between the Idaho State Line and Afton</td>' +
+  '<td class="modimpactcond">Falling Rock</td></tr>' +
+  '<tr><td class="closurelocation">Between Afton and Alpine Jct</td>' +
+  '<td class="noimpactcond">Dry</td></tr>' +
+  '</table></body></html>';
 
 const GOOGLE_ROUTES_STUB = JSON.stringify({
   routes: [{ duration: '1860s', staticDuration: '1800s', distanceMeters: 38000 }],
@@ -57,7 +72,10 @@ beforeAll(async () => {
 });
 
 describe('runPollCycle', () => {
-  it('happy path writes status+weather rows, one per cycle', async () => {
+  it('happy path writes status+weather rows, one per cycle, and all 12 travel times', async () => {
+    const beforeTravelCount = (
+      (await env.DB.prepare('SELECT COUNT(*) n FROM travel_times').first()) as any
+    ).n as number;
     await runPollCycle(
       env as any,
       fakeFetch({
@@ -73,6 +91,10 @@ describe('runPollCycle', () => {
     ).first();
     expect(s).toMatchObject({ status: 'open', source: 'primary' });
     expect((await env.DB.prepare('SELECT COUNT(*) n FROM weather_snapshots').first())!.n).toBe(1);
+    const afterTravelCount = (
+      (await env.DB.prepare('SELECT COUNT(*) n FROM travel_times').first()) as any
+    ).n as number;
+    expect(afterTravelCount - beforeTravelCount).toBe(12);
   });
 
   it(
@@ -138,8 +160,8 @@ describe('runPollCycle', () => {
       env as any,
       fakeFetch({
         'RoadClosures.html': roadclosuresClosed,
-        'SelectedRoute=US26': us26ClosedHtml,
-        'SelectedRoute=US89': us89ClosedHtml,
+        'SelectedRoute=US26': us26MultiSegmentHtml,
+        'SelectedRoute=US89': us89MultiSegmentHtml,
         'Sensors.StationResults': sensorsTetonpass,
         'routes.googleapis.com': GOOGLE_ROUTES_STUB,
         '511.idaho.gov': '[]',
@@ -154,6 +176,42 @@ describe('runPollCycle', () => {
       .n as number;
     expect(afterCount - beforeCount).toBe(2);
   });
+
+  it(
+    'primary+fallback failure with Statewide closed ⇒ crosscheck status (never open)',
+    async () => {
+      const s = await env.DB.prepare(
+        'SELECT COUNT(*) n FROM status_snapshots WHERE source = ?',
+      )
+        .bind('crosscheck')
+        .first();
+      const beforeCrosscheckCount = (s as any).n as number;
+      await runPollCycle(
+        env as any,
+        fakeFetch({
+          'RoadClosures.html': 500,
+          'SelectedRoute=WY22': 500,
+          'MEDIA.Statewide': statewideClosed,
+          'Sensors.StationResults': sensorsTetonpass,
+          'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+          '511.idaho.gov': '[]',
+        }),
+        IN_WINDOW_NOW_MS,
+      );
+      const row = await env.DB.prepare(
+        'SELECT status, source FROM status_snapshots ORDER BY id DESC LIMIT 1',
+      ).first();
+      expect(row).toMatchObject({ status: 'closed', source: 'crosscheck' });
+      expect((row as any).status).not.toBe('open');
+      const afterCrosscheckCount = (
+        (await env.DB.prepare('SELECT COUNT(*) n FROM status_snapshots WHERE source = ?')
+          .bind('crosscheck')
+          .first()) as any
+      ).n as number;
+      expect(afterCrosscheckCount - beforeCrosscheckCount).toBe(1);
+    },
+    20_000,
+  );
 
   it('no travel_times insert outside polling window', async () => {
     const beforeCount = (await env.DB.prepare('SELECT COUNT(*) n FROM travel_times').first())!
@@ -189,21 +247,193 @@ describe('fetchDetours', () => {
   it('returns an entry per reachable detour route', async () => {
     const result = await fetchDetours(
       fakeFetch({
-        'SelectedRoute=US26': us26ClosedHtml,
-        'SelectedRoute=US89': us89ClosedHtml,
+        'SelectedRoute=US26': us26MultiSegmentHtml,
+        'SelectedRoute=US89': us89MultiSegmentHtml,
       }),
     );
     expect(result).toHaveLength(2);
     expect(result.map((r) => r.route).sort()).toEqual(['US26', 'US89']);
   });
 
-  it('omits a route whose fetch fails rather than fabricating an entry', async () => {
+  it('prefers the closed segment over an earlier open one, not just the first cell on the page', async () => {
     const result = await fetchDetours(
       fakeFetch({
-        'SelectedRoute=US26': us26ClosedHtml,
+        'SelectedRoute=US26': us26MultiSegmentHtml,
         'SelectedRoute=US89': 500,
       }),
     );
-    expect(result).toEqual([{ route: 'US26', conditionText: 'CLOSED due to Avalanche Control' }]);
+    expect(result).toEqual([
+      { route: 'US26', conditionText: 'Between Alpine Jct and Hoback Jct: CLOSED due to Avalanche Control' },
+    ]);
   }, 10_000);
+
+  it('joins multiple non-closed segments when no segment is closed', async () => {
+    const result = await fetchDetours(
+      fakeFetch({
+        'SelectedRoute=US26': 500,
+        'SelectedRoute=US89': us89MultiSegmentHtml,
+      }),
+    );
+    expect(result).toEqual([
+      {
+        route: 'US89',
+        conditionText:
+          'Between the Idaho State Line and Afton: Falling Rock; Between Afton and Alpine Jct: Dry',
+      },
+    ]);
+  }, 10_000);
+
+  it('omits a route whose fetch fails rather than fabricating an entry', async () => {
+    const result = await fetchDetours(
+      fakeFetch({
+        'SelectedRoute=US26': us26MultiSegmentHtml,
+        'SelectedRoute=US89': 500,
+      }),
+    );
+    expect(result).toEqual([
+      { route: 'US26', conditionText: 'Between Alpine Jct and Hoback Jct: CLOSED due to Avalanche Control' },
+    ]);
+  }, 10_000);
+});
+
+describe('advisory diff churn avoidance', () => {
+  it('an unknown cycle between two good reads does not manufacture an advisory diff', async () => {
+    // Seed a controlled "prior good cycle" row directly, independent of
+    // whatever earlier tests in this file have already written, so this
+    // test's assertions don't depend on execution order.
+    const seededAt = new Date(IN_WINDOW_NOW_MS - 60_000).toISOString();
+    await env.DB
+      .prepare(
+        `INSERT INTO status_snapshots
+           (captured_at, segment, status, condition_text, advisories, restrictions, wydot_report_time, source)
+         VALUES (?, 'wilson-stateline', 'open', 'Road Open', ?, '[]', NULL, 'primary')`,
+      )
+      .bind(seededAt, JSON.stringify(['Falling Rock']))
+      .run();
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      // Cycle 1: every source fails -> 'unknown'. Without the fix, this
+      // would diff the seeded ['Falling Rock'] against the unknown cycle's
+      // synthetic [] and log a spurious "removed: Falling Rock" event.
+      await runPollCycle(env as any, fakeFetch({}), IN_WINDOW_NOW_MS);
+      // Cycle 2: a good read again, with the SAME standing advisory. Without
+      // the fix, this would diff against cycle 1's synthetic [] and log a
+      // spurious "added: Falling Rock" event, even though nothing changed
+      // across the two real reads.
+      await runPollCycle(
+        env as any,
+        fakeFetch({
+          'RoadClosures.html': roadclosuresOpen,
+          'Sensors.StationResults': sensorsTetonpass,
+          'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+          '511.idaho.gov': '[]',
+        }),
+        IN_WINDOW_NOW_MS,
+      );
+      const diffCalls = logSpy.mock.calls.filter(([msg]) => msg === '[poller] advisory diff');
+      expect(diffCalls).toHaveLength(0);
+    } finally {
+      logSpy.mockRestore();
+    }
+  }, 20_000);
+});
+
+describe('Idaho 511 event upsert semantics', () => {
+  it('a fetch failure (null) leaves an existing active event untouched', async () => {
+    const eventId = 'id33-test-null-path';
+    const seedEvent = JSON.stringify([
+      {
+        ID: eventId,
+        RoadwayName: 'ID-33',
+        Description: 'Seeded active event',
+        IsFullClosure: true,
+        Latitude: 43.6,
+        Longitude: -111.1,
+      },
+    ]);
+    // Seed one active event via a successful cycle.
+    await runPollCycle(
+      env as any,
+      fakeFetch({
+        'RoadClosures.html': roadclosuresOpen,
+        'Sensors.StationResults': sensorsTetonpass,
+        'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+        '511.idaho.gov': seedEvent,
+      }),
+      IN_WINDOW_NOW_MS,
+    );
+    const before = await env.DB.prepare(
+      'SELECT cleared_at FROM id33_events WHERE event_id = ?',
+    )
+      .bind(eventId)
+      .first();
+    expect((before as any).cleared_at).toBeNull();
+
+    // A failed Idaho fetch (null) must leave it untouched.
+    await runPollCycle(
+      env as any,
+      fakeFetch({
+        'RoadClosures.html': roadclosuresOpen,
+        'Sensors.StationResults': sensorsTetonpass,
+        'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+        '511.idaho.gov': 500,
+      }),
+      IN_WINDOW_NOW_MS,
+    );
+    const after = await env.DB.prepare(
+      'SELECT cleared_at FROM id33_events WHERE event_id = ?',
+    )
+      .bind(eventId)
+      .first();
+    expect((after as any).cleared_at).toBeNull();
+  });
+
+  it('a successful empty result ([]) clears an existing active event', async () => {
+    const eventId = 'id33-test-empty-path';
+    const seedEvent = JSON.stringify([
+      {
+        ID: eventId,
+        RoadwayName: 'ID-33',
+        Description: 'Seeded active event',
+        IsFullClosure: true,
+        Latitude: 43.6,
+        Longitude: -111.1,
+      },
+    ]);
+    await runPollCycle(
+      env as any,
+      fakeFetch({
+        'RoadClosures.html': roadclosuresOpen,
+        'Sensors.StationResults': sensorsTetonpass,
+        'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+        '511.idaho.gov': seedEvent,
+      }),
+      IN_WINDOW_NOW_MS,
+    );
+    const before = await env.DB.prepare(
+      'SELECT cleared_at FROM id33_events WHERE event_id = ?',
+    )
+      .bind(eventId)
+      .first();
+    expect((before as any).cleared_at).toBeNull();
+
+    // An empty (but successful) Idaho result must clear it.
+    await runPollCycle(
+      env as any,
+      fakeFetch({
+        'RoadClosures.html': roadclosuresOpen,
+        'Sensors.StationResults': sensorsTetonpass,
+        'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+        '511.idaho.gov': '[]',
+      }),
+      IN_WINDOW_NOW_MS,
+    );
+    const after = await env.DB.prepare(
+      'SELECT cleared_at FROM id33_events WHERE event_id = ?',
+    )
+      .bind(eventId)
+      .first();
+    expect((after as any).cleared_at).not.toBeNull();
+  });
 });

@@ -1,4 +1,4 @@
-import { desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, ne, or } from 'drizzle-orm';
 
 import type { Env } from '../env';
 import {
@@ -137,7 +137,13 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<StatusResult
   try {
     const html = await wydotFetch(STATEWIDE_URL, fetcher);
     const statewideStatus = html === null ? 'unknown' : parseStatewide(html);
-    if (statewideStatus !== 'unknown') {
+    // Allowlist, not a not-unknown check: this is the one place that decides
+    // whether the crosscheck source gets to set the banner, so it must
+    // itself enforce "never open without fresh primary/fallback evidence"
+    // rather than trusting parseStatewide's current behavior (which today
+    // never emits 'open', but that invariant belongs here too, not only in
+    // a module this task isn't allowed to touch).
+    if (statewideStatus === 'closed' || statewideStatus === 'restricted') {
       return { ...unknownStatusResult('crosscheck'), status: statewideStatus };
     }
   } catch {
@@ -147,30 +153,68 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<StatusResult
   return unknownStatusResult('primary');
 }
 
-/** Extract a route's "*cond" cell text from a RoutesResults page for a
- *  detour route (US26/US89). These are different segments than the WY22
- *  Wilson-Stateline row parseRoutesResults locates, so that parser (which
- *  is hardcoded to SEGMENT_TEXT) can't be reused here -- this is a
- *  deliberately minimal, purpose-built extraction: it grabs the first
- *  "*cond" cell on the page (RoutesResults pages for a single route only
- *  ever have one, or a small handful of, segment rows) as a human-readable
- *  condition description, not a machine-classified PassStatus. Never
- *  throws; an unrecognized/empty page yields no entry for that route
- *  (never a fabricated placeholder). */
-function extractFirstCondText(html: string): string | null {
+function stripDetourHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+interface DetourSegment {
+  location: string;
+  condition: string;
+  isClosed: boolean;
+}
+
+/** Extract every segment row (`closurelocation` + "*cond" cell pair) from a
+ *  RoutesResults page for a detour route (US26/US89). A single-route
+ *  RoutesResults page can list multiple segments statewide for that route
+ *  number (mirroring the two-row WY22 fixture from Task 4), so unlike
+ *  `parseRoadClosures`/`parseRoutesResults` (which locate ONE specific,
+ *  known segment by its fixed `SEGMENT_TEXT`), there's no single segment
+ *  name to anchor on here -- these are arbitrary detour routes, so every
+ *  segment row is collected and the caller decides which one(s) matter.
+ *  Never throws; an unrecognized/empty page yields an empty list. */
+function extractDetourSegments(html: string): DetourSegment[] {
   try {
-    const match = /<td\s+class="[a-zA-Z]*cond"[^>]*>([\s\S]*?)<\/td>/i.exec(html);
-    if (!match) return null;
-    const text = match[1]
-      .replace(/<br\s*\/?>/gi, ' ')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return text.length > 0 ? text : null;
+    const segments: DetourSegment[] = [];
+    for (const rowBlock of html.split(/<tr[\s>]/i)) {
+      const locationMatch = /<td\s+class="closurelocation"[^>]*>([\s\S]*?)<\/td>/i.exec(rowBlock);
+      const condMatch = /<td\s+class="([a-zA-Z]*cond)"[^>]*>([\s\S]*?)<\/td>/i.exec(rowBlock);
+      if (!locationMatch || !condMatch) continue;
+      const location = stripDetourHtml(locationMatch[1]);
+      const condition = stripDetourHtml(condMatch[2]);
+      if (!location || !condition) continue;
+      segments.push({ location, condition, isClosed: condMatch[1].toLowerCase() === 'closedcond' });
+    }
+    return segments;
   } catch {
-    return null;
+    return [];
   }
+}
+
+const MAX_JOINED_DETOUR_SEGMENTS = 3;
+
+/** Summarize a detour route's current condition as a single self-describing
+ *  string ("Location: condition"). When any segment is closed (`closedcond`
+ *  class), that segment alone is reported -- it's the one most relevant to
+ *  a driver deciding whether this detour is viable, regardless of where it
+ *  falls in page order. Otherwise (no closure), the first few segments are
+ *  joined so the summary isn't silently dropping segments a driver might
+ *  need, without unbounded growth on a route with many reported segments.
+ *  Returns null (never a fabricated placeholder) when the page has no
+ *  recognizable segment rows at all. */
+function summarizeDetourConditions(html: string): string | null {
+  const segments = extractDetourSegments(html);
+  if (segments.length === 0) return null;
+  const closed = segments.find((s) => s.isClosed);
+  if (closed) return `${closed.location}: ${closed.condition}`;
+  return segments
+    .slice(0, MAX_JOINED_DETOUR_SEGMENTS)
+    .map((s) => `${s.location}: ${s.condition}`)
+    .join('; ');
 }
 
 const DETOUR_ROUTES: Array<{ route: 'US26' | 'US89'; url: string }> = [
@@ -191,7 +235,7 @@ export async function fetchDetours(
     try {
       const html = await wydotFetch(url, fetcher);
       if (html === null) continue;
-      const conditionText = extractFirstCondText(html);
+      const conditionText = summarizeDetourConditions(html);
       if (conditionText === null) continue;
       out.push({ route, conditionText });
     } catch {
@@ -238,18 +282,40 @@ export async function runPollCycle(
     status = unknownStatusResult('primary');
   }
 
-  // Step 2: advisory diff vs the previous snapshot (log only for now; P2
-  // wires this into push notifications).
+  // Step 2: advisory diff vs the previous RELIABLE snapshot (log only for
+  // now; P2 wires this into push notifications). `status.advisories` is
+  // only ever real, parsed data when the cycle resolved via 'primary' or
+  // 'fallback' -- an 'unknown' cycle's advisories are always `[]`
+  // (unknownStatusResult), and a 'crosscheck' cycle's advisories are also
+  // always `[]` (parseStatewide only reports a PassStatus, never
+  // advisories). Diffing either of those against a real previous list would
+  // manufacture a spurious "all standing advisories removed" event on the
+  // unknown/crosscheck cycle itself, followed by a spurious "re-added" event
+  // on the next good read -- so this step is skipped entirely unless the
+  // CURRENT cycle has real advisory data, and it's diffed against the most
+  // recent PRIOR snapshot that itself had real advisory data (status !=
+  // 'unknown' and source in primary/fallback), skipping over any
+  // intervening unknown/crosscheck rows, so a blip between two good reads
+  // never itself looks like a change.
   try {
-    const [prevRow] = await database
-      .select({ advisories: statusSnapshots.advisories })
-      .from(statusSnapshots)
-      .orderBy(desc(statusSnapshots.id))
-      .limit(1);
-    const prevAdvisories: string[] = prevRow?.advisories ? JSON.parse(prevRow.advisories) : [];
-    const diff = diffAdvisories(prevAdvisories, status.advisories);
-    if (diff.added.length > 0 || diff.removed.length > 0) {
-      console.log('[poller] advisory diff', diff);
+    const hasReliableAdvisories = status.status !== 'unknown' && status.source !== 'crosscheck';
+    if (hasReliableAdvisories) {
+      const [prevRow] = await database
+        .select({ advisories: statusSnapshots.advisories })
+        .from(statusSnapshots)
+        .where(
+          and(
+            ne(statusSnapshots.status, 'unknown'),
+            or(eq(statusSnapshots.source, 'primary'), eq(statusSnapshots.source, 'fallback')),
+          ),
+        )
+        .orderBy(desc(statusSnapshots.id))
+        .limit(1);
+      const prevAdvisories: string[] = prevRow?.advisories ? JSON.parse(prevRow.advisories) : [];
+      const diff = diffAdvisories(prevAdvisories, status.advisories);
+      if (diff.added.length > 0 || diff.removed.length > 0) {
+        console.log('[poller] advisory diff', diff);
+      }
     }
   } catch (err) {
     console.error('[poller] advisory diff step failed', err);
