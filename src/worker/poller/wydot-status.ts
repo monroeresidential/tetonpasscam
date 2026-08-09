@@ -188,19 +188,40 @@ export function parseRoadClosures(html: string): StatusResult {
 //      classless -- irrelevant to us since we still locate the row by
 //      SEGMENT_TEXT match, not by that cell's class.
 //   2. The `*cond` cell holds a raw surface-condition report (e.g. "Dry"),
-//      never a "Road Open" phrase. There is no "open" phrase on this page
-//      to assert on, so classification follows the brief's stated rule:
-//      closed iff the word "closed" appears in the *cond text (e.g. a live
-//      closure reads "CLOSED"); any other non-empty *cond text is this
-//      page's equivalent open evidence. A cell naming both is unrecognized
-//      -> unknown, same ambiguity philosophy as parseRoadClosures.
+//      never a "Road Open" phrase, so there is no fixed "open" phrase to
+//      assert on here as parseRoadClosures does. Unlike RoadClosures --
+//      where every one of the ~80 rows uses the constant class
+//      "noimpactcond" regardless of actual status, so the class carries no
+//      signal and text is the only option -- this page's own CSS legend
+//      (routesresults-wy22.html, embedded <style> block) declares distinct
+//      td.closedcond / td.lowimpactcond / td.modimpactcond /
+//      td.highimpactcond / td.extendedcond classes for this column, and our
+//      live capture uses "lowimpactcond" (not a constant value), so the
+//      class genuinely varies here. We classify on that class, the same way
+//      parseStatewide classifies on heading class rather than heading text:
+//      it is the taxonomy the site itself provides, and unlike prose
+//      ("Closure due to Avalanche Control" vs "CLOSED" vs "Road Closed due
+//      to winter conditions") it can't be missed by a keyword regex. Text
+//      is kept only as descriptive `conditionText`, not used to classify.
 //
 // This page also carries a "District Comments" table
 // (<td class="region">District 3 (Southwest)</td><td class="comments">...)
 // -- same shape reused by Statewide -- from which we pull the District 3
 // comment when it mentions WY22/WY 22/Teton Pass.
 
-const ROUTESRESULTS_CLOSED_RX = /\bclosed\b/i;
+const ROUTESRESULTS_CLOSED_COND_CLASS = 'closedcond';
+// The non-closed *cond classes this page's own CSS legend declares
+// (low/mod/high/extendedcond), plus "noimpactcond" from RoadClosures'
+// shared taxonomy (not declared in this page's own legend, but included
+// defensively in case a fully-clear report ever uses it here too). Any
+// *cond class outside this recognized set is an unrecognized shape.
+const ROUTESRESULTS_OPEN_COND_CLASSES = new Set([
+  'noimpactcond',
+  'lowimpactcond',
+  'modimpactcond',
+  'highimpactcond',
+  'extendedcond',
+]);
 
 /**
  * Find the District 3 (Southwest) row in a District Comments table
@@ -264,18 +285,24 @@ export function parseRoutesResults(html: string): StatusResult & { district3Comm
 
     const advisories = impactCell && impactCell.text && !ADVISORY_RX.test(impactCell.text) ? [impactCell.text] : [];
 
-    // Mirrors parseRoadClosures's mutual-exclusivity guard: a cell is only
-    // unambiguous when it EITHER carries closure language ("closed") OR
-    // some other non-empty condition report, but not both -- a cell naming
-    // both (e.g. a stray "CLOSED<br />Dry" during a page reshape) is an
-    // unrecognized shape and must resolve to unknown, never open or closed.
-    const hasClosedWord = conditionText !== null && ROUTESRESULTS_CLOSED_RX.test(conditionText);
-    const hasOtherConditionText = conditionText !== null && conditionText.replace(ROUTESRESULTS_CLOSED_RX, '').trim().length > 0;
+    // Classify on the *cond cell's CLASS, not its text: this page's own CSS
+    // legend declares a real closedcond/low/mod/high/extendedcond taxonomy
+    // (see the layout comment above), so this is immune to closure prose
+    // varying ("CLOSED", "Road Closed due to winter conditions", "Closure
+    // due to Avalanche Control" all carry the same closedcond class). An
+    // unrecognized class (missing cell, page reshape, typo'd class) is an
+    // unrecognized shape -> unknown, never open or closed. A cell with a
+    // recognized class but EMPTY text is also treated as unknown, not
+    // trusted at face value -- a half-populated row (class set, condition
+    // text not yet filled in) is exactly the kind of incomplete/ambiguous
+    // shape this file resolves to unknown everywhere else.
+    const condClass = condCell ? condCell.className.toLowerCase() : null;
+    const hasCondText = conditionText !== null && conditionText.length > 0;
 
     let status: PassStatus = 'unknown';
-    if (hasClosedWord && !hasOtherConditionText) {
+    if (hasCondText && condClass === ROUTESRESULTS_CLOSED_COND_CLASS) {
       status = 'closed';
-    } else if (!hasClosedWord && conditionText !== null && conditionText.length > 0) {
+    } else if (hasCondText && condClass !== null && ROUTESRESULTS_OPEN_COND_CLASSES.has(condClass)) {
       status = restrictions.length > 0 ? 'restricted' : 'open';
     }
 
@@ -320,11 +347,17 @@ export function parseRoutesResults(html: string): StatusResult & { district3Comm
 //                                 this page only ever lists problem
 //                                 segments, it has no explicit "open" list)
 // If the segment is found under more than one heading, the most severe
-// wins (closed > restricted).
+// wins (closed > restricted), regardless of which order they appear in.
 //
-// No live closedtitle example exists to capture (the pass is open), so
-// that class name is inferred from the confirmed low/mod/high/extended
-// naming convention rather than directly observed -- see fixtures/README.md.
+// No live closedtitle example exists to capture (the pass is open), but
+// the class itself is VERIFIED, not inferred: .mediagrid th.closedtitle is
+// declared in WYDOT's public stylesheet at
+// https://www.wyoroad.info/css/body2.css (line 198 at review time) -- an
+// externally linked stylesheet, which is why our page capture alone
+// couldn't show it. That same stylesheet does not declare a `.lowtitle`
+// rule, so the 'low' branch below is believed to be dead code in practice;
+// kept for defensiveness (harmless if WYDOT adds it, or if some other
+// wyoroad.info media page uses it) rather than dropped.
 
 const HEADING_TABLE_RX = /<table class="mediagrid"[^>]*>([\s\S]*?)<\/table>/gi;
 const HEADING_TH_RX = /<th\s+class="([a-zA-Z]+)title"[^>]*>([\s\S]*?)<\/th>/i;

@@ -45,20 +45,36 @@ scheme with RoadClosures.html (confirmed via the page's own CSS legend, e.g.
 `closurelocation` (not classless as on RoadClosures), and -- materially
 different from RoadClosures -- the `*cond` cell holds a raw surface-condition
 report (e.g. `Dry`) rather than a `Road Open` / `Road Closed due to ...`
-phrase. There is no "Road Open" phrase anywhere on this page to test for, so
-`parseRoutesResults` treats any non-empty `*cond` text that does not contain
-the word "closed" as open evidence (that page's equivalent of an explicit
-open signal), and the literal word "closed" (e.g. `CLOSED`) as closed
-evidence, per the brief's `closed ⟺ CLOSED in the Conditions column` rule.
-The page also carries a single-row "District Comments" table (`class="region"`
-/ `class="comments"`, same markup as Statewide's) with only a District 3 row
-present in this capture.
+phrase, so there's no fixed "open" phrase to test for here.
 
-`routesresults-wy22-closed.html` is a hand-edited copy: only the Wilson-
-Stateline row's `*cond` cell text changed from `Dry` to `CLOSED`. Everything
-else, including the generic CLOSED-legend row near the page footer (a
-distractor with no `closurelocation` cell, must not be picked up as the data
-row), is untouched.
+Unlike RoadClosures, where every one of the ~80 rows uses the same constant
+class `noimpactcond` regardless of actual status (so the class itself
+carries no information there), this page's own CSS legend declares distinct
+`closedcond` / `lowimpactcond` / `modimpactcond` / `highimpactcond` /
+`extendedcond` classes for the `*cond` column, and our live capture uses
+`lowimpactcond` (not the RoadClosures-constant value) for a `Dry` report --
+i.e. the class genuinely varies here. `parseRoutesResults` therefore
+classifies on that class (`closedcond` -> closed; the other four,
+low/mod/high/extendedcond, plus `noimpactcond` included defensively from
+RoadClosures' shared taxonomy -> open/restricted), the same way
+`parseStatewide` classifies on heading class rather than heading text --
+this is immune to closure prose varying ("CLOSED", "Road Closed due to
+winter conditions", "Closure due to Avalanche Control" all carry the same
+`closedcond` class), where an earlier revision of this parser matched only
+the literal word "closed" in the cell's text and so misclassified
+"Closure ..." wording as open. The page also carries a single-row "District
+Comments" table (`class="region"` / `class="comments"`, same markup as
+Statewide's) with only a District 3 row present in this capture.
+
+`routesresults-wy22-closed.html` is a hand-edited copy: the Wilson-
+Stateline row's `*cond` cell changed from `class="lowimpactcond"` / `Dry`
+to `class="closedcond"` / `CLOSED due to Avalanche Control` -- both the
+class AND the text, so the fixture exercises the real closedcond shape
+(a closure-carrying class alongside realistic non-"CLOSED"-literal closure
+prose), not just a text substitution that happened to still say "closed".
+Everything else, including the generic CLOSED-legend row near the page
+footer (a distractor with no `closurelocation` cell, must not be picked up
+as the data row), is untouched.
 
 ## statewide*.html
 
@@ -96,8 +112,11 @@ table shape as RoutesResults, but with all five districts' rows present.
 `statewide-closed.html` is a hand-edited copy: the Wilson-Stateline row is
 moved out of the `modtitle` "Falling Rock" table into a new synthetic
 `<table class="mediagrid">` headed `<th class="closedtitle">Winter Storm
-Closure</th>`, since no live closedtitle example exists to capture. This
-`closedtitle` class name is inferred (not directly observed) from the
-confirmed `low/mod/high/extended/closed` + suffix convention already used by
-`*cond`/`*impact`/`*restrict` classes elsewhere on wyoroad.info; see the
-task report for this caveat.
+Closure</th>`, since no live closedtitle example exists to capture. The
+`closedtitle` class name itself is **verified**, not inferred: it's declared
+as `.mediagrid th.closedtitle` in WYDOT's public stylesheet at
+https://www.wyoroad.info/css/body2.css (an externally linked stylesheet,
+which is why a single page capture alone couldn't show it). That same
+stylesheet does not declare a `.lowtitle` rule, so `parseStatewide`'s 'low'
+branch is believed dead in practice; it's kept defensively rather than
+dropped (see the code comment in `wydot-status.ts`).
