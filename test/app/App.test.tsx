@@ -69,8 +69,8 @@ describe('App', () => {
     expect(statusFetchCount(fetchMock)).toBe(1);
 
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
-    await user.click(screen.getByRole('button', { name: 'Other' }));
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: '⚠ Other' }));
+    await user.click(screen.getByRole('button', { name: /send report/i }));
 
     await waitFor(() => expect(statusFetchCount(fetchMock)).toBe(2));
   });

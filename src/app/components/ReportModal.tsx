@@ -1,19 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { AlertType } from '../../shared/types';
+import { TYPE_ICON, TYPE_LABEL, TYPE_ORDER } from '../alertTypes';
 import { getDeviceId } from '../deviceId';
 
-const TYPE_OPTIONS: { type: AlertType; label: string }[] = [
-  { type: 'crash', label: 'Crash' },
-  { type: 'slideoff', label: 'Slide-off' },
-  { type: 'slick', label: 'Slick/Ice' },
-  { type: 'wildlife', label: 'Wildlife' },
-  { type: 'stopped', label: 'Stopped traffic' },
-  { type: 'closure', label: 'Closure' },
-  { type: 'other', label: 'Other' },
-];
+const TYPE_OPTIONS = TYPE_ORDER.map((type) => ({
+  type,
+  icon: TYPE_ICON[type],
+  label: TYPE_LABEL[type],
+}));
 
-type Step = 'type' | 'details';
 type SubmitState = 'idle' | 'submitting' | 'rate-limited' | 'error';
 
 const TOAST_MS = 4000;
@@ -50,7 +46,12 @@ export default function ReportModal({
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = open !== undefined;
   const isOpen = isControlled ? open : internalOpen;
-  const [step, setStep] = useState<Step>('type');
+  // Task 8 restyle: card 2d's mockup shows the type grid, direction pills,
+  // note field, and submit button all on ONE sheet at once (no
+  // choose-type-then-details step-through like the pre-restyle modal) --
+  // the "2-tap" flow is now literally two taps (a type tile, then Send
+  // report), with direction/note as always-visible optional extras rather
+  // than a second screen.
   const [type, setType] = useState<AlertType | null>(null);
   const [note, setNote] = useState('');
   const [direction, setDirection] = useState<'eb' | 'wb' | ''>('');
@@ -64,7 +65,6 @@ export default function ReportModal({
   const honeypotRef = useRef<HTMLInputElement>(null);
 
   function resetFlow() {
-    setStep('type');
     setType(null);
     setNote('');
     setDirection('');
@@ -91,11 +91,6 @@ export default function ReportModal({
 
   function closeModal() {
     setOpen(false);
-  }
-
-  function chooseType(t: AlertType) {
-    setType(t);
-    setStep('details');
   }
 
   async function submit() {
@@ -161,13 +156,32 @@ export default function ReportModal({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Report conditions"
+          aria-label="What are you seeing?"
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
         >
-          <div className="w-full max-w-md rounded-lg bg-white p-4 dark:bg-neutral-800">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">Report conditions</h2>
-              <button type="button" onClick={closeModal} aria-label="Close">
+          {/* Bottom sheet on phone (card 2d): fixed to the viewport bottom,
+              rounded top corners, drag-handle bar. The mockup is phone-only
+              -- desktop falls back to a centered dialog capped at max-w-sm
+              (documented deviation; no desktop version of this card exists
+              in the design handoff). */}
+          <div className="bg-card w-full max-w-md rounded-t-2xl p-4 pb-5 sm:max-w-sm sm:rounded-2xl">
+            <div className="bg-card-border mx-auto h-1 w-9 rounded-full" />
+
+            <div className="mt-3.5 flex items-start justify-between gap-2">
+              <div>
+                <h2 className="font-display text-[22px] font-extrabold tracking-tight text-ink">
+                  What are you seeing?
+                </h2>
+                <p className="text-muted mt-0.5 text-[12.5px]">
+                  No account needed. Reports show as unverified and expire on their own.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="Close"
+                className="text-muted flex-none"
+              >
                 ✕
               </button>
             </div>
@@ -193,85 +207,78 @@ export default function ReportModal({
               }}
             />
 
-            {step === 'type' && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {TYPE_OPTIONS.map((opt) => (
+            <div className="mt-3.5 grid grid-cols-2 gap-2">
+              {TYPE_OPTIONS.map((opt) => {
+                const selected = type === opt.type;
+                return (
                   <button
                     key={opt.type}
                     type="button"
-                    onClick={() => chooseType(opt.type)}
-                    className="rounded border border-neutral-300 p-3 text-left font-medium dark:border-neutral-600"
+                    aria-pressed={selected}
+                    onClick={() => setType(opt.type)}
+                    className={`rounded-card border-card-border flex items-center gap-2.5 border p-3.5 text-left ${
+                      opt.type === 'other' ? 'col-span-2 justify-center text-center' : ''
+                    } ${selected ? 'border-ink border-2' : ''}`}
                   >
-                    {opt.label}
+                    <span className="text-lg">{opt.icon}</span> <span className="text-sm font-bold">{opt.label}</span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
+            </div>
+
+            <div role="group" aria-label="Direction" className="mt-3.5 flex gap-2">
+              {(['wb', 'eb'] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={direction === d}
+                  onClick={() => setDirection(direction === d ? '' : d)}
+                  className={`border-card-border text-muted flex-1 rounded-full border px-3 py-2.5 text-center text-[13px] font-bold aria-pressed:border-2 aria-pressed:border-ink aria-pressed:text-ink`}
+                >
+                  {d === 'wb' ? 'WB → Victor' : 'EB → Jackson'}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3.5">
+              <label htmlFor="report-note" className="sr-only">
+                Note (optional)
+              </label>
+              <textarea
+                id="report-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={140}
+                rows={2}
+                placeholder="Add a note (optional, 140 chars)…"
+                className="rounded-card border-card-border bg-card text-ink placeholder:text-faint mt-1 w-full border p-3 text-[13.5px]"
+              />
+            </div>
+
+            {submitState === 'rate-limited' && (
+              <p className="mt-2.5 text-sm font-semibold text-red-600 dark:text-red-400">
+                You&apos;re reporting too often
+              </p>
+            )}
+            {submitState === 'error' && (
+              <p className="mt-2.5 text-sm font-semibold text-red-600 dark:text-red-400">
+                Something went wrong. Try again.
+              </p>
             )}
 
-            {step === 'details' && type && (
-              <div className="mt-3 space-y-3">
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Reporting: {TYPE_OPTIONS.find((o) => o.type === type)?.label}
-                </p>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!type || submitState === 'submitting'}
+              className="mt-3.5 h-12 w-full rounded-full bg-btn-bg font-display font-bold text-btn-ink disabled:opacity-50"
+            >
+              Send report
+            </button>
 
-                <div>
-                  <label htmlFor="report-note" className="block text-sm font-medium">
-                    Note (optional)
-                  </label>
-                  <textarea
-                    id="report-note"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    maxLength={140}
-                    rows={3}
-                    className="mt-1 w-full rounded border border-neutral-300 p-2 dark:border-neutral-600 dark:bg-neutral-900"
-                  />
-                </div>
-
-                <div role="group" aria-label="Direction" className="flex gap-2">
-                  {(['eb', 'wb'] as const).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      aria-pressed={direction === d}
-                      onClick={() => setDirection(direction === d ? '' : d)}
-                      className="rounded border border-neutral-300 px-3 py-1 text-sm aria-pressed:bg-neutral-800 aria-pressed:text-white dark:border-neutral-600 dark:aria-pressed:bg-neutral-200 dark:aria-pressed:text-black"
-                    >
-                      {d === 'eb' ? 'Eastbound' : 'Westbound'}
-                    </button>
-                  ))}
-                </div>
-
-                {submitState === 'rate-limited' && (
-                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">
-                    You&apos;re reporting too often
-                  </p>
-                )}
-                {submitState === 'error' && (
-                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">
-                    Something went wrong. Try again.
-                  </p>
-                )}
-
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep('type')}
-                    className="text-sm underline"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={submit}
-                    disabled={submitState === 'submitting'}
-                    className="rounded bg-red-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
-                  >
-                    Submit
-                  </button>
-                </div>
-              </div>
-            )}
+            <p className="text-faint mt-2.5 text-center text-[10.5px] leading-relaxed">
+              This report does not change the official status — only WYDOT does. Limit 2 reports
+              per 30 min.
+            </p>
           </div>
         </div>
       )}

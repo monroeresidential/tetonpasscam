@@ -22,19 +22,21 @@ describe('ReportModal', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders 7 type buttons after opening', async () => {
+  it('renders the sheet title and 7 emoji-labeled type buttons after opening', async () => {
     const user = userEvent.setup();
     render(<ReportModal />);
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
 
+    expect(screen.getByRole('heading', { name: 'What are you seeing?' })).toBeInTheDocument();
+
     for (const label of [
-      'Crash',
-      'Slide-off',
-      'Slick/Ice',
-      'Wildlife',
-      'Stopped traffic',
-      'Closure',
-      'Other',
+      '💥 Crash',
+      '🛞 Slide-off',
+      '❄ Slick/Ice',
+      '🦌 Wildlife',
+      '🚗 Stopped traffic',
+      '🚧 Closure',
+      '⚠ Other',
     ]) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
@@ -47,11 +49,11 @@ describe('ReportModal', () => {
     const user = userEvent.setup();
     render(<ReportModal />);
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
-    await user.click(screen.getByRole('button', { name: 'Wildlife' }));
+    await user.click(screen.getByRole('button', { name: '🦌 Wildlife' }));
 
     await user.type(screen.getByLabelText(/note/i), 'Elk on the road');
-    await user.click(screen.getByRole('button', { name: 'Eastbound' }));
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: 'EB → Jackson' }));
+    await user.click(screen.getByRole('button', { name: /send report/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const [url, init] = fetchMock.mock.calls[0];
@@ -72,10 +74,18 @@ describe('ReportModal', () => {
     const user = userEvent.setup();
     render(<ReportModal />);
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
-    await user.click(screen.getByRole('button', { name: 'Other' }));
+    await user.click(screen.getByRole('button', { name: '⚠ Other' }));
 
     const note = screen.getByLabelText(/note/i) as HTMLTextAreaElement;
     expect(note.maxLength).toBe(140);
+  });
+
+  it('fine print states reports do not change the official status', async () => {
+    const user = userEvent.setup();
+    render(<ReportModal />);
+    await user.click(screen.getByRole('button', { name: /report conditions/i }));
+
+    expect(screen.getByText(/does not change the official status/i)).toBeInTheDocument();
   });
 
   it('on success, closes the modal and shows a toast', async () => {
@@ -85,8 +95,8 @@ describe('ReportModal', () => {
     const user = userEvent.setup();
     render(<ReportModal />);
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
-    await user.click(screen.getByRole('button', { name: 'Closure' }));
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: '🚧 Closure' }));
+    await user.click(screen.getByRole('button', { name: /send report/i }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent(/thanks|submitted/i);
@@ -100,8 +110,8 @@ describe('ReportModal', () => {
     const user = userEvent.setup();
     render(<ReportModal onSuccess={onSuccess} />);
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
-    await user.click(screen.getByRole('button', { name: 'Crash' }));
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: '💥 Crash' }));
+    await user.click(screen.getByRole('button', { name: /send report/i }));
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
   });
@@ -113,8 +123,8 @@ describe('ReportModal', () => {
     const user = userEvent.setup();
     render(<ReportModal />);
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
-    await user.click(screen.getByRole('button', { name: 'Slick/Ice' }));
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: '❄ Slick/Ice' }));
+    await user.click(screen.getByRole('button', { name: /send report/i }));
 
     await waitFor(() =>
       expect(screen.getByText("You're reporting too often")).toBeInTheDocument(),

@@ -55,6 +55,11 @@ describe('Footer', () => {
     render(<Footer />);
     await user.click(screen.getByRole('button', { name: /feedback/i }));
 
+    expect(
+      screen.getByRole('heading', { name: "Tell us what's broken (or what you'd love)" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Goes straight to a human in Teton Valley.')).toBeInTheDocument();
+
     const textbox = screen.getByRole('textbox', { name: /feedback/i });
     await user.type(textbox, 'Love the site!');
     await user.click(screen.getByRole('button', { name: /send/i }));

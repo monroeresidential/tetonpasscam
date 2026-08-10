@@ -42,22 +42,42 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
       aria-label="Send feedback"
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
     >
-      <div className="w-full max-w-md rounded-lg bg-white p-4 dark:bg-neutral-800">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Send feedback</h2>
-          <button type="button" onClick={onClose} aria-label="Close">
+      {/* Same bottom-sheet card language as ReportModal (card 2d) -- rounded
+          top corners + drag-handle bar -- so the two report/feedback sheets
+          read as one system. Card 2e's mockup shows a "← Back" link instead
+          (it's explored as a full navigated screen, not an overlay), but
+          Footer's feedback entry point is a modal, so a "✕ Close" button is
+          kept for consistency with ReportModal and existing behavior. */}
+      <div className="bg-card w-full max-w-md rounded-t-2xl p-4 pb-5 sm:max-w-sm sm:rounded-2xl">
+        <div className="bg-card-border mx-auto h-1 w-9 rounded-full" />
+
+        <div className="mt-3.5 flex items-start justify-between gap-2">
+          <div>
+            <h2 className="font-display text-[24px] font-extrabold tracking-tight text-ink">
+              Tell us what&apos;s broken (or what you&apos;d love)
+            </h2>
+            <p className="text-muted mt-0.5 text-[13px]">
+              Goes straight to a human in Teton Valley.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-muted flex-none"
+          >
             ✕
           </button>
         </div>
 
         {state === 'sent' ? (
-          <p role="status" className="mt-3 text-sm">
+          <p role="status" className="mt-3.5 text-sm">
             Thanks for the feedback!
           </p>
         ) : (
-          <div className="mt-3 space-y-3">
+          <div className="mt-3.5 space-y-2.5">
             <div>
-              <label htmlFor="feedback-body" className="block text-sm font-medium">
+              <label htmlFor="feedback-body" className="sr-only">
                 Feedback
               </label>
               <textarea
@@ -66,11 +86,12 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setBody(e.target.value)}
                 maxLength={2000}
                 rows={4}
-                className="mt-1 w-full rounded border border-neutral-300 p-2 dark:border-neutral-600 dark:bg-neutral-900"
+                placeholder="Your message…"
+                className="rounded-card border-card-border bg-card text-ink placeholder:text-faint w-full border p-3.5 text-[13.5px]"
               />
             </div>
             <div>
-              <label htmlFor="feedback-email" className="block text-sm font-medium">
+              <label htmlFor="feedback-email" className="sr-only">
                 Email (optional)
               </label>
               <input
@@ -78,7 +99,8 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded border border-neutral-300 p-2 dark:border-neutral-600 dark:bg-neutral-900"
+                placeholder="Email (optional — only if you want a reply)"
+                className="rounded-card border-card-border bg-card text-ink placeholder:text-faint w-full border p-3.5 text-[13.5px]"
               />
             </div>
 
@@ -88,16 +110,14 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
               </p>
             )}
 
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={submit}
-                disabled={state === 'sending' || body.trim().length === 0}
-                className="rounded bg-neutral-800 px-4 py-2 font-semibold text-white disabled:opacity-50 dark:bg-neutral-200 dark:text-black"
-              >
-                Send
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={state === 'sending' || body.trim().length === 0}
+              className="mt-1 h-12 w-full rounded-full bg-btn-bg font-display font-bold text-btn-ink disabled:opacity-50"
+            >
+              Send feedback
+            </button>
           </div>
         )}
       </div>

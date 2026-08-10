@@ -1,32 +1,8 @@
-import type { AlertType, PublicAlert } from '../../shared/types';
-
-const TYPE_ICON: Record<AlertType, string> = {
-  crash: '💥',
-  slideoff: '🛞',
-  slick: '❄',
-  wildlife: '🦌',
-  stopped: '🚗',
-  closure: '🚧',
-  other: '⚠',
-};
-
-const TYPE_LABEL: Record<AlertType, string> = {
-  crash: 'Crash',
-  slideoff: 'Slide-off',
-  slick: 'Slick/Ice',
-  wildlife: 'Wildlife',
-  stopped: 'Stopped traffic',
-  closure: 'Closure',
-  other: 'Other',
-};
-
-// Item-title direction phrasing: "toward" the side of the pass a driver
-// coming from that direction is headed, not a bare compass word -- matches
-// the Trailhead restyle's "From the road" card copy (task-5-brief.md).
-const DIRECTION_SUFFIX: Record<'eb' | 'wb', string> = {
-  wb: 'westbound to Victor',
-  eb: 'eastbound to Jackson',
-};
+import type { PublicAlert } from '../../shared/types';
+// Icon/label/direction-phrasing metadata is hoisted to a shared module
+// (Task 8) so ReportModal's type grid can reuse the exact same
+// emoji/label pairing instead of a second, driftable copy.
+import { DIRECTION_SUFFIX, TYPE_ICON, TYPE_LABEL } from '../alertTypes';
 
 function titleFor(alert: PublicAlert): string {
   const label = TYPE_LABEL[alert.type];
