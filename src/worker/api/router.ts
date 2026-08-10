@@ -2,9 +2,19 @@ import { Hono } from 'hono';
 import type { Env } from '../env';
 import { admin } from './admin';
 import { getActiveAlerts, postAlert, postCameraError } from './alerts';
+import { readJsonCapped } from './body';
 import { postFeedback } from './feedback';
 import { getHistory } from './history';
 import { getStatus } from './status';
+
+// Per-endpoint body size caps for `readJsonCapped` (see body.ts) -- sized to
+// comfortably fit each endpoint's legitimate payload (alerts: short enum +
+// ≤140-char note + ≤128-char deviceId; feedback: ≤2000-char body + ≤200-char
+// email; camera-error: one short enum string) with headroom, while still
+// bounding how much an attacker can force the Worker to buffer.
+const ALERTS_MAX_BODY_BYTES = 2 * 1024;
+const FEEDBACK_MAX_BODY_BYTES = 8 * 1024;
+const CAMERA_ERROR_MAX_BODY_BYTES = 1024;
 
 export const api = new Hono<{ Bindings: Env }>();
 api.route('/admin', admin);
@@ -21,22 +31,25 @@ api.get('/alerts', async (c) => {
 });
 
 api.post('/alerts', async (c) => {
-  const body: unknown = await c.req.json().catch(() => ({}));
+  const parsed = await readJsonCapped(c, ALERTS_MAX_BODY_BYTES);
+  if (!parsed.ok) return c.json(parsed.body, parsed.status);
   const ip = c.req.header('CF-Connecting-IP') ?? null;
-  const result = await postAlert(c.env, body, ip);
+  const result = await postAlert(c.env, parsed.value, ip);
   return c.json(result.body, result.status);
 });
 
 api.post('/camera-error', async (c) => {
-  const body: unknown = await c.req.json().catch(() => ({}));
-  const result = await postCameraError(c.env, body);
+  const parsed = await readJsonCapped(c, CAMERA_ERROR_MAX_BODY_BYTES);
+  if (!parsed.ok) return c.json(parsed.body, parsed.status);
+  const result = await postCameraError(c.env, parsed.value);
   return c.json(result.body, result.status);
 });
 
 api.post('/feedback', async (c) => {
-  const body: unknown = await c.req.json().catch(() => ({}));
+  const parsed = await readJsonCapped(c, FEEDBACK_MAX_BODY_BYTES);
+  if (!parsed.ok) return c.json(parsed.body, parsed.status);
   const ip = c.req.header('CF-Connecting-IP') ?? null;
-  const result = await postFeedback(c.env, body, ip);
+  const result = await postFeedback(c.env, parsed.value, ip);
   return c.json(result.body, result.status);
 });
 

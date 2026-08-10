@@ -125,16 +125,32 @@ export const alerts = sqliteTable(
       .notNull()
       .default('active'),
   },
-  (table) => [index('alerts_expires_status_idx').on(table.expiresAt, table.status)],
+  (table) => [
+    index('alerts_expires_status_idx').on(table.expiresAt, table.status),
+    // Support the rate-limit conditional insert's two subqueries (see
+    // postAlert in alerts.ts): `WHERE device_hash = ? AND created_at > ?`
+    // and `WHERE ip_hash = ? AND created_at > ?`. Without these, both
+    // subqueries fall back to a full table scan on every single POST.
+    index('alerts_device_hash_created_idx').on(table.deviceHash, table.createdAt),
+    index('alerts_ip_hash_created_idx').on(table.ipHash, table.createdAt),
+  ],
 );
 
-export const feedback = sqliteTable('feedback', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  createdAt: text('created_at').notNull(),
-  body: text('body').notNull(),
-  email: text('email'),
-  ipHash: text('ip_hash'),
-});
+export const feedback = sqliteTable(
+  'feedback',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    createdAt: text('created_at').notNull(),
+    body: text('body').notNull(),
+    email: text('email'),
+    ipHash: text('ip_hash'),
+  },
+  (table) => [
+    // Supports postFeedback's rate-limit conditional insert:
+    // `WHERE ip_hash = ? AND created_at > ?`.
+    index('feedback_ip_hash_created_idx').on(table.ipHash, table.createdAt),
+  ],
+);
 
 export const bans = sqliteTable(
   'bans',

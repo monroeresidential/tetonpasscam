@@ -197,7 +197,15 @@ export async function postAlert(
     direction = body.direction;
   }
 
-  if (typeof body.deviceId !== 'string' || body.deviceId.length === 0) {
+  // 128 chars comfortably fits the real client (a `crypto.randomUUID()`,
+  // 36 chars -- see src/app/deviceId.ts) with headroom, while still
+  // bounding what an attacker can stuff into the value that gets hashed
+  // and stored below.
+  if (
+    typeof body.deviceId !== 'string' ||
+    body.deviceId.length === 0 ||
+    body.deviceId.length > 128
+  ) {
     return { status: 400, body: { error: 'invalid deviceId' } };
   }
 
@@ -230,29 +238,27 @@ export async function postAlert(
   }
 
   const windowStart = new Date(nowMs - RATE_LIMIT_WINDOW_MIN * 60_000).toISOString();
-
-  const [deviceCountRow] = await database
-    .select({ n: sql<number>`COUNT(*)` })
-    .from(alerts)
-    .where(and(eq(alerts.deviceHash, deviceHash), gt(alerts.createdAt, windowStart)));
-  if ((deviceCountRow?.n ?? 0) >= DEVICE_RATE_LIMIT_MAX) {
-    return { status: 429, body: { error: 'rate limited' } };
-  }
-
-  const [ipCountRow] = await database
-    .select({ n: sql<number>`COUNT(*)` })
-    .from(alerts)
-    .where(and(eq(alerts.ipHash, ipHash), gt(alerts.createdAt, windowStart)));
-  if ((ipCountRow?.n ?? 0) >= IP_RATE_LIMIT_MAX) {
-    return { status: 429, body: { error: 'rate limited' } };
-  }
-
   const createdAt = new Date(nowMs).toISOString();
   const expiresAt = new Date(nowMs + EXPIRY_HOURS[type] * 3_600_000).toISOString();
 
-  const [inserted] = await database
-    .insert(alerts)
-    .values({
+  // Atomic conditional insert: a single D1 statement whose INSERT...SELECT
+  // only produces a row when BOTH rate-limit subqueries still have
+  // headroom. A separate "SELECT COUNT(*) ... ; if under limit, INSERT"
+  // pair (the previous shape) has a check-then-act race -- two concurrent
+  // requests for the same device/IP can both read a count that's still
+  // under the limit before either of their inserts commits, letting both
+  // through. D1 executes one statement as a single atomic unit, so the two
+  // subqueries and the INSERT they gate always see a consistent snapshot;
+  // whichever request's statement runs second sees the first one's row
+  // already counted.
+  const insertedRow = await env.DB.prepare(
+    `INSERT INTO alerts (created_at, expires_at, type, note, direction, device_hash, ip_hash, status)
+       SELECT ?, ?, ?, ?, ?, ?, ?, 'active'
+       WHERE (SELECT COUNT(*) FROM alerts WHERE device_hash = ? AND created_at > ?) < ?
+         AND (SELECT COUNT(*) FROM alerts WHERE ip_hash = ? AND created_at > ?) < ?
+       RETURNING id`,
+  )
+    .bind(
       createdAt,
       expiresAt,
       type,
@@ -260,9 +266,34 @@ export async function postAlert(
       direction,
       deviceHash,
       ipHash,
-      status: 'active',
-    })
-    .returning({ id: alerts.id });
+      deviceHash,
+      windowStart,
+      DEVICE_RATE_LIMIT_MAX,
+      ipHash,
+      windowStart,
+      IP_RATE_LIMIT_MAX,
+    )
+    .first<{ id: number } | null>();
+
+  if (!insertedRow) {
+    // Same 429 body regardless of which limit tripped (or both) -- the
+    // response has never distinguished them. This follow-up pair of counts
+    // runs ONLY on this already-rare rejection path, purely so a
+    // `wrangler tail` breadcrumb can say which limit fired; it plays no
+    // part in the response.
+    const [deviceCount, ipCount] = await Promise.all([
+      env.DB.prepare(`SELECT COUNT(*) n FROM alerts WHERE device_hash = ? AND created_at > ?`)
+        .bind(deviceHash, windowStart)
+        .first<{ n: number }>(),
+      env.DB.prepare(`SELECT COUNT(*) n FROM alerts WHERE ip_hash = ? AND created_at > ?`)
+        .bind(ipHash, windowStart)
+        .first<{ n: number }>(),
+    ]);
+    const deviceTripped = (deviceCount?.n ?? 0) >= DEVICE_RATE_LIMIT_MAX;
+    const ipTripped = (ipCount?.n ?? 0) >= IP_RATE_LIMIT_MAX;
+    console.log(`alert rate limited: device=${deviceTripped} ip=${ipTripped}`);
+    return { status: 429, body: { error: 'rate limited' } };
+  }
 
   // Best-effort notification -- sendEmail's own contract never throws, so
   // this can't fail the response below regardless of Resend's availability.
@@ -280,7 +311,7 @@ export async function postAlert(
 
   return {
     status: 201,
-    body: toPublicAlert({ id: inserted.id, type, note, direction, createdAt }),
+    body: toPublicAlert({ id: insertedRow.id, type, note, direction, createdAt }),
   };
 }
 

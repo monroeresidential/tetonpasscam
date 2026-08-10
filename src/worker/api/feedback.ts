@@ -1,6 +1,3 @@
-import { and, eq, gt, sql } from 'drizzle-orm';
-
-import { feedback, db } from '../db';
 import type { Env } from '../env';
 import { sendEmail, ALERTS_FROM_ADDRESS } from '../notify';
 import { hashIdentifier } from './alerts';
@@ -65,28 +62,26 @@ export async function postFeedback(
   const ip = rawIp ?? 'unknown';
   const ipHash = await hashIdentifier(env, 'ip', ip);
 
-  const database = db(env);
-
   const windowStart = new Date(nowMs - IP_RATE_LIMIT_WINDOW_MIN * 60_000).toISOString();
-  const [ipCountRow] = await database
-    .select({ n: sql<number>`COUNT(*)` })
-    .from(feedback)
-    .where(and(eq(feedback.ipHash, ipHash), gt(feedback.createdAt, windowStart)));
-  if ((ipCountRow?.n ?? 0) >= IP_RATE_LIMIT_MAX) {
-    return { status: 429, body: { error: 'rate limited' } };
-  }
-
   const createdAt = new Date(nowMs).toISOString();
 
-  // Insert the feedback row
-  await database
-    .insert(feedback)
-    .values({
-      createdAt,
-      body: body.body,
-      email,
-      ipHash,
-    });
+  // Atomic conditional insert -- same "single D1 statement closes the
+  // check-then-insert race" pattern as postAlert in alerts.ts (see its
+  // comment for the full rationale). Only one limit here (per-IP), so
+  // `meta`-less rejection (RETURNING gives back nothing) is unambiguous:
+  // there's no second condition it could be, unlike alerts' device+IP pair.
+  const insertedRow = await env.DB.prepare(
+    `INSERT INTO feedback (created_at, body, email, ip_hash)
+       SELECT ?, ?, ?, ?
+       WHERE (SELECT COUNT(*) FROM feedback WHERE ip_hash = ? AND created_at > ?) < ?
+       RETURNING id`,
+  )
+    .bind(createdAt, body.body, email, ipHash, ipHash, windowStart, IP_RATE_LIMIT_MAX)
+    .first<{ id: number } | null>();
+
+  if (!insertedRow) {
+    return { status: 429, body: { error: 'rate limited' } };
+  }
 
   // Daily email cap: atomically increment today's counter and only send the
   // notification while the post-increment count is still within the cap.
