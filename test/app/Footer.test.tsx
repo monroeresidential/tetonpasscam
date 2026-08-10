@@ -47,6 +47,31 @@ describe('Footer', () => {
     expect(screen.getByText(/not affiliated with wydot/i)).toBeInTheDocument();
   });
 
+  it('arranges the six footer controls as two column stacks of three, column-major', () => {
+    render(<Footer />);
+    const nav = screen.getByRole('navigation', { name: 'Footer' });
+    expect(nav.className).toMatch(/\bgrid-cols-2\b/);
+
+    const [col1, col2] = Array.from(nav.children) as HTMLElement[];
+    expect(nav.children).toHaveLength(2);
+
+    const col1Controls = Array.from(col1.querySelectorAll('a, button'));
+    const col2Controls = Array.from(col2.querySelectorAll('a, button'));
+    expect(col1Controls).toHaveLength(3);
+    expect(col2Controls).toHaveLength(3);
+
+    expect(col1Controls.map((el) => el.textContent)).toEqual([
+      'Wyoming 511',
+      'Idaho 511',
+      'START bus',
+    ]);
+    expect(col2Controls.map((el) => el.textContent)).toEqual([
+      '511 Notify (get text/email alerts)',
+      'Privacy policy',
+      'Feedback',
+    ]);
+  });
+
   it('opens a feedback mini-modal that posts to /api/feedback', async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValue(jsonResponse(201, { ok: true }));
