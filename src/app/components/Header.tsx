@@ -34,7 +34,7 @@ export default function Header({
   now?: Date;
 }) {
   return (
-    <header className="flex items-center justify-between gap-3 px-3.5 pt-4 pb-2.5 lg:px-7 lg:py-4">
+    <header className="flex items-center justify-between gap-3 pt-4 pb-2.5 lg:py-4">
       <div className="font-display text-[19px] font-extrabold tracking-tight text-ink lg:text-[21px]">
         Teton Pass Cam
       </div>

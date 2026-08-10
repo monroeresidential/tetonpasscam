@@ -76,8 +76,6 @@ function App() {
         </div>
       )}
 
-      <Header onReport={() => setReportOpen(true)} variant={isDesktop ? 'desktop' : 'phone'} />
-
       {/* Phone: plain flex column, DOM order below is the visual order --
           matches design card 1a's header/banner/drive-times/alerts/
           cameras/weather/sponsor/footer stack. Desktop (card 2a): only
@@ -87,11 +85,14 @@ function App() {
           throughout (rather than relying on implicit grid auto-flow around
           Cameras's span) so the two-column desktop arrangement can't
           silently reorder around the phone-order DOM. Header/banner/footer
-          stay full-width outside the grid, same as the mockup. */}
-      <div className="mx-auto max-w-[30rem] px-3.5 lg:max-w-none lg:px-7">
+          stay full-width inside this capped-width wrapper, same as the
+          mockup. */}
+      <div className="mx-auto max-w-[30rem] px-3.5 lg:max-w-[1080px] lg:px-7">
+        <Header onReport={() => setReportOpen(true)} variant={isDesktop ? 'desktop' : 'phone'} />
+
         <StatusBanner data={data} />
 
-        <div className="mt-2 flex flex-col gap-2 lg:grid lg:grid-cols-[1fr_380px] lg:items-start lg:gap-7">
+        <div className="mt-2 flex flex-col gap-2 lg:grid lg:grid-cols-[1fr_380px] lg:items-start lg:gap-5">
           <div className="lg:col-start-1 lg:row-start-1">
             <DriveTimes travelTimes={data.travelTimes} />
           </div>

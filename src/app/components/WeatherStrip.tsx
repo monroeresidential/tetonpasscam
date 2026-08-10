@@ -51,7 +51,7 @@ export default function WeatherStrip({
 }) {
   if (!weather) {
     return (
-      <section aria-label="Summit weather" className="p-4">
+      <section aria-label="Summit weather" className="mt-4">
         <p className="text-muted text-sm">Weather data unavailable.</p>
       </section>
     );
@@ -71,7 +71,7 @@ export default function WeatherStrip({
   const tiles: Tile[] = [...tempTiles, gustTile, visibilityTile];
 
   return (
-    <section aria-label="Summit weather" className="grid grid-cols-4 gap-2 p-4">
+    <section aria-label="Summit weather" className="mt-4 grid grid-cols-4 gap-2">
       {tiles.map((tile) => (
         <div key={tile.label} className="bg-card border-card-border rounded-card border p-3 text-center">
           <p className="font-display text-lg font-extrabold">{tile.value}</p>

@@ -63,7 +63,7 @@ export default function AlertsStrip({
   now?: Date;
 }) {
   return (
-    <section aria-labelledby="alerts-heading" className="p-4">
+    <section aria-labelledby="alerts-heading" className="mt-4">
       <h2 id="alerts-heading" className="font-display text-[15px] font-bold">
         From the road
       </h2>

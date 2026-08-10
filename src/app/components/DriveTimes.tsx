@@ -75,7 +75,7 @@ export default function DriveTimes({ travelTimes }: { travelTimes: ApiStatus['tr
   const rows = travelTimes.filter((t) => directionOf(t.slug) === direction);
 
   return (
-    <section aria-labelledby="drive-times-heading" className="p-4">
+    <section aria-labelledby="drive-times-heading" className="mt-4">
       <div className="flex items-baseline justify-between">
         <h2 id="drive-times-heading" className="font-display text-[15px] font-bold">
           Drive times right now

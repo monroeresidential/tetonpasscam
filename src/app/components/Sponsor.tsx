@@ -3,7 +3,7 @@ const SPONSOR_URL =
 
 export default function Sponsor() {
   return (
-    <section aria-label="Sponsor" className="p-4">
+    <section aria-label="Sponsor" className="mt-4">
       <div className="bg-sponsor-bg border-sponsor-border rounded-card border p-4">
         <p className="text-sponsor-label text-[10.5px] font-bold uppercase tracking-wide">
           Sponsored by{' '}
