@@ -154,4 +154,22 @@ describe('App', () => {
       expect(wrapper?.className).not.toContain('lg:max-w-none');
     });
   });
+
+  describe('explainer relocation (scope addition)', () => {
+    // main.tsx's #seo-shell hide/show logic lives outside App (it never
+    // renders index.html's static markup -- App is only ever mounted into a
+    // bare testing-library container, with no #seo-shell sibling present),
+    // so this just pins that <About />'s relocated H1 is the ONE h1 a real,
+    // JS-enabled visitor's DOM ends up with -- no duplicate heading from
+    // some other section.
+    it('renders exactly one h1 (the relocated About explainer, between Sponsor and Footer)', async () => {
+      mockStatusOnlyFetch();
+      render(<App />);
+      await screen.findByText('The pass is OPEN');
+
+      const headings = screen.getAllByRole('heading', { level: 1 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toHaveTextContent('Teton Pass — live cams & conditions');
+    });
+  });
 });

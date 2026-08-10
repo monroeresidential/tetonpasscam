@@ -8,6 +8,7 @@ import Cameras from './components/Cameras';
 import Header from './components/Header';
 import ReportModal from './components/ReportModal';
 import Sponsor from './components/Sponsor';
+import About from './components/About';
 import Footer from './components/Footer';
 import { useStatus } from './useStatus';
 
@@ -105,6 +106,8 @@ function App() {
             <Sponsor />
           </div>
         </div>
+
+        <About />
 
         <Footer />
       </div>
