@@ -119,8 +119,22 @@ export default defineConfig({
         // anyway but is denylisted defensively) preserves the existing
         // "real files win" precedent (wrangler's own asset serving already
         // does this outside the SW; this keeps the SW consistent with it
-        // once installed).
-        navigateFallbackDenylist: [/^\/admin\.html$/, /^\/privacy\.html$/, /^\/api\//],
+        // once installed). The pretty `/admin`/`/privacy` URLs (SEO fix wave
+        // -- Footer.tsx/llms.txt now link to these instead of the
+        // `.html` originals) need their own entries: without them, a
+        // repeat/installed visitor whose SW has already precached
+        // index.html gets the app shell silently served at `/privacy`
+        // instead of the real static page, since Cloudflare's own
+        // `.html`-stripping redirect (which is what makes the pretty URL
+        // resolve at all outside the SW) never gets a chance to run once
+        // the SW intercepts the navigation.
+        navigateFallbackDenylist: [
+          /^\/admin\.html$/,
+          /^\/privacy\.html$/,
+          /^\/admin$/,
+          /^\/privacy$/,
+          /^\/api\//,
+        ],
         runtimeCaching: [
           {
             // Deliberately narrow: matches ONLY a same-origin GET to

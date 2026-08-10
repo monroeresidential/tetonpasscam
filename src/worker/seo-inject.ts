@@ -1,6 +1,6 @@
 import { desc, eq } from 'drizzle-orm';
 
-import { DEAD_HOURS, TRAVEL_TIME_FRESHNESS_MIN } from './api/status';
+import { DEAD_HOURS, TRAVEL_TIME_FRESHNESS_MIN, WEATHER_STALE_MIN } from './api/status';
 import { db, routes, statusSnapshots, travelTimes, weatherSnapshots } from './db';
 import type { Env } from './env';
 
@@ -82,8 +82,19 @@ async function buildLiveStatusHtml(env: Env, nowMs: number): Promise<string> {
       : (newest.status as 'open' | 'restricted' | 'closed' | 'unknown');
 
     if (status !== 'unknown') {
-      const timestamp = formatDenverTimestamp(newest.capturedAt);
-      let s = `Latest reported status (as of ${timestamp}): Teton Pass is ${STATUS_LABEL[status]}`;
+      // Prefer WYDOT's own report time over our capture time -- the exact
+      // mislabeling this repo already fixed once for weather (see
+      // weatherSnapshots.reportedAt's comment in db/schema.ts): capturedAt
+      // is "when we last polled", not "when WYDOT says this was true".
+      // wydotReportTime is nullable (crosscheck-sourced rows never carry
+      // one) and can in principle be unparseable, so it's only trusted when
+      // it actually parses; otherwise the phrasing is reworded rather than
+      // silently passing off capturedAt as a WYDOT report time it isn't.
+      const reportMs = newest.wydotReportTime ? Date.parse(newest.wydotReportTime) : NaN;
+      const asOf = Number.isFinite(reportMs)
+        ? `as of ${formatDenverTimestamp(newest.wydotReportTime!)}`
+        : `as of our last check ${formatDenverTimestamp(newest.capturedAt)}`;
+      let s = `Latest reported status (${asOf}): Teton Pass is ${STATUS_LABEL[status]}`;
       if (newest.conditionText) {
         s += ` — "${esc(newest.conditionText)}"`;
       }
@@ -105,7 +116,15 @@ async function buildLiveStatusHtml(env: Env, nowMs: number): Promise<string> {
     .orderBy(desc(weatherSnapshots.id))
     .limit(1);
   if (weatherRow && weatherRow.airF != null) {
-    sentence += ` Summit air temperature ${Math.round(weatherRow.airF)}°F.`;
+    // Same freshness gate as getStatus's weatherStale (based on OUR OWN
+    // capture time, not WYDOT's) -- unlike the API response, this one-line
+    // crawler snapshot has no separate "stale" flag to attach, so a reading
+    // older than the window is omitted entirely rather than presented
+    // (unflagged) as current.
+    const weatherAgeMs = nowMs - Date.parse(weatherRow.capturedAt);
+    if (Number.isFinite(weatherAgeMs) && weatherAgeMs <= WEATHER_STALE_MIN * 60_000) {
+      sentence += ` Summit air temperature ${Math.round(weatherRow.airF)}°F.`;
+    }
   }
 
   const [travelRow] = await database

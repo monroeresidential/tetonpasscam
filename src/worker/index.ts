@@ -24,7 +24,16 @@ async function serveHomepage(req: Request, env: Env, ctx: ExecutionContext): Pro
   const cached = await cache.match(req);
   if (cached) return cached;
 
-  const assetResponse = await env.ASSETS.fetch(req);
+  // Strip conditional-request headers before asking ASSETS: dist/index.html
+  // is a static file with a constant ETag, so a revalidating crawler's own
+  // If-None-Match otherwise makes the ASSETS binding itself answer with a
+  // bodyless 304 (confirmed empirically) before injectLiveStatus ever runs
+  // -- freezing that crawler on whatever content it first saw, forever.
+  const assetReq = new Request(req);
+  assetReq.headers.delete('If-None-Match');
+  assetReq.headers.delete('If-Modified-Since');
+
+  const assetResponse = await env.ASSETS.fetch(assetReq);
   const contentType = assetResponse.headers.get('content-type') ?? '';
   if (assetResponse.status !== 200 || !contentType.includes('text/html')) {
     return assetResponse;
@@ -32,7 +41,20 @@ async function serveHomepage(req: Request, env: Env, ctx: ExecutionContext): Pro
 
   const injected = await injectLiveStatus(assetResponse, env);
   const finalResponse = new Response(injected.body, injected);
-  finalResponse.headers.set('Cache-Control', 'public, max-age=300');
+  // s-maxage governs the edge cache (what caches.default stores here);
+  // max-age=0 + must-revalidate stops browsers caching this response at
+  // all, so a client's own future conditional request always reaches the
+  // edge rather than being answered silently from local disk cache.
+  finalResponse.headers.set('Cache-Control', 'public, s-maxage=300, max-age=0, must-revalidate');
+  // Drop the (file-derived, effectively constant) validators the ASSETS
+  // response carried over. Cloudflare's edge automatically downgrades a
+  // cacheable 200 with a matching ETag/Last-Modified into a bodyless 304
+  // for a conditional request -- without this, that would freeze any
+  // revalidating client on its first-ever injected snapshot forever, since
+  // the underlying file's ETag never changes even though the injected
+  // content changes every 5 minutes.
+  finalResponse.headers.delete('ETag');
+  finalResponse.headers.delete('Last-Modified');
 
   ctx.waitUntil(cache.put(req, finalResponse.clone()));
   return finalResponse;

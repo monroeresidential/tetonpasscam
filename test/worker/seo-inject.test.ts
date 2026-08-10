@@ -40,13 +40,23 @@ async function insertStatusSnapshot(overrides: {
   capturedAt: string;
   status: 'open' | 'restricted' | 'closed' | 'unknown';
   conditionText?: string | null;
+  // Defaults to capturedAt (matching real poller rows, which almost always
+  // carry one) -- pass `null` explicitly to exercise the no-report-time
+  // reword, or a distinct value to exercise the "prefer WYDOT's own report
+  // time" fix.
+  wydotReportTime?: string | null;
 }): Promise<void> {
   await env.DB.prepare(
     `INSERT INTO status_snapshots
        (captured_at, segment, status, condition_text, advisories, restrictions, wydot_report_time, source)
      VALUES (?, 'wilson-stateline', ?, ?, '[]', '[]', ?, 'primary')`,
   )
-    .bind(overrides.capturedAt, overrides.status, overrides.conditionText ?? null, overrides.capturedAt)
+    .bind(
+      overrides.capturedAt,
+      overrides.status,
+      overrides.conditionText ?? null,
+      overrides.wydotReportTime === undefined ? overrides.capturedAt : overrides.wydotReportTime,
+    )
     .run();
 }
 
@@ -57,6 +67,8 @@ async function insertWeather(capturedAt: string, airF: number): Promise<void> {
     .bind(capturedAt, airF, capturedAt)
     .run();
 }
+
+const MINUTE_MS = 60_000;
 
 async function insertTravelTime(capturedAt: string, durationSec: number): Promise<void> {
   const id = await routeId('victor-jackson-eb');
@@ -101,7 +113,11 @@ describe('GET / — homepage live-status injection', () => {
     const { res, text } = await get('/?case=fresh-open');
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
-    expect(res.headers.get('Cache-Control')).toBe('public, max-age=300');
+    expect(res.headers.get('Cache-Control')).toBe('public, s-maxage=300, max-age=0, must-revalidate');
+    // Fix wave: the underlying asset's constant validators must not survive
+    // into the injected response (see the ETag/304 test below for why).
+    expect(res.headers.get('ETag')).toBeNull();
+    expect(res.headers.get('Last-Modified')).toBeNull();
 
     const block = extractLiveStatusDiv(text);
     expect(block).toContain('Teton Pass is open');
@@ -189,6 +205,93 @@ describe('GET / — homepage live-status injection', () => {
     const secondBlock = extractLiveStatusDiv(second.text);
     expect(secondBlock).toContain('cache test A');
     expect(secondBlock).not.toContain('cache test B');
-    expect(second.res.headers.get('Cache-Control')).toBe('public, max-age=300');
+    expect(second.res.headers.get('Cache-Control')).toBe(
+      'public, s-maxage=300, max-age=0, must-revalidate',
+    );
+  });
+
+  it('prefers wydotReportTime over capturedAt for the "as of" timestamp', async () => {
+    const capturedAt = new Date(Date.now()).toISOString();
+    // A distinctly different, still-fresh report time -- if the bug
+    // regresses (capturedAt used instead), this exact hour/minute would
+    // NOT appear in the rendered block.
+    const reportTime = new Date(Date.now() - 37 * MINUTE_MS).toISOString();
+    await insertStatusSnapshot({
+      capturedAt,
+      status: 'open',
+      conditionText: 'Road Open — report-time test',
+      wydotReportTime: reportTime,
+    });
+
+    const { text } = await get('/?case=report-time');
+    const block = extractLiveStatusDiv(text);
+    const expectedTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Denver',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(new Date(reportTime));
+    expect(block).toContain(`as of ${expectedTime}`);
+    expect(block).not.toContain('our last check');
+  });
+
+  it('reports "as of our last check" when wydotReportTime is null (crosscheck-sourced row)', async () => {
+    const capturedAt = new Date(Date.now()).toISOString();
+    await insertStatusSnapshot({
+      capturedAt,
+      status: 'open',
+      conditionText: 'Road Open — no report time',
+      wydotReportTime: null,
+    });
+
+    const { text } = await get('/?case=no-report-time');
+    const block = extractLiveStatusDiv(text);
+    expect(block).toContain('as of our last check');
+  });
+
+  it('omits the temperature sentence when the newest weather row is stale (> WEATHER_STALE_MIN)', async () => {
+    const capturedAt = new Date(Date.now()).toISOString();
+    await insertStatusSnapshot({
+      capturedAt,
+      status: 'open',
+      conditionText: 'Road Open — stale weather test',
+    });
+    const staleWeatherAt = new Date(Date.now() - 70 * MINUTE_MS).toISOString();
+    await insertWeather(staleWeatherAt, 19.9);
+
+    const { text } = await get('/?case=stale-weather');
+    const block = extractLiveStatusDiv(text);
+    expect(block).toContain('Teton Pass is open');
+    expect(block).not.toContain('°F');
+  });
+
+  it('a conditional request carrying the underlying asset\'s ETag still gets a fresh 200 with live-status content, not a stale 304', async () => {
+    const capturedAt = new Date(Date.now()).toISOString();
+    await insertStatusSnapshot({
+      capturedAt,
+      status: 'open',
+      conditionText: 'Road Open — etag test',
+    });
+
+    // Learn the real, constant ETag of the underlying static asset by
+    // asking ASSETS directly, bypassing our own worker logic entirely.
+    const rawAssetRes = await env.ASSETS.fetch(
+      new Request('https://tetonpasscam.com/?case=etag-check'),
+    );
+    const assetEtag = rawAssetRes.headers.get('ETag');
+    expect(assetEtag).toBeTruthy();
+
+    const request = new Request('https://tetonpasscam.com/?case=etag-check', {
+      headers: { 'If-None-Match': assetEtag! },
+    });
+    const ctx = createExecutionContext();
+    const res = await worker.fetch(request, env as any, ctx);
+    await waitOnExecutionContext(ctx);
+
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const block = extractLiveStatusDiv(text);
+    expect(block).toContain('etag test');
+    expect(res.headers.get('ETag')).toBeNull();
   });
 });

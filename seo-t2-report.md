@@ -237,4 +237,160 @@ $ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8788/nonexistent-xyz
   itself returns last-known weather regardless of staleness (with a
   separate `weatherStale` boolean the API layer surfaces), so I matched
   that "last-known beats nothing" behavior rather than inventing a new
-  threshold.
+  threshold. **Superseded by the fix wave below** — this HTML snapshot has
+  no `weatherStale` flag to attach to a stale reading the way the JSON API
+  does, so "last-known beats nothing" was the wrong call here specifically;
+  the fix wave now gates it on `WEATHER_STALE_MIN` and omits the sentence
+  entirely when stale.
+
+---
+
+## Fix wave (post-review, same day)
+
+Branch review came back "merge WITH FIXES": 2 critical + 3 important. All
+five addressed in one commit on top of the original. Final: 148/81/156
+green (worker went 144 → 148: 4 new tests), tsc clean, build clean.
+
+### Critical 1 — stale ETag defeats injection for revalidating crawlers
+
+`serveHomepage` was forwarding the ASSETS response's `ETag`/`Last-Modified`
+straight through into the injected response. Confirmed empirically (a
+throwaway scratch test, before touching any implementation code) that
+`env.ASSETS.fetch()` itself answers a request carrying a matching
+`If-None-Match` with a bodyless **304** — so a revalidating crawler that
+cached the homepage's ETag on its first crawl would get an empty 304 on
+every later crawl, forever, and `injectLiveStatus` would never even run.
+
+Fix in `src/worker/index.ts`'s `serveHomepage`:
+- Strip `If-None-Match`/`If-Modified-Since` from the request before calling
+  `env.ASSETS.fetch` (via `new Request(req)` + `.headers.delete(...)`), so
+  the ASSETS binding always returns a full 200 body regardless of what the
+  incoming request's conditional headers say.
+- Delete `ETag`/`Last-Modified` from the final response before both
+  returning it and `cache.put`-ing it — these validators are derived from
+  the *static file*, which never changes even though the injected content
+  does every 5 minutes; leaving them in place would let Cloudflare's own
+  edge (which automatically downgrades a cacheable 200 with a matching
+  validator into a 304 for a conditional request) freeze a revalidating
+  client on its first-ever snapshot. This second half isn't reproducible
+  inside the vitest-pool-workers harness (no real edge sits in front of
+  `worker.fetch()` there) — flagging so it's understood as reasoned-through
+  rather than test-verified on that specific point; the first half (the
+  ASSETS-binding-level 304) *is* directly reproducible and is what the new
+  automated test pins.
+
+New test (`test/worker/seo-inject.test.ts`, "a conditional request
+carrying the underlying asset's ETag still gets a fresh 200..."): learns
+the real, constant ETag of the built `dist/index.html` via a direct
+`env.ASSETS.fetch()` call (bypassing our own code), then issues the actual
+request through `worker.fetch()` with that exact ETag as `If-None-Match`.
+Asserts **200** (not 304) with `data-live-status` present, and no `ETag`
+header on the response.
+
+**Empirical `wrangler dev` confirmation** (not just the unit test): briefly
+flipped `run_worker_first` off (git-checkout'd back immediately after) to
+learn the real raw asset ETag directly from the ASSETS layer
+(`"1bf39373a9d3702d756c4e8c96e9988b"`), restored the config, restarted
+`wrangler dev`, then:
+```
+$ curl -s -D - -o body.html -H 'If-None-Match: "1bf39373a9d3702d756c4e8c96e9988b"' "http://localhost:8789/?fixwave=etag-real" | grep -iE "^HTTP|etag|cache-control"
+HTTP/1.1 200 OK
+Cache-Control: public, s-maxage=300, max-age=0, must-revalidate
+$ grep -o '<div data-live-status>.*</div>' body.html
+<div data-live-status><p>Current status is temporarily unavailable — check <a href="...">Wyoming 511</a>.</p></div>
+```
+200, no ETag, live-status content present — the exact request that used to
+304 now works.
+
+### Critical 2 — SW serves the app shell at /privacy for repeat visitors
+
+`vite.config.ts`'s `navigateFallbackDenylist` only listed the `.html`
+originals (`/admin.html`, `/privacy.html`), not the pretty URLs Footer.tsx/
+llms.txt now link to (`/admin`, `/privacy`) — so an installed PWA visitor
+whose SW already precached `index.html` would get the app shell silently
+served at `/privacy` instead of the real static page, since the SW
+intercepts the navigation before Cloudflare's own `.html`-stripping
+redirect (what makes the pretty URL work at all outside the SW) ever gets
+a chance to run.
+
+Fix: added `/^\/admin$/` and `/^\/privacy$/` to the denylist array
+alongside the existing two entries.
+
+Verified in the actual built artifact, not just the source:
+```
+$ npm run build
+$ grep -o '.\{80\}admin.\{80\}' dist/sw.js
+te(new e.NavigationRoute(e.createHandlerBoundToURL("index.html"),{denylist:[/^\/admin\.html$/,/^\/privacy\.html$/,/^\/admin$/,/^\/privacy$/,/^\/api\//]})),e.register...
+```
+All four path patterns plus the `/api/` defensive entry are present in the
+generated `NavigationRoute`'s denylist.
+
+New regression pin: `test/app/pwa-config.test.ts` (tokens.test.ts-style —
+reads `vite.config.ts`'s raw source, not the build output, since this test
+suite has no build step of its own) asserts all four denylist patterns and
+the `/api/` entry are present in source. This is what would have caught
+the gap in the first place had it existed before Footer.tsx/llms.txt were
+repointed to the pretty URLs.
+
+### Important 3 — capturedAt mislabeled as reported time
+
+`buildLiveStatusHtml` was formatting `newest.capturedAt` (our own poll
+time) into the "as of" timestamp — exactly the mislabeling this repo
+already fixed once for weather (`weatherSnapshots.reportedAt`'s own
+comment in `db/schema.ts` documents the same trap). Fixed in
+`src/worker/seo-inject.ts`: now prefers `newest.wydotReportTime` (WYDOT's
+own report time) when it's present *and* parses as a valid date;
+otherwise reworded to `as of our last check {time}` using `capturedAt`
+instead of silently passing capture time off as a WYDOT report time it
+isn't.
+
+Two new tests: one seeds a `wydotReportTime` distinctly different from
+`capturedAt` and asserts the rendered block uses *that* hour/minute (not
+capturedAt's); one seeds `wydotReportTime: null` (the crosscheck-sourced
+case, which never carries one) and asserts the reworded "our last check"
+phrasing appears.
+
+### Important 4 — weather rendered with no freshness gate
+
+Imported `WEATHER_STALE_MIN` from `src/worker/api/status.ts` (already used
+by `getStatus`'s `weatherStale` flag) and gated the temperature sentence on
+it: a weather row older than `WEATHER_STALE_MIN` (60 min) based on our own
+`capturedAt` is omitted entirely rather than shown unflagged, since this
+one-line crawler snapshot has no separate stale-flag field to attach the
+way the JSON API response does.
+
+New test: seeds a fresh open snapshot but a 70-minute-old weather row;
+asserts the block contains the status but no `°F` anywhere.
+
+### Important 5 — browser max-age deploy hazard
+
+Changed the injected response's `Cache-Control` from `public, max-age=300`
+to `public, s-maxage=300, max-age=0, must-revalidate` in
+`src/worker/index.ts`: `s-maxage` keeps the 5-minute edge/CDN caching
+behavior (what `caches.default` stores), while `max-age=0` +
+`must-revalidate` stop browsers from caching this response locally at all
+— pairs with the ETag/Last-Modified removal above, since without a
+validator a "must-revalidate" browser request would otherwise have nothing
+to conditionally revalidate *with*, always doing a full fetch instead.
+This also directly protects against a deploy-day hazard: a browser that
+had cached the old `max-age=300` response wouldn't see new deploys
+reflected in the injected content for up to 5 minutes even after a fresh
+edge cache entry existed.
+
+Both `Cache-Control` pins in `test/worker/seo-inject.test.ts` (the
+fresh-open test and the cache-behavior test) updated to the new value;
+also added assertions that `ETag`/`Last-Modified` are absent from the
+response.
+
+### Final verification (fix wave)
+
+- `npm run test` (parsers): 81/81 passed
+- `npm run test:worker`: 148/148 passed (144 → 148: 4 new tests)
+- `npm run test:app`: 156/156 passed (154 → 156: the new `pwa-config.test.ts`)
+- `npx tsc --noEmit`: clean
+- `npm run build`: clean
+- `dist/sw.js` grep: denylist contains all 4 path patterns + `/api/`
+- `scripts/verify-launch.sh` against `wrangler dev` (post-fix): 16/16
+  passed
+- Manual `wrangler dev` ETag check (above): confirmed 200 (not 304), no
+  `ETag` header, live-status content present, using the *real* asset ETag
