@@ -54,7 +54,9 @@
       #seo-shell {
         background: #faf7f0;
       }
-      #seo-shell h1 {
+      #seo-shell h1,
+      #seo-shell h2,
+      #seo-shell h3 {
         font-family: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
         color: #2b2620;
       }
@@ -66,7 +68,9 @@
         #seo-shell {
           background: #211d17;
         }
-        #seo-shell h1 {
+        #seo-shell h1,
+        #seo-shell h2,
+        #seo-shell h3 {
           color: #f0ebe1;
         }
         #seo-shell p {
@@ -84,7 +88,7 @@
             "name": "Is Teton Pass open right now?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Check the live status banner at the top of this page for the current WYDOT-reported status. WYDOT (511wy.com) is the authority on Teton Pass conditions, and a posted closure is a legal closure -- do not attempt to cross a closed pass."
+              "text": "The live status banner at the top of this page shows the current WYDOT-reported status for Wyoming Highway 22 over Teton Pass -- open, restricted, closed, or unknown -- refreshed automatically about every 10 minutes. WYDOT and Wyoming 511 (511wy.com) are the official, authoritative source for Teton Pass conditions. When the pass is posted closed, that is a legal closure under Wyoming law, not a suggestion: driving past a closure barricade can carry a fine of up to $750. If the banner shows unknown, it means our own data is stale or unavailable -- treat that as a reason to check Wyoming 511 directly before heading up, not as a sign the road is open."
             }
           },
           {
@@ -92,7 +96,23 @@
             "name": "How long is the drive from Victor to Jackson?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "In normal conditions, the drive from Victor, Idaho to Jackson, Wyoming over Teton Pass typically takes about 35 to 45 minutes. This site shows the current live drive time alongside the typical time for the same hour and season."
+              "text": "In normal conditions, the drive from Victor, Idaho to Jackson, Wyoming over Teton Pass typically takes about 35 to 45 minutes. This site shows live, traffic-aware drive times pulled throughout the day, and -- as its history grows -- how today's time compares with the typical time for the same hour and season, so you can tell at a glance whether the pass is running slower than usual. Winter storms, avalanche control closures, and slide-offs on the pass's steep grades can add significant time or close the route outright, so always check the live status banner above alongside the drive-time estimate."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which cameras does this site show?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Teton Pass Cam displays three live camera feeds: WYO 22 Teton Pass -- East, WYO 22 Teton Pass -- West, and a Jackson Hole Valley view. Together these cameras let you see current road surface, snowpack, and visibility conditions on both sides of the summit, plus a look down into the valley, without waiting for a written report to update. All camera imagery is courtesy of WYDOT and Wyoming 511 (511wy.com), refreshed on the same cadence as the rest of this site's data."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does the pass close?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Teton Pass closes most often for winter storms, scheduled avalanche control work near the summit, and slide-offs or crashes on the pass's steep 10% grades. Most closures last a few hours rather than days, but duration depends entirely on conditions and cannot be predicted in advance -- this site never publishes an estimated reopening time, because WYDOT itself doesn't commit to one until the road is actually clear. When Teton Pass is closed, the usual alternative route is Swan Valley/Alpine via US-26 and US-89, roughly 85 miles and about 1 hour 40 minutes in good conditions. Always confirm current status and any detour guidance on Wyoming 511 before you commit to a route."
             }
           }
         ]
@@ -135,6 +155,61 @@
         511wy.com remains the official and authoritative source for closures and travel
         advisories; always confirm current conditions there before deciding whether to cross,
         especially in winter weather.
+      </p>
+
+      <h2 class="mt-6 text-lg font-bold">Frequently asked questions</h2>
+
+      <h3 class="mt-4 text-sm font-bold">Is Teton Pass open right now?</h3>
+      <p class="mt-1 text-sm text-neutral-600">
+        The live status banner at the top of this page shows the current WYDOT-reported status
+        for Wyoming Highway 22 over Teton Pass -- open, restricted, closed, or unknown --
+        refreshed automatically about every 10 minutes. WYDOT and Wyoming 511 (511wy.com) are the
+        official, authoritative source for Teton Pass conditions. When the pass is posted closed,
+        that is a legal closure under Wyoming law, not a suggestion: driving past a closure
+        barricade can carry a fine of up to $750. If the banner shows unknown, it means our own
+        data is stale or unavailable -- treat that as a reason to check Wyoming 511 directly
+        before heading up, not as a sign the road is open.
+      </p>
+
+      <h3 class="mt-4 text-sm font-bold">How long is the drive from Victor to Jackson?</h3>
+      <p class="mt-1 text-sm text-neutral-600">
+        In normal conditions, the drive from Victor, Idaho to Jackson, Wyoming over Teton Pass
+        typically takes about 35 to 45 minutes. This site shows live, traffic-aware drive times
+        pulled throughout the day, and -- as its history grows -- how today's time compares with
+        the typical time for the same hour and season, so you can tell at a glance whether the
+        pass is running slower than usual. Winter storms, avalanche control closures, and
+        slide-offs on the pass's steep grades can add significant time or close the route
+        outright, so always check the live status banner above alongside the drive-time estimate.
+      </p>
+
+      <h3 class="mt-4 text-sm font-bold">Which cameras does this site show?</h3>
+      <p class="mt-1 text-sm text-neutral-600">
+        Teton Pass Cam displays three live camera feeds: WYO 22 Teton Pass -- East, WYO 22 Teton
+        Pass -- West, and a Jackson Hole Valley view. Together these cameras let you see current
+        road surface, snowpack, and visibility conditions on both sides of the summit, plus a look
+        down into the valley, without waiting for a written report to update. All camera imagery
+        is courtesy of WYDOT and Wyoming 511 (511wy.com), refreshed on the same cadence as the
+        rest of this site's data.
+      </p>
+
+      <h3 class="mt-4 text-sm font-bold">Why does the pass close?</h3>
+      <p class="mt-1 text-sm text-neutral-600">
+        Teton Pass closes most often for winter storms, scheduled avalanche control work near the
+        summit, and slide-offs or crashes on the pass's steep 10% grades. Most closures last a few
+        hours rather than days, but duration depends entirely on conditions and cannot be
+        predicted in advance -- this site never publishes an estimated reopening time, because
+        WYDOT itself doesn't commit to one until the road is actually clear. When Teton Pass is
+        closed, the usual alternative route is Swan Valley/Alpine via US-26 and US-89, roughly 85
+        miles and about 1 hour 40 minutes in good conditions. Always confirm current status and
+        any detour guidance on Wyoming 511 before you commit to a route.
+      </p>
+
+      <p class="mt-4 text-sm text-neutral-600">
+        <a class="underline" href="/privacy">Privacy policy</a>
+        ·
+        <a class="underline" href="https://www.wyoroad.info">Wyoming 511</a>
+        ·
+        <a class="underline" href="https://511.idaho.gov">Idaho 511</a>
       </p>
     </div>
     <div id="root"></div>

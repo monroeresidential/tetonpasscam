@@ -44,7 +44,7 @@ describe('index.html static SEO shell', () => {
     expect(text).toMatch(/not affiliated with/);
   });
 
-  it('has a valid FAQPage JSON-LD block with exactly the two spec questions', () => {
+  it('has a valid FAQPage JSON-LD block with exactly the four spec questions', () => {
     const match = html.match(
       /<script type="application\/ld\+json">([\s\S]*?)<\/script>/,
     );
@@ -53,12 +53,14 @@ describe('index.html static SEO shell', () => {
 
     expect(json['@context']).toBe('https://schema.org');
     expect(json['@type']).toBe('FAQPage');
-    expect(json.mainEntity).toHaveLength(2);
+    expect(json.mainEntity).toHaveLength(4);
 
     const names = json.mainEntity.map((q: { name: string }) => q.name);
     expect(names).toEqual([
       'Is Teton Pass open right now?',
       'How long is the drive from Victor to Jackson?',
+      'Which cameras does this site show?',
+      'Why does the pass close?',
     ]);
 
     for (const question of json.mainEntity) {
@@ -71,11 +73,51 @@ describe('index.html static SEO shell', () => {
     // Spot-check the specific facts each answer must convey per spec.
     expect(json.mainEntity[0].acceptedAnswer.text).toMatch(/WYDOT/);
     expect(json.mainEntity[0].acceptedAnswer.text).toMatch(/legal closure/i);
+    expect(json.mainEntity[0].acceptedAnswer.text).toMatch(/\$750/);
     expect(json.mainEntity[1].acceptedAnswer.text).toMatch(/35/);
     expect(json.mainEntity[1].acceptedAnswer.text).toMatch(/45/);
+    expect(json.mainEntity[2].acceptedAnswer.text).toMatch(/camera/i);
+    expect(json.mainEntity[2].acceptedAnswer.text).toMatch(/WYO 22 Teton Pass -- East/);
+    expect(json.mainEntity[2].acceptedAnswer.text).toMatch(/WYO 22 Teton Pass -- West/);
+    expect(json.mainEntity[2].acceptedAnswer.text).toMatch(/Jackson Hole Valley/);
+    expect(json.mainEntity[3].acceptedAnswer.text).toMatch(/avalanche/i);
+    expect(json.mainEntity[3].acceptedAnswer.text).toMatch(/US-26/);
+    expect(json.mainEntity[3].acceptedAnswer.text).toMatch(/Wyoming 511/);
+  });
+
+  it('has the FAQ JSON-LD questions and answers verbatim in the visible shell markup', () => {
+    const match = html.match(
+      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/,
+    );
+    const json = JSON.parse(match![1]);
+    for (const question of json.mainEntity as { name: string; acceptedAnswer: { text: string } }[]) {
+      expect(html).toContain(`<h3 class="mt-4 text-sm font-bold">${question.name}</h3>`);
+      const answerMatch = html.match(
+        new RegExp(
+          `<h3 class="mt-4 text-sm font-bold">${question.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<\\/h3>\\s*<p class="mt-1 text-sm[^"]*">([\\s\\S]*?)<\\/p>`,
+        ),
+      );
+      expect(answerMatch).not.toBeNull();
+      const visibleText = answerMatch![1].replace(/\s+/g, ' ').trim();
+      expect(visibleText).toBe(question.acceptedAnswer.text);
+    }
   });
 
   it('mounts React into a sibling div, never the static shell container', () => {
     expect(html).toMatch(/<div id="seo-shell"[^>]*>[\s\S]*<\/div>\s*<div id="root">/);
+  });
+
+  it('has a shell (H1 + explainer + FAQ + links) totaling at least 450 words', () => {
+    const match = html.match(/<div id="seo-shell"[^>]*>([\s\S]*?)<div id="root">/);
+    expect(match).not.toBeNull();
+    const text = match![1].replace(/<[^>]+>/g, ' ');
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+    expect(wordCount).toBeGreaterThanOrEqual(450);
+  });
+
+  it('has shell links to privacy, Wyoming 511, and Idaho 511 (audit fix #5: internal/outbound links)', () => {
+    expect(html).toMatch(/<a class="underline" href="\/privacy">Privacy policy<\/a>/);
+    expect(html).toMatch(/<a class="underline" href="https:\/\/www\.wyoroad\.info">Wyoming 511<\/a>/);
+    expect(html).toMatch(/<a class="underline" href="https:\/\/511\.idaho\.gov">Idaho 511<\/a>/);
   });
 });

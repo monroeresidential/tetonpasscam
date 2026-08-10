@@ -31,6 +31,16 @@ function shellH1Text(): string {
   return normalize(match[1]);
 }
 
+function shellFaqAnswerText(question: string): string {
+  const html = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
+  const escaped = question.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = html.match(
+    new RegExp(`<h3 class="mt-4 text-sm font-bold">${escaped}<\\/h3>\\s*<p class="mt-1 text-sm[^"]*">([\\s\\S]*?)<\\/p>`),
+  );
+  if (!match) throw new Error(`index.html FAQ answer for "${question}" not found`);
+  return normalize(match[1]);
+}
+
 describe('About', () => {
   it('renders an h1 whose text exactly matches the static shell H1 in index.html', () => {
     render(<About />);
@@ -51,5 +61,35 @@ describe('About', () => {
     render(<About />);
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading.className).not.toMatch(/text-\[40px\]|text-\[46px\]/);
+  });
+
+  it('renders an h2 "Frequently asked questions" matching the static shell', () => {
+    render(<About />);
+    const heading = screen.getByRole('heading', { level: 2 });
+    expect(normalize(heading.textContent ?? '')).toBe('Frequently asked questions');
+  });
+
+  it.each([
+    'Is Teton Pass open right now?',
+    'How long is the drive from Victor to Jackson?',
+    'Which cameras does this site show?',
+    'Why does the pass close?',
+  ])('renders an FAQ answer for "%s" that exactly matches the static shell in index.html', (question) => {
+    render(<About />);
+    const heading = screen.getByRole('heading', { level: 3, name: question });
+    const paragraph = heading.nextElementSibling;
+    expect(paragraph).not.toBeNull();
+    expect(paragraph!.tagName).toBe('P');
+    expect(normalize(paragraph!.textContent ?? '')).toBe(shellFaqAnswerText(question));
+  });
+
+  it('renders the same three shell links (privacy, Wyoming 511, Idaho 511) as index.html', () => {
+    render(<About />);
+    const privacyLink = screen.getByRole('link', { name: 'Privacy policy' });
+    const wyLink = screen.getByRole('link', { name: 'Wyoming 511' });
+    const idLink = screen.getByRole('link', { name: 'Idaho 511' });
+    expect(privacyLink.getAttribute('href')).toBe('/privacy');
+    expect(wyLink.getAttribute('href')).toBe('https://www.wyoroad.info');
+    expect(idLink.getAttribute('href')).toBe('https://511.idaho.gov');
   });
 });
