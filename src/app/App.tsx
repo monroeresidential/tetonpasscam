@@ -100,7 +100,7 @@ function App() {
             <Cameras refreshedAt={refreshedAt} />
           </div>
           <div>
-            <WeatherStrip weather={data.weather} />
+            <WeatherStrip weather={data.weather} weatherStale={data.weatherStale} />
           </div>
           <div>
             <Sponsor />

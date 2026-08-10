@@ -82,6 +82,14 @@ export const weatherSnapshots = sqliteTable('weather_snapshots', {
   windGust: real('wind_gust'),
   windDir: text('wind_dir'),
   visibilityFt: real('visibility_ft'),
+  // WYDOT's own "Last Report Time" from the Sensors.StationResults page
+  // (WeatherReading.reportedAt), NOT re-derived from capturedAt (the
+  // poller's own fetch time) -- see LH T2 finding 4's survey: the API used
+  // to relabel capturedAt as reportedAt because this column didn't exist,
+  // silently discarding the parser's own reading. Nullable because the
+  // parser can fail to find/parse the timestamp text even when the numeric
+  // readings themselves come through fine.
+  reportedAt: text('reported_at'),
 });
 
 export const id33Events = sqliteTable('id33_events', {

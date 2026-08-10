@@ -17,6 +17,7 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
     restrictions: [],
     wydotReportTime: '2026-08-09T17:00:00.000Z',
     weather: null,
+    weatherStale: false,
     travelTimes: [],
     id33Advisory: null,
     detours: null,

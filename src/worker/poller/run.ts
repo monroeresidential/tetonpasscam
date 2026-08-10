@@ -103,16 +103,46 @@ function dedupeAppend(base: string[], extra: string[]): string[] {
   return out;
 }
 
+/** Older (earlier) of two ISO timestamps, treating a null or unparseable
+ *  value as absent rather than "infinitely old"/"infinitely new" -- an
+ *  absent side simply defers to whichever side has a usable value. Picking
+ *  the OLDER of the two (rather than always primary's, as before) is the
+ *  conservative choice for a merged report: a driver reading `wydotReportTime`
+ *  as "how current is this" should never see a timestamp fresher than the
+ *  least-current source that contributed to the merged status. */
+function olderReportTime(a: string | null, b: string | null): string | null {
+  const aMs = a === null ? NaN : Date.parse(a);
+  const bMs = b === null ? NaN : Date.parse(b);
+  if (!Number.isFinite(aMs)) return Number.isFinite(bMs) ? b : null;
+  if (!Number.isFinite(bMs)) return a;
+  return aMs <= bMs ? a : b;
+}
+
 /** Merge two DEFINITE StatusResults that AGREE on `passAxis` (both
  *  'closed', or both in {'open','restricted'}) into one. Within an
  *  agreeing 'passable' pair, the more restrictive of the two wins
  *  (open+restricted -> restricted; open+open -> open); a 'closed' pair can
- *  only ever agree with another 'closed'. Advisories/restrictions are the
- *  deduped union of both sources (primary's entries first) so a driver
- *  never loses a real restriction just because only the fallback page
- *  reported it. `primary`'s conditionText/wydotReportTime win, and the
- *  reported source stays 'primary' -- it's still the authoritative page,
- *  fallback here only ever narrows/corroborates it, never overrides it. */
+ *  only ever agree with another 'closed'.
+ *
+ *  Advisories come from whichever side's OWN status matches the merged
+ *  `status` (the "winning" side) -- not a union of both. A union would let
+ *  a less-restrictive source's advisory list bleed into a report that's
+ *  really describing the other, more-restrictive source's conditions.
+ *  When both sides already agree exactly (open+open, or one side is the
+ *  sole source of the merged status because the other was more permissive
+ *  and lost), primary's advisories are used, matching the historical
+ *  'primary'-favoring default. Restrictions, by contrast, stay a deduped
+ *  union of both sources (primary's entries first) -- a driver must never
+ *  lose a real restriction just because only the fallback page reported it,
+ *  and unlike advisories a restriction isn't tied to which side "won" the
+ *  open/closed axis.
+ *
+ *  `wydotReportTime` is the OLDER of the two sources' report times (see
+ *  `olderReportTime`) -- conservative, since the merged report is only as
+ *  current as its least-current input. `primary`'s conditionText wins, and
+ *  the reported source stays 'primary' -- it's still the authoritative
+ *  page, fallback here only ever narrows/corroborates it, never overrides
+ *  it. */
 function mergeAgreeing(primary: StatusResult, fallback: StatusResult): StatusResult {
   const status: StatusResult['status'] =
     primary.status === 'closed' || fallback.status === 'closed'
@@ -120,12 +150,14 @@ function mergeAgreeing(primary: StatusResult, fallback: StatusResult): StatusRes
       : primary.status === 'restricted' || fallback.status === 'restricted'
         ? 'restricted'
         : 'open';
+  const advisories =
+    fallback.status === status && primary.status !== status ? fallback.advisories : primary.advisories;
   return {
     status,
     conditionText: primary.conditionText,
-    advisories: dedupeAppend(primary.advisories, fallback.advisories),
+    advisories,
     restrictions: dedupeAppend(primary.restrictions, fallback.restrictions),
-    wydotReportTime: primary.wydotReportTime,
+    wydotReportTime: olderReportTime(primary.wydotReportTime, fallback.wydotReportTime),
     source: 'primary',
   };
 }
@@ -417,6 +449,11 @@ export async function runPollCycle(
         windGust: reading.windGustMph,
         windDir: reading.windDir,
         visibilityFt: reading.visibilityFt,
+        // The parser's own WYDOT-report timestamp, distinct from
+        // `capturedAt` (this poller cycle's fetch time) -- see LH T2
+        // finding 4's survey: previously there was no column for this, so
+        // `capturedAt` got relabeled as `reportedAt` at the API layer.
+        reportedAt: reading.reportedAt,
       });
     }
   } catch (err) {

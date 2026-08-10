@@ -23,7 +23,7 @@ import routesresultsWy22Open from '../fixtures/routesresults-wy22.html?raw';
 import sensorsTetonpass from '../fixtures/sensors-tetonpass.html?raw';
 import statewideClosed from '../fixtures/statewide-closed.html?raw';
 
-import { SEGMENT_TEXT } from '../../src/worker/poller/wydot-status';
+import { parseRoadClosures, parseRoutesResults, SEGMENT_TEXT } from '../../src/worker/poller/wydot-status';
 
 // Same page shape as routesresultsWy22Open (Wilson-Stateline row: cond class
 // "lowimpactcond" / "Dry", i.e. open-axis), but with the always-present
@@ -50,6 +50,30 @@ const routesresultsWy22Restricted =
       'WY 22 from milepost 6.000 to 17.490<br />Weight restriction: 60000 lbs',
       'Chain Law Level 1',
     );
+
+// Same restricted-fallback derivation as above, but ALSO swaps the impact
+// ("*impact") cell's advisory text so this fixture's own advisory differs
+// from roadclosuresOpen's ('Falling Rock') -- exercises mergeAgreeing's
+// "advisories from the winning side only" rule (LH T1-review minor 1):
+// with routesresultsWy22Restricted alone, both sides happen to report the
+// SAME advisory, so a union-vs-winning-side bug would be invisible.
+const routesresultsWy22RestrictedDistinctAdvisory = routesresultsWy22Restricted.replace(
+  'Falling Rock',
+  'Slick Spots',
+);
+
+// mergeAgreeing's wydotReportTime is the OLDER of primary's/fallback's own
+// report times (LH T1-review minor 1), not always primary's -- these two
+// variants of the fallback page each shift its "Last Report Time" cell
+// relative to roadclosuresOpen's fixed "Aug 9, 2026, 08:51 AM", one later
+// and one earlier, so a test can prove the merge picks whichever is
+// actually older rather than defaulting to a fixed side.
+const routesresultsWy22OpenLaterReport =
+  routesresultsWy22Open.slice(0, segmentMarkerIdx) +
+  routesresultsWy22Open.slice(segmentMarkerIdx).replace('Aug 9, 2026, 08:51 AM', 'Aug 9, 2026, 09:15 AM');
+const routesresultsWy22OpenEarlierReport =
+  routesresultsWy22Open.slice(0, segmentMarkerIdx) +
+  routesresultsWy22Open.slice(segmentMarkerIdx).replace('Aug 9, 2026, 08:51 AM', 'Aug 9, 2026, 08:10 AM');
 
 // Synthetic, multi-segment RoutesResults-shaped fragments for the two
 // detour routes (US26, US89). Deliberately NOT single-row: a real
@@ -134,6 +158,15 @@ describe('runPollCycle', () => {
     // the one that actually proves the fallback page was fetched at all.
     expect(s).toMatchObject({ status: 'open', source: 'primary' });
     expect((await env.DB.prepare('SELECT COUNT(*) n FROM weather_snapshots').first())!.n).toBe(1);
+    // LH T2 finding 4 survey: reported_at must hold the parser's own WYDOT
+    // report time (sensorsTetonpass's page text says "Aug 9, 2026, 11:10
+    // AM" -- distinct from IN_WINDOW_NOW_MS's captured_at, "...T18:00:00Z"),
+    // not a copy of captured_at.
+    const weatherRow = (await env.DB
+      .prepare('SELECT captured_at AS capturedAt, reported_at AS reportedAt FROM weather_snapshots ORDER BY id DESC LIMIT 1')
+      .first()) as { capturedAt: string; reportedAt: string | null };
+    expect(weatherRow.reportedAt).not.toBeNull();
+    expect(weatherRow.reportedAt).not.toBe(weatherRow.capturedAt);
     const afterTravelCount = (
       (await env.DB.prepare('SELECT COUNT(*) n FROM travel_times').first()) as any
     ).n as number;
@@ -347,7 +380,7 @@ describe('resolveStatus', () => {
     20_000,
   );
 
-  it('primary open + fallback open ⇒ open, source primary, advisories deduped', async () => {
+  it('primary open + fallback open ⇒ open, source primary, advisories from primary (both sides happen to agree here)', async () => {
     const result = await resolveStatus(
       fakeFetch({
         'RoadClosures.html': roadclosuresOpen,
@@ -371,6 +404,60 @@ describe('resolveStatus', () => {
       expect(result.status).toBe('restricted');
       expect(result.source).toBe('primary');
       expect(result.restrictions).toEqual(['Chain Law Level 1']);
+    },
+  );
+
+  it(
+    "mergeAgreeing: advisories come from the winning side only, not a union of both sources (LH T1-review minor 1)",
+    async () => {
+      // primary (roadclosuresOpen) reports advisory 'Falling Rock' but LOSES
+      // the passAxis (its status is 'open'); fallback reports a distinct
+      // advisory 'Slick Spots' and WINS (its status, 'restricted', is the
+      // merged status) -- the merged advisories must be fallback's alone.
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresOpen,
+          'SelectedRoute=WY22': routesresultsWy22RestrictedDistinctAdvisory,
+        }),
+      );
+      expect(result.status).toBe('restricted');
+      expect(result.advisories).toEqual(['Slick Spots']);
+      expect(result.advisories).not.toContain('Falling Rock');
+      // Restrictions are unaffected by this rule -- still a deduped union
+      // of both sources (pinned by the test above).
+      expect(result.restrictions).toEqual(['Chain Law Level 1']);
+    },
+  );
+
+  it(
+    'mergeAgreeing: wydotReportTime is the OLDER of the two sources, not always primary\'s (LH T1-review minor 1)',
+    async () => {
+      // Fallback's report time (09:15 AM) is LATER than primary's (08:51
+      // AM) -- the merged result must still be primary's, since primary is
+      // the older/less-current of the two. (Coincides with the historical
+      // "primary always wins" behavior, so this alone wouldn't catch a
+      // regression back to it -- the next test does.)
+      const laterFallback = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresOpen,
+          'SelectedRoute=WY22': routesresultsWy22OpenLaterReport,
+        }),
+      );
+      const primaryOnly = parseRoadClosures(roadclosuresOpen);
+      expect(laterFallback.wydotReportTime).toBe(primaryOnly.wydotReportTime);
+
+      // Fallback's report time (08:10 AM) is EARLIER than primary's (08:51
+      // AM) -- the merged result must now be fallback's, proving this
+      // ISN'T "always primary's" (the pre-fix behavior).
+      const earlierFallback = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresOpen,
+          'SelectedRoute=WY22': routesresultsWy22OpenEarlierReport,
+        }),
+      );
+      const fallbackOnly = parseRoutesResults(routesresultsWy22OpenEarlierReport);
+      expect(earlierFallback.wydotReportTime).toBe(fallbackOnly.wydotReportTime);
+      expect(earlierFallback.wydotReportTime).not.toBe(primaryOnly.wydotReportTime);
     },
   );
 

@@ -58,6 +58,12 @@ export interface ApiStatus {
   restrictions: string[];
   wydotReportTime: string | null;
   weather: WeatherReading | null;
+  // True when the newest weather_snapshots row is older than the weather
+  // freshness window (see status.ts's WEATHER_STALE_MIN) -- `weather` above
+  // is still returned (last-known is better than nothing for a stat strip),
+  // but the frontend should visibly flag it as not current rather than
+  // presenting it as a live reading.
+  weatherStale: boolean;
   // One entry per route-direction that has at least one travel_times row.
   // A route with zero recorded travel times (e.g. the poller has never
   // successfully reached it) is OMITTED here, not included with a null/0

@@ -22,6 +22,13 @@
       "when": 1786310415570,
       "tag": "0002_feedback_throttling",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786365811392,
+      "tag": "0003_massive_grandmaster",
+      "breakpoints": true
     }
   ]
 }
