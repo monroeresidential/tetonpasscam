@@ -101,4 +101,9 @@ describe('design tokens (src/app/index.css)', () => {
     const darkBlock = darkBlockMatch![1];
     expect(darkBlock).toMatch(/#seo-shell\s*{[^}]*background:\s*#211d17;/);
   });
+
+  it('has the GA4 gtag.js tag wired to the site measurement ID', () => {
+    expect(html).toContain('googletagmanager.com/gtag/js?id=G-TF1QFWT7W8');
+    expect(html).toContain("gtag('config', 'G-TF1QFWT7W8')");
+  });
 });
