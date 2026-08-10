@@ -1,9 +1,20 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, gte, lt } from 'drizzle-orm';
 
 import type { PassStatus } from '../../shared/types';
 import { db, statusSnapshots } from '../db';
 import type { Env } from '../env';
+import { formatShareCode, shareCodeToUtcWindow } from '../share-code';
 import type { CardInput, CardRoute } from './render';
+
+/** Width of the fallback DB scan on either side of the share code's PRIMARY
+ *  (constant-offset) window guess -- only reached on the ~2 DST-transition
+ *  days/year where that guess can drift by the DST delta (1h). Wide enough
+ *  to comfortably contain the true instant on either side; rows in this
+ *  range are then filtered in code by re-formatting each one's own
+ *  `capturedAt` and comparing it to the requested code, so the width here is
+ *  a performance/safety margin, not a source of false matches. */
+const FALLBACK_BEFORE_MS = 2 * 3_600_000;
+const FALLBACK_AFTER_MS = 3 * 3_600_000;
 
 /** Travel-time rows within this many minutes of the snapshot's own
  *  `capturedAt` count as "that cycle's" reading for a route (design doc:
@@ -46,6 +57,61 @@ function safeStringArray(raw: string | null): string[] {
 function resolveAsOfIso(capturedAt: string, wydotReportTime: string | null): string {
   if (wydotReportTime && Number.isFinite(Date.parse(wydotReportTime))) return wydotReportTime;
   return capturedAt;
+}
+
+/**
+ * Resolves a share code (`YYYYMMDD-HHmm`, America/Denver) to the
+ * `status_snapshots.id` it names, or `null` if the code is malformed or
+ * names no snapshot. Two-step lookup:
+ *
+ * 1. PRIMARY: query the single Denver-local minute the code's constant-
+ *    offset guess (`shareCodeToUtcWindow`) resolves to. This is correct
+ *    every day except the ~2/year where the code's HH:mm falls on the far
+ *    side of a DST transition from that calendar day's midnight.
+ * 2. FALLBACK (only when step 1 finds nothing): scan a wide window around
+ *    that guess and re-derive each candidate row's OWN code via
+ *    `formatShareCode`, keeping only exact string matches -- this is always
+ *    correct regardless of DST, just slower, so it's only paid when step 1
+ *    comes up empty.
+ *
+ * A code naming a Denver-local minute with more than one snapshot (not
+ * possible at the poller's 10-min cadence, but not something to crash on)
+ * resolves to the newest (highest id). No match in either step -> `null`;
+ * callers (route.ts) turn that into the same 404/redirect as a request that
+ * never touched the DB at all.
+ */
+export async function resolveShareCode(env: Env, code: string): Promise<number | null> {
+  const window = shareCodeToUtcWindow(code);
+  if (!window) return null;
+
+  const database = db(env);
+
+  const [primary] = await database
+    .select({ id: statusSnapshots.id })
+    .from(statusSnapshots)
+    .where(
+      and(
+        gte(statusSnapshots.capturedAt, new Date(window.start).toISOString()),
+        lt(statusSnapshots.capturedAt, new Date(window.end).toISOString()),
+      ),
+    )
+    .orderBy(desc(statusSnapshots.id))
+    .limit(1);
+  if (primary) return primary.id;
+
+  const fallbackRows = await database
+    .select({ id: statusSnapshots.id, capturedAt: statusSnapshots.capturedAt })
+    .from(statusSnapshots)
+    .where(
+      and(
+        gte(statusSnapshots.capturedAt, new Date(window.start - FALLBACK_BEFORE_MS).toISOString()),
+        lt(statusSnapshots.capturedAt, new Date(window.start + FALLBACK_AFTER_MS).toISOString()),
+      ),
+    )
+    .orderBy(desc(statusSnapshots.id));
+
+  const match = fallbackRows.find((row) => formatShareCode(row.capturedAt) === code);
+  return match ? match.id : null;
 }
 
 /**

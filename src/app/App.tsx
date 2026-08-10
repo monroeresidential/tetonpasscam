@@ -91,7 +91,7 @@ function App() {
 
         <div className="mt-2 flex flex-col gap-2">
           <div>
-            <DriveTimes travelTimes={data.travelTimes} statusSnapshotId={data.statusSnapshotId} />
+            <DriveTimes travelTimes={data.travelTimes} shareCode={data.shareCode} />
           </div>
           <div>
             <AlertsStrip alerts={data.alerts} id33Advisory={data.id33Advisory} />

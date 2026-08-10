@@ -6,8 +6,9 @@
 import { env } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { loadCardData } from '../../src/worker/card/data';
+import { loadCardData, resolveShareCode } from '../../src/worker/card/data';
 import { seedRoutes } from '../../src/worker/db/seed-routes';
+import { formatShareCode } from '../../src/worker/share-code';
 
 const MINUTE_MS = 60_000;
 
@@ -124,5 +125,48 @@ describe('loadCardData', () => {
 
     const result = await loadCardData(env as any, id, 'eb');
     expect(result!.routes).toEqual([]);
+  });
+});
+
+describe('resolveShareCode', () => {
+  beforeAll(async () => {
+    await seedRoutes(env.DB);
+  });
+
+  it('returns null for a malformed code', async () => {
+    expect(await resolveShareCode(env as any, '53')).toBeNull();
+    expect(await resolveShareCode(env as any, 'not-a-code')).toBeNull();
+  });
+
+  it('returns null for a well-formed code with no matching snapshot', async () => {
+    expect(await resolveShareCode(env as any, '20990101-0000')).toBeNull();
+  });
+
+  it('resolves via the PRIMARY window on a normal (non-DST-boundary) day', async () => {
+    const capturedAt = new Date('2026-08-10T20:00:00.000Z').toISOString();
+    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    const code = formatShareCode(capturedAt);
+
+    expect(await resolveShareCode(env as any, code)).toBe(id);
+  });
+
+  it('resolves via the FALLBACK scan just after the spring-forward DST jump, where the primary window guess drifts 1h', async () => {
+    const capturedAt = new Date('2026-03-08T09:30:00.000Z').toISOString();
+    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    const code = formatShareCode(capturedAt);
+    expect(code).toBe('20260308-0330');
+
+    expect(await resolveShareCode(env as any, code)).toBe(id);
+  });
+
+  it('multiple snapshots naming the same minute resolve to the newest (highest id)', async () => {
+    const capturedAt1 = new Date('2026-08-10T21:00:00.000Z').toISOString();
+    const capturedAt2 = new Date('2026-08-10T21:00:30.000Z').toISOString();
+    await insertSnapshot({ capturedAt: capturedAt1, status: 'open' });
+    const newerId = await insertSnapshot({ capturedAt: capturedAt2, status: 'closed' });
+    const code = formatShareCode(capturedAt1);
+    expect(formatShareCode(capturedAt2)).toBe(code);
+
+    expect(await resolveShareCode(env as any, code)).toBe(newerId);
   });
 });

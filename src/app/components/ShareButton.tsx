@@ -8,12 +8,14 @@ const TOAST_MS = 4000;
  * `window.location.origin` (not a hardcoded production constant) -- this
  * makes the built URL correct in dev (`localhost:5173`/`wrangler dev`), in
  * prod (`tetonpasscam.com`), and on any future host the app is served from,
- * since the `/s/{id}` route is served by whatever Worker answers this
+ * since the `/s/{code}` route is served by whatever Worker answers this
  * origin's requests (see T1's `src/worker/index.ts` wiring) rather than
- * being tied to one specific domain.
+ * being tied to one specific domain. `code` is the datetime share code
+ * (`YYYYMMDD-HHmm`, America/Denver) `ApiStatus.shareCode` returns -- see
+ * `src/worker/share-code.ts`.
  */
-export function buildShareUrl(statusSnapshotId: number, direction: 'eb' | 'wb'): string {
-  const base = `${window.location.origin}/s/${statusSnapshotId}`;
+export function buildShareUrl(code: string, direction: 'eb' | 'wb'): string {
+  const base = `${window.location.origin}/s/${code}`;
   return direction === 'wb' ? `${base}?dir=wb` : base;
 }
 
@@ -25,17 +27,17 @@ type NavigatorWithShare = Navigator & {
 };
 
 export default function ShareButton({
-  statusSnapshotId,
+  shareCode,
   direction,
 }: {
-  // Withheld entirely (not just disabled) when null -- see ApiStatus.statusSnapshotId's
+  // Withheld entirely (not just disabled) when null -- see ApiStatus.shareCode's
   // doc comment: pollerDead/no-snapshot means there is nothing current to share.
-  statusSnapshotId: number | null;
+  shareCode: string | null;
   direction: 'eb' | 'wb';
 }) {
   const [showToast, setShowToast] = useState(false);
 
-  if (statusSnapshotId === null) return null;
+  if (shareCode === null) return null;
 
   async function copyToClipboard(url: string) {
     await navigator.clipboard.writeText(url);
@@ -44,7 +46,7 @@ export default function ShareButton({
   }
 
   async function handleShare() {
-    const url = buildShareUrl(statusSnapshotId as number, direction);
+    const url = buildShareUrl(shareCode as string, direction);
     const nav = navigator as NavigatorWithShare;
 
     if (typeof nav.share === 'function') {

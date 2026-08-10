@@ -11,7 +11,7 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
     isStale: false,
     pollerDead: false,
     generatedAt: new Date().toISOString(),
-    statusSnapshotId: 1,
+    shareCode: '20260810-1200',
     lastConfirmed: { status: 'open', at: '2026-08-09T17:00:00.000Z' },
     conditionText: null,
     advisories: [],

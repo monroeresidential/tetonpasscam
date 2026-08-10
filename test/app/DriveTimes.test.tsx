@@ -148,23 +148,23 @@ describe('DriveTimes routes-omitted contract', () => {
   });
 });
 
-// share-cards T2: DriveTimes only needs to thread statusSnapshotId through to
+// share-cards T2: DriveTimes only needs to thread shareCode through to
 // ShareButton correctly -- ShareButton's own behavior (URL construction,
 // navigator.share/clipboard fallback, toast) is covered in
 // ShareButton.test.tsx, not duplicated here.
 describe('DriveTimes share button wiring', () => {
-  it('is hidden when statusSnapshotId is omitted (existing callers/tests keep working unchanged)', () => {
+  it('is hidden when shareCode is omitted (existing callers/tests keep working unchanged)', () => {
     render(<DriveTimes travelTimes={[row({})]} />);
     expect(screen.queryByRole('button', { name: /share current conditions/i })).not.toBeInTheDocument();
   });
 
-  it('is hidden when statusSnapshotId is explicitly null (pollerDead/no snapshot)', () => {
-    render(<DriveTimes travelTimes={[row({})]} statusSnapshotId={null} />);
+  it('is hidden when shareCode is explicitly null (pollerDead/no snapshot)', () => {
+    render(<DriveTimes travelTimes={[row({})]} shareCode={null} />);
     expect(screen.queryByRole('button', { name: /share current conditions/i })).not.toBeInTheDocument();
   });
 
-  it('renders when statusSnapshotId is present', () => {
-    render(<DriveTimes travelTimes={[row({})]} statusSnapshotId={7} />);
+  it('renders when shareCode is present', () => {
+    render(<DriveTimes travelTimes={[row({})]} shareCode="20260810-1412" />);
     expect(screen.getByRole('button', { name: /share current conditions/i })).toBeInTheDocument();
   });
 });

@@ -73,14 +73,14 @@ function DriveTimeCard({ travelTime }: { travelTime: TravelTime }) {
 
 export default function DriveTimes({
   travelTimes,
-  statusSnapshotId = null,
+  shareCode = null,
 }: {
   travelTimes: ApiStatus['travelTimes'];
   // Additive/optional (share-cards T2): defaults to null so every existing
   // caller/test that doesn't pass it gets the same "share button hidden"
   // behavior as an explicit null, rather than needing to update every call
   // site just to keep compiling.
-  statusSnapshotId?: number | null;
+  shareCode?: string | null;
 }) {
   const [direction, setDirection] = useState<Direction>('eb');
   const rows = travelTimes.filter((t) => directionOf(t.slug) === direction);
@@ -100,7 +100,7 @@ export default function DriveTimes({
           >
             ⇄ Flip direction
           </button>
-          <ShareButton statusSnapshotId={statusSnapshotId} direction={direction} />
+          <ShareButton shareCode={shareCode} direction={direction} />
         </div>
       </div>
       <ul className="mt-2 flex flex-col gap-2">

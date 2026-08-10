@@ -22,15 +22,18 @@ function setupUser() {
   return user;
 }
 
+const CODE = '20260810-1412';
+const CODE_2 = '20260811-0930';
+
 describe('buildShareUrl', () => {
   it('eb (default direction) has no query param', () => {
-    const url = buildShareUrl(42, 'eb');
-    expect(url).toBe(`${window.location.origin}/s/42`);
+    const url = buildShareUrl(CODE, 'eb');
+    expect(url).toBe(`${window.location.origin}/s/${CODE}`);
   });
 
   it('wb direction appends ?dir=wb', () => {
-    const url = buildShareUrl(42, 'wb');
-    expect(url).toBe(`${window.location.origin}/s/42?dir=wb`);
+    const url = buildShareUrl(CODE, 'wb');
+    expect(url).toBe(`${window.location.origin}/s/${CODE}?dir=wb`);
   });
 });
 
@@ -39,13 +42,13 @@ describe('ShareButton', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders nothing when statusSnapshotId is null (pollerDead/no snapshot)', () => {
-    render(<ShareButton statusSnapshotId={null} direction="eb" />);
+  it('renders nothing when shareCode is null (pollerDead/no snapshot)', () => {
+    render(<ShareButton shareCode={null} direction="eb" />);
     expect(screen.queryByRole('button', { name: /share current conditions/i })).not.toBeInTheDocument();
   });
 
-  it('renders an accessible share control when a snapshot id is present', () => {
-    render(<ShareButton statusSnapshotId={7} direction="eb" />);
+  it('renders an accessible share control when a share code is present', () => {
+    render(<ShareButton shareCode={CODE} direction="eb" />);
     expect(screen.getByRole('button', { name: /share current conditions/i })).toBeInTheDocument();
   });
 
@@ -54,12 +57,12 @@ describe('ShareButton', () => {
       const user = setupUser();
       defineNavProp('share', vi.fn().mockResolvedValue(undefined));
 
-      render(<ShareButton statusSnapshotId={7} direction="wb" />);
+      render(<ShareButton shareCode={CODE} direction="wb" />);
       await user.click(screen.getByRole('button', { name: /share current conditions/i }));
 
       expect(navigator.share).toHaveBeenCalledWith({
         title: 'Teton Pass conditions',
-        url: `${window.location.origin}/s/7?dir=wb`,
+        url: `${window.location.origin}/s/${CODE}?dir=wb`,
       });
       expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -70,7 +73,7 @@ describe('ShareButton', () => {
       const abortError = Object.assign(new Error('cancelled'), { name: 'AbortError' });
       defineNavProp('share', vi.fn().mockRejectedValue(abortError));
 
-      render(<ShareButton statusSnapshotId={7} direction="eb" />);
+      render(<ShareButton shareCode={CODE} direction="eb" />);
       await user.click(screen.getByRole('button', { name: /share current conditions/i }));
 
       await waitFor(() => expect(navigator.share).toHaveBeenCalled());
@@ -82,11 +85,11 @@ describe('ShareButton', () => {
       const user = setupUser();
       defineNavProp('share', vi.fn().mockRejectedValue(new Error('no share target')));
 
-      render(<ShareButton statusSnapshotId={7} direction="eb" />);
+      render(<ShareButton shareCode={CODE} direction="eb" />);
       await user.click(screen.getByRole('button', { name: /share current conditions/i }));
 
       await waitFor(() =>
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/s/7`),
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/s/${CODE}`),
       );
       expect(await screen.findByRole('status')).toHaveTextContent(/link copied/i);
     });
@@ -97,10 +100,12 @@ describe('ShareButton', () => {
       const user = setupUser();
       defineNavProp('share', undefined);
 
-      render(<ShareButton statusSnapshotId={99} direction="wb" />);
+      render(<ShareButton shareCode={CODE_2} direction="wb" />);
       await user.click(screen.getByRole('button', { name: /share current conditions/i }));
 
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/s/99?dir=wb`);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        `${window.location.origin}/s/${CODE_2}?dir=wb`,
+      );
       expect(await screen.findByRole('status')).toHaveTextContent(/link copied/i);
     });
   });

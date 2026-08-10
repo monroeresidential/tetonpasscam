@@ -14,7 +14,7 @@ const base: ApiStatus = {
   isStale: false,
   pollerDead: false,
   generatedAt: REPORT_AT,
-  statusSnapshotId: 1,
+  shareCode: '20260810-1200',
   lastConfirmed: { status: 'open', at: REPORT_AT },
   conditionText: 'Road Open',
   advisories: [],

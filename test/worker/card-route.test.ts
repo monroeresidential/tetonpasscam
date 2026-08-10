@@ -11,6 +11,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { seedRoutes } from '../../src/worker/db/seed-routes';
 import worker from '../../src/worker/index';
+import { formatShareCode } from '../../src/worker/share-code';
 
 async function get(pathAndQuery: string): Promise<Response> {
   const request = new Request(`https://tetonpasscam.com${pathAndQuery}`);
@@ -20,10 +21,14 @@ async function get(pathAndQuery: string): Promise<Response> {
   return res;
 }
 
+/** Inserts a status_snapshots row and returns its share code (the
+ *  America/Denver `YYYYMMDD-HHmm` rendering of `capturedAt`) alongside its
+ *  raw id, since a couple of tests below still need the id to mutate the row
+ *  directly (the cache-immutability test). */
 async function insertSnapshot(overrides: {
   capturedAt: string;
   status: 'open' | 'restricted' | 'closed' | 'unknown';
-}): Promise<number> {
+}): Promise<{ id: number; code: string }> {
   const result = await env.DB.prepare(
     `INSERT INTO status_snapshots
        (captured_at, segment, status, condition_text, advisories, restrictions, wydot_report_time, source)
@@ -32,7 +37,7 @@ async function insertSnapshot(overrides: {
   )
     .bind(overrides.capturedAt, overrides.status, overrides.capturedAt)
     .first<{ id: number }>();
-  return result!.id;
+  return { id: result!.id, code: formatShareCode(overrides.capturedAt) };
 }
 
 /** Reads a PNG's IHDR width/height (big-endian uint32 at byte offsets
@@ -43,16 +48,16 @@ function pngDimensions(bytes: Uint8Array): { width: number; height: number } {
   return { width: view.getUint32(16), height: view.getUint32(20) };
 }
 
-describe('GET /og/{id}-{dir}.png', () => {
+describe('GET /og/{code}-{dir}.png', () => {
   beforeAll(async () => {
     await seedRoutes(env.DB);
   });
 
   it('renders a real 1200x630 PNG with the correct magic bytes and immutable cache headers', async () => {
     const capturedAt = new Date('2026-08-10T18:00:00.000Z').toISOString();
-    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    const { code } = await insertSnapshot({ capturedAt, status: 'open' });
 
-    const res = await get(`/og/${id}-eb.png`);
+    const res = await get(`/og/${code}-eb.png`);
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('image/png');
     expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
@@ -62,96 +67,130 @@ describe('GET /og/{id}-{dir}.png', () => {
     expect(pngDimensions(bytes)).toEqual({ width: 1200, height: 630 });
   }, 20000);
 
-  it('404s for a non-numeric id', async () => {
-    const res = await get('/og/not-a-number-eb.png');
+  it('404s for a malformed code (old-style numeric id)', async () => {
+    const res = await get('/og/53-eb.png');
+    expect(res.status).toBe(404);
+  });
+
+  it('404s for an injection-y path segment (rejected by the route regex before any DB lookup)', async () => {
+    const res = await get(`/og/${encodeURIComponent("' OR 1=1--")}-eb.png`);
     expect(res.status).toBe(404);
   });
 
   it('404s for an invalid direction', async () => {
     const capturedAt = new Date('2026-08-10T18:05:00.000Z').toISOString();
-    const id = await insertSnapshot({ capturedAt, status: 'open' });
-    const res = await get(`/og/${id}-nb.png`);
+    const { code } = await insertSnapshot({ capturedAt, status: 'open' });
+    const res = await get(`/og/${code}-nb.png`);
     expect(res.status).toBe(404);
   });
 
-  it('404s for an id with no matching snapshot', async () => {
-    const res = await get('/og/999999999-eb.png');
+  it('404s for a well-formed code with no matching snapshot', async () => {
+    const res = await get('/og/20990101-0000-eb.png');
     expect(res.status).toBe(404);
   });
 
   it('caches a successful render: a second request reflects the FIRST render even after the row changes', async () => {
     const capturedAt = new Date('2026-08-10T18:10:00.000Z').toISOString();
-    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    const { id, code } = await insertSnapshot({ capturedAt, status: 'open' });
 
-    const first = await get(`/og/${id}-eb.png`);
+    const first = await get(`/og/${code}-eb.png`);
     expect(first.status).toBe(200);
     const firstBytes = new Uint8Array(await first.arrayBuffer());
 
     await env.DB.prepare(`UPDATE status_snapshots SET status = 'closed' WHERE id = ?`).bind(id).run();
 
-    const second = await get(`/og/${id}-eb.png`);
+    const second = await get(`/og/${code}-eb.png`);
     expect(second.status).toBe(200);
     const secondBytes = new Uint8Array(await second.arrayBuffer());
     expect(secondBytes).toEqual(firstBytes);
   }, 20000);
+
+  it('resolves a snapshot captured just after the spring-forward DST jump via the fallback scan', async () => {
+    // 2026-03-08 02:00 America/Denver -> 03:00 (spring forward): a snapshot
+    // captured at 2026-03-08T09:15:00Z reads as 03:15 MDT (GMT-6), but the
+    // PRIMARY window guess (constant-offset from that day's midnight, still
+    // MST/GMT-7 at 00:00) lands on 10:15 UTC, an hour off -- only the
+    // fallback scan (data.ts's resolveShareCode) finds this row.
+    const capturedAt = new Date('2026-03-08T09:15:00.000Z').toISOString();
+    const { code } = await insertSnapshot({ capturedAt, status: 'open' });
+    expect(code).toBe('20260308-0315');
+
+    const res = await get(`/og/${code}-eb.png`);
+    expect(res.status).toBe(200);
+  }, 20000);
 });
 
-describe('GET /s/{id}', () => {
+describe('GET /s/{code}', () => {
   beforeAll(async () => {
     await seedRoutes(env.DB);
   });
 
   it('rewrites og:image/twitter:image/og:url/og:title, leaves canonical untouched', async () => {
     const capturedAt = new Date('2026-08-10T19:00:00.000Z').toISOString();
-    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    const { code } = await insertSnapshot({ capturedAt, status: 'open' });
 
-    const res = await get(`/s/${id}`);
+    const res = await get(`/s/${code}`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     const html = await res.text();
 
-    expect(html).toContain(`https://tetonpasscam.com/og/${id}-eb.png`);
-    expect(html).toContain(`https://tetonpasscam.com/s/${id}`);
+    expect(html).toContain(`https://tetonpasscam.com/og/${code}-eb.png`);
+    expect(html).toContain(`https://tetonpasscam.com/s/${code}`);
     expect(html).toContain('Teton Pass is OPEN — live conditions');
     expect(html).toContain('<link rel="canonical" href="https://tetonpasscam.com/" />');
   });
 
   it('?dir=wb builds the wb-direction /og URL and preserves the query on og:url', async () => {
     const capturedAt = new Date('2026-08-10T19:05:00.000Z').toISOString();
-    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    const { code } = await insertSnapshot({ capturedAt, status: 'open' });
 
-    const res = await get(`/s/${id}?dir=wb`);
+    const res = await get(`/s/${code}?dir=wb`);
     const html = await res.text();
-    expect(html).toContain(`https://tetonpasscam.com/og/${id}-wb.png`);
-    expect(html).toContain(`https://tetonpasscam.com/s/${id}?dir=wb`);
+    expect(html).toContain(`https://tetonpasscam.com/og/${code}-wb.png`);
+    expect(html).toContain(`https://tetonpasscam.com/s/${code}?dir=wb`);
   });
 
   it('CLOSED snapshot ⇒ og:title says CLOSED', async () => {
     const capturedAt = new Date('2026-08-10T19:10:00.000Z').toISOString();
-    const id = await insertSnapshot({ capturedAt, status: 'closed' });
+    const { code } = await insertSnapshot({ capturedAt, status: 'closed' });
 
-    const res = await get(`/s/${id}`);
+    const res = await get(`/s/${code}`);
     const html = await res.text();
     expect(html).toContain('Teton Pass is CLOSED — live conditions');
   });
 
-  it('redirects to / for a non-numeric id', async () => {
-    const res = await get('/s/not-a-number');
+  it('redirects to / for a malformed code (old-style numeric id)', async () => {
+    const res = await get('/s/53');
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('https://tetonpasscam.com/');
   });
 
-  it('redirects to / for an id with no matching snapshot', async () => {
-    const res = await get('/s/999999999');
+  it('redirects to / for an injection-y path segment', async () => {
+    const res = await get(`/s/${encodeURIComponent("'; DROP TABLE status_snapshots;--")}`);
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('https://tetonpasscam.com/');
+  });
+
+  it('redirects to / for a well-formed code with no matching snapshot', async () => {
+    const res = await get('/s/20990101-0000');
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('https://tetonpasscam.com/');
+  });
+
+  it('resolves a snapshot captured just after the spring-forward DST jump via the fallback scan', async () => {
+    const capturedAt = new Date('2026-03-08T09:20:00.000Z').toISOString();
+    const { code } = await insertSnapshot({ capturedAt, status: 'open' });
+    expect(code).toBe('20260308-0320');
+
+    const res = await get(`/s/${code}`);
+    expect(res.status).toBe(200);
   });
 
   it('sets the homepage-style short-cache headers, strips ETag/Last-Modified', async () => {
     const capturedAt = new Date('2026-08-10T19:15:00.000Z').toISOString();
-    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    const { code } = await insertSnapshot({ capturedAt, status: 'open' });
 
-    const res = await get(`/s/${id}`);
+    const res = await get(`/s/${code}`);
     expect(res.headers.get('Cache-Control')).toBe('public, s-maxage=300, max-age=0, must-revalidate');
     expect(res.headers.get('ETag')).toBeNull();
     expect(res.headers.get('Last-Modified')).toBeNull();

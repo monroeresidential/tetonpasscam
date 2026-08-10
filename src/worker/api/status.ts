@@ -4,6 +4,7 @@ import type { ApiStatus } from '../../shared/types';
 import type { PassStatus } from '../../shared/types';
 import { db, id33Events, statusSnapshots, weatherSnapshots } from '../db';
 import type { Env } from '../env';
+import { formatShareCode } from '../share-code';
 import { denverParts } from '../tz';
 import { getActiveAlerts } from './alerts';
 
@@ -352,11 +353,11 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     isStale,
     pollerDead,
     generatedAt: new Date(nowMs).toISOString(),
-    // See ApiStatus.statusSnapshotId's own comment: withheld (null) whenever
+    // See ApiStatus.shareCode's own comment: withheld (null) whenever
     // there's no snapshot, or the poller is dead -- both cases where "share
     // what I'm currently looking at" wouldn't actually be sharing anything
     // current.
-    statusSnapshotId: newest && !pollerDead ? newest.id : null,
+    shareCode: newest && !pollerDead ? formatShareCode(newest.capturedAt) : null,
     lastConfirmed,
     conditionText,
     advisories,

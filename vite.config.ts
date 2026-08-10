@@ -134,7 +134,7 @@ export default defineConfig({
           /^\/admin$/,
           /^\/privacy$/,
           /^\/api\//,
-          // share-cards T1: /s/{id} needs its own per-share rewritten
+          // share-cards T1: /s/{code} needs its own per-share rewritten
           // og:image/og:title meta tags (see src/worker/card/route.ts's
           // handleShareRequest) -- an installed PWA's SW must not swallow
           // that navigation and serve its precached, untransformed
