@@ -1,4 +1,5 @@
 import { api } from './api/router';
+import { handleOgRequest, handleShareRequest } from './card/route';
 import type { Env } from './env';
 import { runNightly } from './poller/aggregate';
 import { runPollCycle } from './poller/run';
@@ -72,6 +73,14 @@ export default {
     if (url.hostname === 'www.tetonpasscam.com') {
       return Response.redirect(`https://tetonpasscam.com${url.pathname}${url.search}`, 301);
     }
+    // share-cards T1: /og/ and /s/ are handled ahead of /api (and ASSETS)
+    // -- both return `null` for anything outside their own prefix/method,
+    // so this is a no-op for every other request.
+    const ogResponse = await handleOgRequest(req, env);
+    if (ogResponse) return ogResponse;
+    const shareResponse = await handleShareRequest(req, env, ctx);
+    if (shareResponse) return shareResponse;
+
     if (url.pathname.startsWith('/api/')) {
       return api.fetch(new Request(new URL(url.pathname.slice(4) + url.search, url.origin), req), env, ctx);
     }

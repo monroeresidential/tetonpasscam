@@ -32,4 +32,8 @@ describe('vite.config.ts PWA navigateFallbackDenylist', () => {
   it('still denylists /api/ defensively', () => {
     expect(denylistSource).toMatch(/\/\^\\\/api\\\//);
   });
+
+  it('denylists /s/ (share-cards T1) so an installed PWA does not swallow a share link', () => {
+    expect(denylistSource).toMatch(/\/\^\\\/s\\\//);
+  });
 });

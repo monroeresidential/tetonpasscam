@@ -36,6 +36,22 @@ binding = "DB"
 database_name = "tetonpasscam"
 database_id = "8a763eb6-ec40-4db2-ae0b-501f137a12d6"
 
+# share-cards T1: the /og PNG renderer (src/worker/card/fonts.ts) imports raw
+# .woff font bytes directly (satori has no woff2 decompressor, so the app's
+# usual self-hosted woff2 fonts can't be reused here -- see fonts.ts's own
+# comment). Wrangler has no built-in rule for .woff (only .wasm/.txt/.html/
+# .bin by default), so this makes `import x from '*.woff'` resolve to the
+# raw file bytes as an ArrayBuffer at build time. `fallthrough = true` is
+# required, not optional: defining ANY custom rule turns off wrangler's
+# built-in default rules unless fallthrough is set, and the `workers-og`
+# package's own internal `import ... from "./resvg-*.wasm"` (its bundled
+# WASM renderer) depends on the default `*.wasm` -> CompiledWasm rule still
+# applying.
+[[rules]]
+type = "Data"
+globs = ["**/*.woff"]
+fallthrough = true
+
 [triggers]
 # "*/10 11-6 * * *" would wrap around midnight UTC, which Cloudflare cron
 # triggers do not support (ranges cannot wrap). Split into two entries that
