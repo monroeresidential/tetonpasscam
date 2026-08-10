@@ -2,12 +2,12 @@ import type { AlertType, PublicAlert } from '../../shared/types';
 
 const TYPE_ICON: Record<AlertType, string> = {
   crash: '💥',
-  slideoff: '🚙',
-  slick: '🧊',
+  slideoff: '🛞',
+  slick: '❄',
   wildlife: '🦌',
-  stopped: '🚦',
-  closure: '⛔',
-  other: 'ℹ️',
+  stopped: '🚗',
+  closure: '🚧',
+  other: '⚠',
 };
 
 const TYPE_LABEL: Record<AlertType, string> = {
@@ -20,10 +20,18 @@ const TYPE_LABEL: Record<AlertType, string> = {
   other: 'Other',
 };
 
-const DIRECTION_LABEL: Record<'eb' | 'wb', string> = {
-  eb: 'Eastbound',
-  wb: 'Westbound',
+// Item-title direction phrasing: "toward" the side of the pass a driver
+// coming from that direction is headed, not a bare compass word -- matches
+// the Trailhead restyle's "From the road" card copy (task-5-brief.md).
+const DIRECTION_SUFFIX: Record<'eb' | 'wb', string> = {
+  wb: 'westbound to Victor',
+  eb: 'eastbound to Jackson',
 };
+
+function titleFor(alert: PublicAlert): string {
+  const label = TYPE_LABEL[alert.type];
+  return alert.direction ? `${label} · ${DIRECTION_SUFFIX[alert.direction]}` : label;
+}
 
 /**
  * "N min ago" under an hour (rounded to the nearest minute); "N h ago" at or
@@ -39,6 +47,36 @@ function ageLabel(createdAt: string, now: Date): string {
   return `${hours} h ago`;
 }
 
+function AlertCard({ alert, now }: { alert: PublicAlert; now: Date }) {
+  return (
+    <li className="bg-card border-card-border rounded-card border p-3">
+      <div className="flex items-start gap-2.5">
+        <div
+          aria-hidden="true"
+          className="bg-icon-tile flex h-8 w-8 flex-none items-center justify-center rounded-[10px] text-[15px]"
+        >
+          {TYPE_ICON[alert.type]}
+        </div>
+        <div className="flex-1">
+          <div className="text-[13.5px] font-bold">{titleFor(alert)}</div>
+          <p data-testid="alert-meta" className="text-muted mt-0.5 text-[12px]">
+            {alert.note && (
+              <>
+                <span aria-hidden="true">&quot;</span>
+                <span>{alert.note}</span>
+                <span aria-hidden="true">&quot;</span>
+                <span aria-hidden="true"> · </span>
+              </>
+            )}
+            <span>{ageLabel(alert.createdAt, now)}</span>
+          </p>
+          <p className="text-faint mt-[3px] text-[10.5px]">Unverified community report</p>
+        </div>
+      </div>
+    </li>
+  );
+}
+
 export default function AlertsStrip({
   alerts,
   id33Advisory,
@@ -50,47 +88,26 @@ export default function AlertsStrip({
 }) {
   return (
     <section aria-labelledby="alerts-heading" className="p-4">
-      <h2 id="alerts-heading" className="text-lg font-bold">
-        Community reports
+      <h2 id="alerts-heading" className="font-display text-[15px] font-bold">
+        From the road
       </h2>
 
       {/* CROSS-TASK FLAG (id33Advisory): a WYDOT-sourced advisory about the
           ID-33 Victor approach, unrelated to the WY-22 pass status itself --
-          kept visually distinct here and never folded into StatusBanner. */}
+          kept visually distinct here (muted card) and never folded into
+          StatusBanner. */}
       {id33Advisory && (
-        <p className="mt-2 rounded border border-blue-300 bg-blue-50 p-2 text-sm text-blue-900 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200">
-          <span className="font-semibold">ID-33 (Victor approach):</span> {id33Advisory}
+        <p className="bg-card border-card-border text-muted rounded-card mt-2 border p-3 text-sm">
+          <span className="text-ink font-semibold">ID-33 (Victor approach):</span> {id33Advisory}
         </p>
       )}
 
       {alerts.length === 0 ? (
-        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-          No reports in the last 3 hours.
-        </p>
+        <p className="text-muted mt-2 text-sm">No reports in the last 3 hours.</p>
       ) : (
-        <ul className="mt-2 space-y-2">
+        <ul className="mt-2 flex flex-col gap-2">
           {alerts.map((alert) => (
-            <li
-              key={alert.id}
-              className="rounded border border-neutral-200 p-2 dark:border-neutral-700"
-            >
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span aria-hidden="true">{TYPE_ICON[alert.type]}</span>
-                <span className="font-medium">{TYPE_LABEL[alert.type]}</span>
-                {alert.direction && (
-                  <span className="text-sm text-neutral-600 dark:text-neutral-300">
-                    {DIRECTION_LABEL[alert.direction]}
-                  </span>
-                )}
-                <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {ageLabel(alert.createdAt, now)}
-                </span>
-              </div>
-              {alert.note && <p className="mt-1 text-sm">{alert.note}</p>}
-              <p className="mt-1 text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
-                Unverified community report
-              </p>
-            </li>
+            <AlertCard key={alert.id} alert={alert} now={now} />
           ))}
         </ul>
       )}

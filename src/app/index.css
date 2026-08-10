@@ -51,6 +51,8 @@
   --color-btn-bg: #2b2620;
   --color-btn-ink: #fff;
 
+  --color-icon-tile: oklch(0.93 0.04 60);
+
   --radius-card: 14px;
   --radius-banner: 18px;
 
@@ -83,6 +85,8 @@
 
     --color-btn-bg: #f0ebe1;
     --color-btn-ink: #211d17;
+
+    --color-icon-tile: oklch(0.34 0.03 60);
   }
 }
 
