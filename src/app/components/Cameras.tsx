@@ -1,10 +1,28 @@
 import { useState } from 'react';
 
-import { CAMERAS } from '../cameras';
+import { CAMERAS, type CameraDef } from '../cameras';
 import type { CameraId } from '../../shared/types';
 
 const WYOROAD_URL = 'https://www.wyoroad.info';
 const SESSION_BEACON_PREFIX = 'camera-error-beaconed-';
+
+/**
+ * Device-local "h:mm AM" clock, same reasoning as Header.tsx's
+ * `formatHeaderTime`: this is a friendly "when was this image last
+ * refreshed" label derived from the client's own poll cadence
+ * (`refreshedAt`/`mountTs` below), not a WYDOT-sourced timestamp -- so no
+ * `timeZone: 'America/Denver'` pin (contrast StatusBanner/DriveTimes, which
+ * do pin Denver because they format WYDOT report times).
+ */
+const TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+function formatTimestamp(ts: number): string {
+  return TIME_FORMAT.format(new Date(ts));
+}
 
 /**
  * Sends the one-per-session-per-camera `/api/camera-error` beacon (Task
@@ -29,6 +47,52 @@ function beaconCameraErrorOnce(camera: CameraId): void {
   navigator.sendBeacon?.('/api/camera-error', JSON.stringify({ camera }));
 }
 
+function CameraTile({
+  cam,
+  ts,
+  hero,
+  errored,
+  onError,
+}: {
+  cam: CameraDef;
+  ts: number;
+  hero: boolean;
+  errored: boolean;
+  onError: () => void;
+}) {
+  const aspect = hero ? 'aspect-[16/8]' : 'aspect-video';
+
+  return (
+    <figure className={hero ? 'col-span-2' : ''}>
+      {errored ? (
+        <a
+          href={WYOROAD_URL}
+          className={`flex ${aspect} border-card-border bg-card w-full flex-col items-center justify-center gap-1 rounded-card border text-center text-sm underline`}
+        >
+          View on Wyoming 511
+        </a>
+      ) : (
+        <img
+          src={`${cam.url}?t=${ts}`}
+          alt={cam.caption}
+          loading="lazy"
+          className={`${aspect} rounded-card w-full object-cover`}
+          onError={onError}
+        />
+      )}
+      <figcaption className="mt-1 flex items-baseline justify-between gap-2 text-sm">
+        <span>
+          <span>{cam.caption}</span> —{' '}
+          <a href={WYOROAD_URL} className="underline">
+            Wyoming 511
+          </a>
+        </span>
+        <span className="text-muted shrink-0 text-[11px]">{formatTimestamp(ts)}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 export default function Cameras({ refreshedAt = null }: { refreshedAt?: Date | null }) {
   const [errored, setErrored] = useState<Record<string, boolean>>({});
   // Cache-buster: tied to `useStatus`'s `refreshedAt` (App threads it
@@ -42,39 +106,23 @@ export default function Cameras({ refreshedAt = null }: { refreshedAt?: Date | n
 
   return (
     <section aria-label="Teton Pass cameras" className="p-4">
-      <h2 className="text-lg font-bold">Cameras</h2>
-      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <h2 className="font-display text-[15px] font-bold">Cameras</h2>
+      <div className="mt-2 grid grid-cols-2 gap-3">
         {CAMERAS.map((cam) => (
-          <figure key={cam.id} className="rounded border border-neutral-200 p-2 dark:border-neutral-700">
-            {errored[cam.id] ? (
-              <a
-                href={WYOROAD_URL}
-                className="flex h-40 flex-col items-center justify-center gap-1 rounded bg-neutral-100 text-center text-sm underline dark:bg-neutral-800"
-              >
-                View on Wyoming 511
-              </a>
-            ) : (
-              <img
-                src={`${cam.url}?t=${ts}`}
-                alt={cam.caption}
-                loading="lazy"
-                className="h-40 w-full rounded object-cover"
-                onError={() => {
-                  setErrored((prev) => ({ ...prev, [cam.id]: true }));
-                  beaconCameraErrorOnce(cam.id);
-                }}
-              />
-            )}
-            <figcaption className="mt-1 text-sm">
-              <span>{cam.caption}</span> —{' '}
-              <a href={WYOROAD_URL} className="underline">
-                Wyoming 511
-              </a>
-            </figcaption>
-          </figure>
+          <CameraTile
+            key={cam.id}
+            cam={cam}
+            ts={ts}
+            hero={cam.id === 'valley'}
+            errored={Boolean(errored[cam.id])}
+            onError={() => {
+              setErrored((prev) => ({ ...prev, [cam.id]: true }));
+              beaconCameraErrorOnce(cam.id);
+            }}
+          />
         ))}
       </div>
-      <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Imagery: WYDOT Wyoming 511.</p>
+      <p className="text-faint mt-1 font-mono text-[10.5px]">Imagery: WYDOT Wyoming 511.</p>
     </section>
   );
 }

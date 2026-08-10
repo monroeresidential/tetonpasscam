@@ -90,4 +90,47 @@ describe('Cameras', () => {
     fireEvent.error(screen.getAllByRole('img')[0]);
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(1); // still 1 -- sessionStorage guard held
   });
+
+  it('renders the "Cameras" section heading', () => {
+    render(<Cameras />);
+    expect(screen.getByRole('heading', { name: 'Cameras' })).toBeInTheDocument();
+  });
+
+  it('renders the valley camera first as a full-width hero, with east/west following as a 2-col grid', () => {
+    render(<Cameras />);
+    const images = screen.getAllByRole('img');
+    expect(images[0]).toHaveAttribute('alt', 'Jackson Hole Valley');
+    expect(images[1]).toHaveAttribute('alt', 'Teton Pass — East');
+    expect(images[2]).toHaveAttribute('alt', 'Teton Pass — West');
+
+    // Hero: full-width 16/8 aspect ratio; halves: aspect-video.
+    expect(images[0].className).toMatch(/aspect-\[16\/8\]/);
+    expect(images[1].className).toMatch(/aspect-video/);
+    expect(images[2].className).toMatch(/aspect-video/);
+  });
+
+  it('shows a visible h:mm AM/PM timestamp next to each caption', () => {
+    render(<Cameras refreshedAt={new Date('2026-08-09T18:00:00.000Z')} />);
+    const timestamps = screen.getAllByText(/^\d{1,2}:\d{2}\s?(AM|PM)$/i);
+    expect(timestamps).toHaveLength(3);
+  });
+
+  it('updates the visible timestamp text as the refreshedAt prop advances', () => {
+    const first = new Date('2026-08-09T18:00:00.000Z');
+    const second = new Date('2026-08-09T18:02:00.000Z');
+
+    const { rerender } = render(<Cameras refreshedAt={first} />);
+    const before = screen.getAllByText(/^\d{1,2}:\d{2}\s?(AM|PM)$/i)[0].textContent;
+
+    rerender(<Cameras refreshedAt={second} />);
+    const after = screen.getAllByText(/^\d{1,2}:\d{2}\s?(AM|PM)$/i)[0].textContent;
+
+    expect(after).not.toBe(before);
+  });
+
+  it('does not render "Invalid Date" for the timestamp before refreshedAt has a value (mount-time fallback)', () => {
+    render(<Cameras refreshedAt={null} />);
+    expect(screen.queryByText(/invalid date/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/^\d{1,2}:\d{2}\s?(AM|PM)$/i)).toHaveLength(3);
+  });
 });
