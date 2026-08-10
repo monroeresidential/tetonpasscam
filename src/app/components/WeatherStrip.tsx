@@ -18,6 +18,11 @@ function isWinterMonth(date: Date): boolean {
   return month >= 11 || month <= 4;
 }
 
+function gustValue(weather: WeatherReading): string {
+  if (weather.windGustMph === null) return '—';
+  return weather.windDir !== null ? `${weather.windGustMph} mph ${weather.windDir}` : `${weather.windGustMph} mph`;
+}
+
 export default function WeatherStrip({
   weather,
   now = new Date(),
@@ -28,43 +33,33 @@ export default function WeatherStrip({
   if (!weather) {
     return (
       <section aria-label="Summit weather" className="p-4">
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">Weather data unavailable.</p>
+        <p className="text-muted text-sm">Weather data unavailable.</p>
       </section>
     );
   }
 
-  const airTile: Tile = { label: 'Air temp', value: weather.airF !== null ? `${weather.airF}°F` : '—' };
-  const surfaceTile: Tile = {
-    label: 'Surface temp',
+  const airTile: Tile = { label: 'Air', value: weather.airF !== null ? `${weather.airF}°F` : '—' };
+  const roadTile: Tile = {
+    label: 'Road',
     value: weather.surfaceF !== null ? `${weather.surfaceF}°F` : '—',
   };
-  const windTile: Tile = {
-    label: 'Wind',
-    value:
-      weather.windAvgMph !== null || weather.windGustMph !== null
-        ? `${weather.windAvgMph ?? '—'} avg / ${weather.windGustMph ?? '—'} gust mph`
-        : '—',
-  };
-  const windDirTile: Tile = { label: 'Wind direction', value: weather.windDir ?? '—' };
+  const gustTile: Tile = { label: 'Gust', value: gustValue(weather) };
   const visibilityTile: Tile = {
     label: 'Visibility',
     value: weather.visibilityFt !== null ? `${weather.visibilityFt} ft` : '—',
   };
 
-  // Surface temp matters most in winter (ice risk); air temp leads the rest
-  // of the year.
-  const tempTiles = isWinterMonth(now) ? [surfaceTile, airTile] : [airTile, surfaceTile];
-  const tiles: Tile[] = [...tempTiles, windTile, windDirTile, visibilityTile];
+  // Road (surface) temp matters most in winter (ice risk); air temp leads
+  // the rest of the year.
+  const tempTiles = isWinterMonth(now) ? [roadTile, airTile] : [airTile, roadTile];
+  const tiles: Tile[] = [...tempTiles, gustTile, visibilityTile];
 
   return (
-    <section aria-label="Summit weather" className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-5">
+    <section aria-label="Summit weather" className="grid grid-cols-4 gap-2 p-4">
       {tiles.map((tile) => (
-        <div
-          key={tile.label}
-          className="rounded-md bg-neutral-100 dark:bg-neutral-800 p-3 text-center"
-        >
-          <p className="text-xs uppercase text-neutral-500 dark:text-neutral-400">{tile.label}</p>
-          <p className="text-lg font-semibold">{tile.value}</p>
+        <div key={tile.label} className="bg-card border-card-border rounded-card border p-3 text-center">
+          <p className="font-display text-lg font-extrabold">{tile.value}</p>
+          <p className="text-muted text-[10.5px] uppercase">{tile.label}</p>
         </div>
       ))}
     </section>

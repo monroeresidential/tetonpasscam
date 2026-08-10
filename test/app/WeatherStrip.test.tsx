@@ -15,25 +15,24 @@ const reading: WeatherReading = {
 };
 
 describe('WeatherStrip', () => {
-  it('renders 5 stat tiles', () => {
+  it('renders 4 stat tiles', () => {
     render(<WeatherStrip weather={reading} now={new Date('2026-01-15T12:00:00.000Z')} />);
-    expect(screen.getByText('Air temp')).toBeInTheDocument();
-    expect(screen.getByText('Surface temp')).toBeInTheDocument();
-    expect(screen.getByText('Wind')).toBeInTheDocument();
-    expect(screen.getByText('Wind direction')).toBeInTheDocument();
+    expect(screen.getByText('Air')).toBeInTheDocument();
+    expect(screen.getByText('Road')).toBeInTheDocument();
+    expect(screen.getByText('Gust')).toBeInTheDocument();
     expect(screen.getByText('Visibility')).toBeInTheDocument();
   });
 
-  it('puts surface temp before air temp Nov-Apr (winter, client clock)', () => {
+  it('puts the Road tile before Air Nov-Apr (winter, client clock)', () => {
     render(<WeatherStrip weather={reading} now={new Date('2026-01-15T12:00:00.000Z')} />);
-    const labels = screen.getAllByText(/temp$/).map((el) => el.textContent);
-    expect(labels).toEqual(['Surface temp', 'Air temp']);
+    const labels = screen.getAllByText(/^(Air|Road)$/).map((el) => el.textContent);
+    expect(labels).toEqual(['Road', 'Air']);
   });
 
-  it('puts air temp before surface temp May-Oct (summer, client clock)', () => {
+  it('puts the Air tile before Road May-Oct (summer, client clock)', () => {
     render(<WeatherStrip weather={reading} now={new Date('2026-07-15T12:00:00.000Z')} />);
-    const labels = screen.getAllByText(/temp$/).map((el) => el.textContent);
-    expect(labels).toEqual(['Air temp', 'Surface temp']);
+    const labels = screen.getAllByText(/^(Air|Road)$/).map((el) => el.textContent);
+    expect(labels).toEqual(['Air', 'Road']);
   });
 
   it('renders a fallback when weather is null', () => {

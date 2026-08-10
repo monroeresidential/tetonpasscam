@@ -109,14 +109,14 @@ export default function Footer() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   return (
-    <footer className="border-t border-neutral-200 p-4 text-sm text-neutral-600 dark:border-neutral-700 dark:text-neutral-400">
-      <nav aria-label="Footer" className="flex flex-wrap gap-x-4 gap-y-2">
+    <footer className="border-card-border text-muted border-t p-4 text-xs">
+      <nav aria-label="Footer" className="flex flex-col gap-1">
         {LINKS.map((link) => (
           <a key={link.href} href={link.href} className="underline">
             {link.label}
           </a>
         ))}
-        <button type="button" onClick={() => setFeedbackOpen(true)} className="underline">
+        <button type="button" onClick={() => setFeedbackOpen(true)} className="text-left underline">
           Feedback
         </button>
       </nav>

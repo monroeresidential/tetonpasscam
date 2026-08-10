@@ -3,15 +3,20 @@ const SPONSOR_URL =
 
 export default function Sponsor() {
   return (
-    <section aria-label="Sponsor" className="border-t border-neutral-200 p-4 dark:border-neutral-700">
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
-        Sponsored by{' '}
-        <a href={SPONSOR_URL} className="font-semibold underline">
-          Teton Flats
-        </a>{' '}
-        — modern 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson. Live here, check this
-        page less.
-      </p>
+    <section aria-label="Sponsor" className="p-4">
+      <div className="bg-sponsor-bg border-sponsor-border rounded-card border p-4">
+        <p className="text-sponsor-label text-[10.5px] font-bold uppercase tracking-wide">
+          Sponsored by{' '}
+          <a href={SPONSOR_URL} className="underline">
+            Teton Flats
+          </a>
+        </p>
+        <p className="mt-1 text-sm">
+          {' '}
+          — modern 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson. Live here, check this
+          page less.
+        </p>
+      </div>
     </section>
   );
 }
