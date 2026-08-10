@@ -52,6 +52,19 @@ export interface ApiStatus {
   // at a later, more recent-looking time. See `useStatus.ts`'s
   // `isGeneratedAtStale` for the client-side guard this enables.
   generatedAt: string;
+  // `status_snapshots.id` of the newest snapshot this response was built
+  // from -- the share button (share-cards T2) builds `/s/{id}` from this.
+  // Null whenever there's no snapshot to share (`pollerDead`, or no snapshot
+  // row at all): a share card built from an already-dead-poller "current"
+  // view would just be a stale, ancient row masquerading as "what I'm
+  // looking at right now", so the share affordance is withheld entirely
+  // rather than offered against a snapshot that's already past its own
+  // currency window. This is independent of `/og/{id}`'s own validation --
+  // an id shared while `newest` was fresh remains servable by `/og`/`/s`
+  // forever after (stale-share honesty: the card is a permanent historical
+  // snapshot by design), this field only gates whether a NEW share link
+  // gets minted from the CURRENT response.
+  statusSnapshotId: number | null;
   lastConfirmed: { status: Exclude<PassStatus, 'unknown'>; at: string } | null; // newest non-unknown snapshot
   conditionText: string | null;
   advisories: string[];

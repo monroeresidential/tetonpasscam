@@ -59,6 +59,8 @@ describe('GET /api/status — no snapshots at all', () => {
     expect(body.status).toBe('unknown');
     expect(body.pollerDead).toBe(true);
     expect(body.lastConfirmed).toBeNull();
+    // share-cards T1: nothing to share when there's no snapshot at all.
+    expect(body.statusSnapshotId).toBeNull();
   });
 });
 
@@ -104,6 +106,21 @@ describe('GET /api/status', () => {
     expect(body.status).toBe('unknown');
     expect(body.pollerDead).toBe(true);
     expect(body.lastConfirmed).toEqual({ status: 'open', at: capturedAt });
+    // share-cards T1: a dead-poller "current" view has nothing current to
+    // share, even though a (now-ancient) snapshot row exists.
+    expect(body.statusSnapshotId).toBeNull();
+  });
+
+  it('fresh snapshot ⇒ statusSnapshotId is that snapshot\'s own row id', async () => {
+    const capturedAt = new Date(Date.now()).toISOString();
+    await insertStatusSnapshot({ capturedAt, status: 'open', wydotReportTime: capturedAt });
+
+    const row = (await env.DB.prepare(
+      'SELECT id FROM status_snapshots ORDER BY id DESC LIMIT 1',
+    ).first()) as { id: number };
+
+    const { body } = await getStatus();
+    expect(body.statusSnapshotId).toBe(row.id);
   });
 
   it('wydotReportTime 13h old but snapshot fresh ⇒ status unchanged, isStale true', async () => {

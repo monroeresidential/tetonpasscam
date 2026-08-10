@@ -1,3 +1,4 @@
+import { CLOSED_LEGAL_COPY } from '../../shared/legal';
 import type { ApiStatus, PassStatus } from '../../shared/types';
 import DetourBlock from './DetourBlock';
 
@@ -21,9 +22,6 @@ const STATUS_FILL: Record<PassStatus, string> = {
 
 const HEADLINE_CLASS =
   'font-display text-[40px] font-extrabold leading-none tracking-tight lg:text-[46px]';
-
-const CLOSED_LEGAL_COPY =
-  'Closed — do not attempt. Traveling a closed Wyoming road is illegal (up to $750 fine).';
 
 export default function StatusBanner({ data }: { data: ApiStatus }) {
   // CROSS-TASK SAFETY FLAG (Task 9 review, binding): pollerDead means the

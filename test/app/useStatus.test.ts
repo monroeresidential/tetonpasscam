@@ -10,6 +10,7 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
     isStale: false,
     pollerDead: false,
     generatedAt: new Date().toISOString(),
+    statusSnapshotId: 1,
     lastConfirmed: null,
     conditionText: null,
     advisories: [],

@@ -352,6 +352,11 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     isStale,
     pollerDead,
     generatedAt: new Date(nowMs).toISOString(),
+    // See ApiStatus.statusSnapshotId's own comment: withheld (null) whenever
+    // there's no snapshot, or the poller is dead -- both cases where "share
+    // what I'm currently looking at" wouldn't actually be sharing anything
+    // current.
+    statusSnapshotId: newest && !pollerDead ? newest.id : null,
     lastConfirmed,
     conditionText,
     advisories,

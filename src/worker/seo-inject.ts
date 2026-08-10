@@ -3,16 +3,12 @@ import { desc, eq } from 'drizzle-orm';
 import { DEAD_HOURS, TRAVEL_TIME_FRESHNESS_MIN, WEATHER_STALE_MIN } from './api/status';
 import { db, routes, statusSnapshots, travelTimes, weatherSnapshots } from './db';
 import type { Env } from './env';
+import { CLOSED_LEGAL_COPY } from '../shared/legal';
 
 // Same link StatusBanner.tsx's UNKNOWN state points to -- one canonical
 // "go check the official source" URL for both the client UI and this
 // edge-rendered fallback.
 const WYOROAD_URL = 'https://www.wyoroad.info/highway/conditions/RoadClosures.html';
-// Byte-identical to StatusBanner.tsx's CLOSED_LEGAL_COPY (hard rule #5:
-// CLOSED must say "do not attempt", never "not recommended", and the
-// statutory fine belongs alongside it).
-const CLOSED_LEGAL_COPY =
-  'Closed — do not attempt. Traveling a closed Wyoming road is illegal (up to $750 fine).';
 const VICTOR_JACKSON_EB_SLUG = 'victor-jackson-eb';
 
 const STATUS_LABEL: Record<'open' | 'restricted' | 'closed', string> = {
