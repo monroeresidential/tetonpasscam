@@ -59,6 +59,13 @@ async function feedbackRowByBody(body: string): Promise<any> {
     .first();
 }
 
+async function countFeedbackByIpHash(ipHash: string): Promise<number> {
+  const row = (await env.DB.prepare('SELECT COUNT(*) n FROM feedback WHERE ip_hash = ?')
+    .bind(ipHash)
+    .first()) as { n: number };
+  return row.n;
+}
+
 describe('POST /api/feedback', () => {
   it('valid POST with body only ⇒ 201, row created with email=null, one email sent', async () => {
     const calls = stubEmailFetcher();
@@ -129,6 +136,21 @@ describe('POST /api/feedback', () => {
     const res = await postFeedback({ body });
     expect(res.status).toBe(400);
     expect(calls).toHaveLength(0);
+  });
+
+  it('request body over the 8KB cap ⇒ 413, no row, no email (LH T3 finding 7)', async () => {
+    const calls = stubEmailFetcher();
+    // Oversized at the HTTP-body level, not the validated `body` field
+    // level -- a big `email` value inflates the raw JSON past 8KB while
+    // still being something the size cap must catch before any field
+    // validation runs.
+    const oversizedEmail = `${'a'.repeat(8200)}@example.com`;
+    const res = await postFeedback({ body: 'feedback text', email: oversizedEmail });
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: 'payload too large' });
+    expect(calls).toHaveLength(0);
+    const row = await feedbackRowByBody('feedback text');
+    expect(row).toBeFalsy();
   });
 
   it('body exactly 2000 chars ⇒ accepted 201', async () => {
@@ -210,6 +232,36 @@ describe('POST /api/feedback', () => {
       // ipA is now at its limit, but ipB has made no posts yet.
       const res = await postFeedback({ body: 'ip B post' }, ipB);
       expect(res.status).toBe(201);
+    });
+
+    it('rate-limited response body is exactly {error: "rate limited"} -- unchanged by the atomic-insert rewrite (LH T3 finding 5)', async () => {
+      stubEmailFetcher();
+      const ip = '198.51.100.220';
+      await postFeedback({ body: 'body-check post 1' }, ip);
+      await postFeedback({ body: 'body-check post 2' }, ip);
+      await postFeedback({ body: 'body-check post 3' }, ip);
+      const fourth = await postFeedback({ body: 'body-check post 4' }, ip);
+      expect(fourth.status).toBe(429);
+      expect(await fourth.json()).toEqual({ error: 'rate limited' });
+    });
+
+    it('5 simultaneous POSTs from the same IP (Promise.all) ⇒ exactly 3 rows persisted, never more -- regression test for the check-then-insert race the atomic conditional insert closes (LH T3 finding 5)', async () => {
+      stubEmailFetcher();
+      const ip = '198.51.100.221';
+
+      const responses = await Promise.all(
+        Array.from({ length: 5 }, (_, i) => postFeedback({ body: `burst-race post ${i}` }, ip)),
+      );
+      const statuses = responses.map((r) => r.status);
+      expect(statuses.filter((s) => s === 201)).toHaveLength(3);
+      expect(statuses.filter((s) => s === 429)).toHaveLength(2);
+
+      // All 5 requests share one IP, so any successfully-inserted row from
+      // this burst carries the ip_hash to look the rest up by.
+      const successRow = (await env.DB.prepare(
+        "SELECT ip_hash FROM feedback WHERE body LIKE 'burst-race post%' LIMIT 1",
+      ).first()) as any;
+      expect(await countFeedbackByIpHash(successRow.ip_hash)).toBe(3);
     });
   });
 

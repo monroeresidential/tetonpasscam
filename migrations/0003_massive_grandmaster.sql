@@ -1,0 +1,1 @@
+ALTER TABLE `weather_snapshots` ADD `reported_at` text;

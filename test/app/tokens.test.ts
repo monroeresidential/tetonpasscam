@@ -80,9 +80,10 @@ describe('design tokens (src/app/index.css)', () => {
 
   it("index.html has media-scoped theme-color metas for light/dark browser chrome (route-22 brand kit)", () => {
     // These track the logo-4c brand kit's cream/ink palette (#faf7f0 light,
-    // #211d17 dark), not the PWA manifest's theme_color (#2b2620, unchanged
-    // -- the brand kit's README is silent on manifest colors, so
-    // vite.config.ts keeps the pre-existing --color-ink value there).
+    // #211d17 dark) for the browser-tab case. The PWA manifest's
+    // theme_color (installed-app chrome/splash) is a separate, unscoped
+    // value -- LH T5 set it to the same cream (#faf7f0) since a manifest
+    // can't media-query; see vite.config.ts's comment.
     expect(html).toContain(
       '<meta name="theme-color" content="#faf7f0" media="(prefers-color-scheme: light)" />',
     );

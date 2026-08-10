@@ -82,6 +82,14 @@ export const weatherSnapshots = sqliteTable('weather_snapshots', {
   windGust: real('wind_gust'),
   windDir: text('wind_dir'),
   visibilityFt: real('visibility_ft'),
+  // WYDOT's own "Last Report Time" from the Sensors.StationResults page
+  // (WeatherReading.reportedAt), NOT re-derived from capturedAt (the
+  // poller's own fetch time) -- see LH T2 finding 4's survey: the API used
+  // to relabel capturedAt as reportedAt because this column didn't exist,
+  // silently discarding the parser's own reading. Nullable because the
+  // parser can fail to find/parse the timestamp text even when the numeric
+  // readings themselves come through fine.
+  reportedAt: text('reported_at'),
 });
 
 export const id33Events = sqliteTable('id33_events', {
@@ -117,16 +125,32 @@ export const alerts = sqliteTable(
       .notNull()
       .default('active'),
   },
-  (table) => [index('alerts_expires_status_idx').on(table.expiresAt, table.status)],
+  (table) => [
+    index('alerts_expires_status_idx').on(table.expiresAt, table.status),
+    // Support the rate-limit conditional insert's two subqueries (see
+    // postAlert in alerts.ts): `WHERE device_hash = ? AND created_at > ?`
+    // and `WHERE ip_hash = ? AND created_at > ?`. Without these, both
+    // subqueries fall back to a full table scan on every single POST.
+    index('alerts_device_hash_created_idx').on(table.deviceHash, table.createdAt),
+    index('alerts_ip_hash_created_idx').on(table.ipHash, table.createdAt),
+  ],
 );
 
-export const feedback = sqliteTable('feedback', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  createdAt: text('created_at').notNull(),
-  body: text('body').notNull(),
-  email: text('email'),
-  ipHash: text('ip_hash'),
-});
+export const feedback = sqliteTable(
+  'feedback',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    createdAt: text('created_at').notNull(),
+    body: text('body').notNull(),
+    email: text('email'),
+    ipHash: text('ip_hash'),
+  },
+  (table) => [
+    // Supports postFeedback's rate-limit conditional insert:
+    // `WHERE ip_hash = ? AND created_at > ?`.
+    index('feedback_ip_hash_created_idx').on(table.ipHash, table.createdAt),
+  ],
+);
 
 export const bans = sqliteTable(
   'bans',

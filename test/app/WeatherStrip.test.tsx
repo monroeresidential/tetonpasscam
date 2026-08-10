@@ -70,4 +70,39 @@ describe('WeatherStrip', () => {
       expect(screen.getByText('—')).toBeInTheDocument();
     });
   });
+
+  describe('weatherStale (LH T2 finding 4)', () => {
+    it('shows no staleness copy when weatherStale is false (the default)', () => {
+      render(<WeatherStrip weather={reading} now={new Date('2026-01-15T12:00:00.000Z')} />);
+      expect(screen.queryByText(/outdated/i)).not.toBeInTheDocument();
+    });
+
+    it('shows a muted "as of" suffix, formatted from reportedAt, when weatherStale is true', () => {
+      render(
+        <WeatherStrip weather={reading} weatherStale now={new Date('2026-01-15T12:00:00.000Z')} />,
+      );
+      // reading.reportedAt = '2026-01-09T18:00:00.000Z' -> 11:00 AM America/Denver (MST, UTC-7).
+      expect(screen.getByText(/outdated/i)).toBeInTheDocument();
+      expect(screen.getByText(/as of 11:00 AM/i)).toBeInTheDocument();
+    });
+
+    it('still renders the tiles (last-known beats nothing) when weatherStale is true', () => {
+      render(
+        <WeatherStrip weather={reading} weatherStale now={new Date('2026-01-15T12:00:00.000Z')} />,
+      );
+      expect(screen.getByText('28°F')).toBeInTheDocument();
+    });
+
+    it('omits the "(as of ...)" time when reportedAt is null, but keeps the outdated flag', () => {
+      render(
+        <WeatherStrip
+          weather={{ ...reading, reportedAt: null }}
+          weatherStale
+          now={new Date('2026-01-15T12:00:00.000Z')}
+        />,
+      );
+      expect(screen.getByText(/outdated/i)).toBeInTheDocument();
+      expect(screen.queryByText(/as of/i)).not.toBeInTheDocument();
+    });
+  });
 });

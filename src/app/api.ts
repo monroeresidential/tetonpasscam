@@ -12,10 +12,16 @@ export class HttpStatusError extends Error {
   }
 }
 
+/** A hung request (dead connection that neither resolves nor rejects on its
+ *  own) must not block the polling loop forever -- `useStatus`'s `inFlight`
+ *  guard would otherwise stay set indefinitely, silently preventing every
+ *  later poll/visibility/manual refresh from ever firing again. */
+const FETCH_TIMEOUT_MS = 15_000;
+
 /** Plain fetch of our own `/api/status` -- the only endpoint the Home
  *  screen reads (see CLAUDE.md: clients never call WYDOT/Google directly). */
 export async function getStatus(): Promise<ApiStatus> {
-  const res = await fetch('/api/status');
+  const res = await fetch('/api/status', { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!res.ok) {
     throw new HttpStatusError(res.status);
   }

@@ -36,10 +36,18 @@ export default function Header({
   return (
     <header className="flex items-center justify-between gap-3 pt-4 pb-2.5 lg:py-4">
       <div className="flex items-center gap-2">
-        {/* Route-22 mark (design/logo-4c/) -- decorative next to the text
-            wordmark, which stays real HTML text rather than baked into the
-            image (see design/logo-4c/README.md's "Header lockup" section). */}
-        <img src="/icons/icon-192.png" width={40} height={40} alt="" />
+        {/* Route-22 mark (design/logo-4c/, design/logo-4c-dark/) -- decorative
+            next to the text wordmark, which stays real HTML text rather than
+            baked into the image (see design/logo-4c/README.md's "Header
+            lockup" section). <picture>/<source> swaps to the kit's dark
+            alternate (cream plate, ink numerals) under prefers-color-scheme,
+            same as the favicon and theme-color meta tags -- the plain <img>
+            src is both the light-mode image and the fallback for browsers
+            that don't evaluate the media condition. */}
+        <picture>
+          <source srcSet="/icons/icon-192-dark.png" media="(prefers-color-scheme: dark)" />
+          <img src="/icons/icon-192.png" width={40} height={40} alt="" />
+        </picture>
         <div className="font-display text-[19px] font-extrabold tracking-tight text-ink lg:text-[21px]">
           Teton Pass Cam
         </div>

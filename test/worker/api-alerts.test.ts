@@ -287,6 +287,69 @@ describe('POST /api/alerts', () => {
     expect(await countAlertsByDeviceHash((row as any).device_hash)).toBe(2);
   });
 
+  it('rate-limited response body is exactly {error: "rate limited"} -- unchanged by the atomic-insert rewrite (LH T3 finding 5)', async () => {
+    stubEmailFetcher();
+    const deviceId = 'device-429-body-check';
+    const ip = '203.0.113.92';
+    await postAlert({ type: 'other', deviceId }, { 'CF-Connecting-IP': ip });
+    await postAlert({ type: 'other', deviceId }, { 'CF-Connecting-IP': ip });
+    const third = await postAlert({ type: 'other', deviceId }, { 'CF-Connecting-IP': ip });
+    expect(third.status).toBe(429);
+    expect(await third.json()).toEqual({ error: 'rate limited' });
+  });
+
+  it('5 simultaneous POSTs from the same device (Promise.all) ⇒ exactly 2 rows persisted, never more -- regression test for the check-then-insert race the atomic conditional insert closes (LH T3 finding 5)', async () => {
+    stubEmailFetcher();
+    const deviceId = 'device-burst-race-test';
+    const ip = '203.0.113.93';
+
+    const responses = await Promise.all(
+      Array.from({ length: 5 }, () => postAlert({ type: 'other', deviceId }, { 'CF-Connecting-IP': ip })),
+    );
+    const statuses = responses.map((r) => r.status);
+    expect(statuses.filter((s) => s === 201)).toHaveLength(2);
+    expect(statuses.filter((s) => s === 429)).toHaveLength(3);
+
+    const successResponse = responses.find((r) => r.status === 201);
+    const successBody = (await successResponse!.json()) as { id: number };
+    const row = (await env.DB.prepare('SELECT device_hash FROM alerts WHERE id = ?')
+      .bind(successBody.id)
+      .first()) as any;
+    expect(await countAlertsByDeviceHash(row.device_hash)).toBe(2);
+  });
+
+  it('deviceId of 129 chars ⇒ 400 (over the 128-char cap)', async () => {
+    stubEmailFetcher();
+    const res = await postAlert(
+      { type: 'other', deviceId: 'd'.repeat(129) },
+      { 'CF-Connecting-IP': '203.0.113.94' },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('deviceId of exactly 128 chars ⇒ accepted', async () => {
+    stubEmailFetcher();
+    const res = await postAlert(
+      { type: 'other', deviceId: 'd'.repeat(128) },
+      { 'CF-Connecting-IP': '203.0.113.95' },
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it('body over the 2KB cap ⇒ 413, no row, no email (LH T3 finding 7)', async () => {
+    const calls = stubEmailFetcher();
+    const oversizedNote = 'x'.repeat(3000);
+    const res = await postAlert(
+      { type: 'other', note: oversizedNote, deviceId: 'device-oversized-body' },
+      { 'CF-Connecting-IP': '203.0.113.96' },
+    );
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: 'payload too large' });
+    const row = await alertRowByNote(oversizedNote);
+    expect(row).toBeFalsy();
+    expect(calls).toHaveLength(0);
+  });
+
   it('6th POST from a different device but the same IP within 30 min ⇒ 429; only 5 rows persisted for that IP', async () => {
     stubEmailFetcher();
     const ip = '203.0.113.21';
@@ -476,5 +539,19 @@ describe('POST /api/camera-error', () => {
       const res = await postCameraError({ camera });
       expect(res.status).toBe(200);
     }
+  });
+
+  it('body over the 1KB cap ⇒ 413, no email (LH T3 finding 7)', async () => {
+    // No "no row" assertion here -- earlier tests in this shared-D1-per-file
+    // suite already recorded a `valley` row for today (camera_errors is
+    // UNIQUE(camera, day)), so presence/absence of a `valley` row isn't a
+    // meaningful signal for THIS request. The email check is: the size cap
+    // must reject the request before it ever reaches postCameraError, so no
+    // NEW email fires for it.
+    const calls = stubEmailFetcher();
+    const res = await postCameraError({ camera: 'valley', junk: 'x'.repeat(2000) });
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: 'payload too large' });
+    expect(calls).toHaveLength(0);
   });
 });

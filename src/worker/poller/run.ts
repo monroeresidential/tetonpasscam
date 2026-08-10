@@ -83,37 +83,135 @@ function unknownStatusResult(source: StatusResult['source']): StatusResult {
   };
 }
 
+/** Where a definite status sits on the only axis that safety cares about:
+ *  can you drive it or not. 'open' and 'restricted' both mean "passable" --
+ *  they can disagree with each other on HOW restricted without that being a
+ *  trust-relevant conflict, but either one disagreeing with 'closed' is
+ *  exactly the conflict this module exists to catch. Returns null for
+ *  'unknown' (no opinion to place on the axis at all). */
+function passAxis(status: StatusResult['status']): 'closed' | 'passable' | null {
+  if (status === 'closed') return 'closed';
+  if (status === 'open' || status === 'restricted') return 'passable';
+  return null;
+}
+
+function dedupeAppend(base: string[], extra: string[]): string[] {
+  const out = [...base];
+  for (const item of extra) {
+    if (!out.includes(item)) out.push(item);
+  }
+  return out;
+}
+
+/** Older (earlier) of two ISO timestamps, treating a null or unparseable
+ *  value as absent rather than "infinitely old"/"infinitely new" -- an
+ *  absent side simply defers to whichever side has a usable value. Picking
+ *  the OLDER of the two (rather than always primary's, as before) is the
+ *  conservative choice for a merged report: a driver reading `wydotReportTime`
+ *  as "how current is this" should never see a timestamp fresher than the
+ *  least-current source that contributed to the merged status. */
+function olderReportTime(a: string | null, b: string | null): string | null {
+  const aMs = a === null ? NaN : Date.parse(a);
+  const bMs = b === null ? NaN : Date.parse(b);
+  if (!Number.isFinite(aMs)) return Number.isFinite(bMs) ? b : null;
+  if (!Number.isFinite(bMs)) return a;
+  return aMs <= bMs ? a : b;
+}
+
+/** Merge two DEFINITE StatusResults that AGREE on `passAxis` (both
+ *  'closed', or both in {'open','restricted'}) into one. Within an
+ *  agreeing 'passable' pair, the more restrictive of the two wins
+ *  (open+restricted -> restricted; open+open -> open); a 'closed' pair can
+ *  only ever agree with another 'closed'.
+ *
+ *  Advisories come from whichever side's OWN status matches the merged
+ *  `status` (the "winning" side) -- not a union of both. A union would let
+ *  a less-restrictive source's advisory list bleed into a report that's
+ *  really describing the other, more-restrictive source's conditions.
+ *  When both sides already agree exactly (open+open, or one side is the
+ *  sole source of the merged status because the other was more permissive
+ *  and lost), primary's advisories are used, matching the historical
+ *  'primary'-favoring default. Restrictions, by contrast, stay a deduped
+ *  union of both sources (primary's entries first) -- a driver must never
+ *  lose a real restriction just because only the fallback page reported it,
+ *  and unlike advisories a restriction isn't tied to which side "won" the
+ *  open/closed axis.
+ *
+ *  `wydotReportTime` is the OLDER of the two sources' report times (see
+ *  `olderReportTime`) -- conservative, since the merged report is only as
+ *  current as its least-current input. `primary`'s conditionText wins, and
+ *  the reported source stays 'primary' -- it's still the authoritative
+ *  page, fallback here only ever narrows/corroborates it, never overrides
+ *  it. */
+function mergeAgreeing(primary: StatusResult, fallback: StatusResult): StatusResult {
+  const status: StatusResult['status'] =
+    primary.status === 'closed' || fallback.status === 'closed'
+      ? 'closed'
+      : primary.status === 'restricted' || fallback.status === 'restricted'
+        ? 'restricted'
+        : 'open';
+  const advisories =
+    fallback.status === status && primary.status !== status ? fallback.advisories : primary.advisories;
+  return {
+    status,
+    conditionText: primary.conditionText,
+    advisories,
+    restrictions: dedupeAppend(primary.restrictions, fallback.restrictions),
+    wydotReportTime: olderReportTime(primary.wydotReportTime, fallback.wydotReportTime),
+    source: 'primary',
+  };
+}
+
+/** Consult the Statewide cross-check page as a last resort and return its
+ *  verdict, but only from an explicit allowlist ('closed' | 'restricted') --
+ *  never trust it to hand back 'open'. Statewide's own parser today never
+ *  emits 'open' (it only ever lists problem segments), but that invariant
+ *  belongs here too, at the one call site that decides whether a crosscheck
+ *  verdict gets to set the banner, not only inside a module this function
+ *  doesn't control. Returns null when Statewide itself can't resolve it
+ *  (fetch failure or no recognizable verdict) -- callers report 'unknown'. */
+async function consultStatewide(fetcher: typeof fetch): Promise<'closed' | 'restricted' | null> {
+  try {
+    const html = await wydotFetch(STATEWIDE_URL, fetcher);
+    const statewideStatus = html === null ? 'unknown' : parseStatewide(html);
+    return statewideStatus === 'closed' || statewideStatus === 'restricted' ? statewideStatus : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Resolve the current Teton Pass status via the primary -> fallback ->
- * crosscheck chain:
+ * Resolve the current Teton Pass status. Both the primary source
+ * (RoadClosures.html) and the fallback source
+ * (RoutesResults?SelectedRoute=WY22) are fetched EVERY cycle -- not only
+ * when primary comes back 'unknown' -- because a definite primary can still
+ * be a misparse or a genuine WYDOT inconsistency, and the only way to ever
+ * catch that (per the spec's cross-check requirement) is to have a second
+ * opinion in hand every single cycle, not just when the first one already
+ * gave up. Decision matrix:
  *
- *   1. Try the primary source (RoadClosures.html). If it resolves to a
- *      definite status (open/restricted/closed), use it (source 'primary').
- *   2. Only when primary is 'unknown' (fetch failed/threw, or the page
- *      shape was unrecognized/ambiguous) do we spend a second fetch on the
- *      fallback source (RoutesResults?SelectedRoute=WY22). If IT resolves,
- *      use it (source 'fallback').
- *   3. If BOTH primary and fallback failed to produce anything but
- *      'unknown', neither offers a trustworthy opinion to agree or disagree
- *      with -- so as a last resort we consult the Statewide cross-check
- *      page. Statewide only ever signals 'closed' or 'restricted' (per its
- *      own parser, it never reports 'open'), so trusting it here can't
- *      introduce a false "open". If it resolves, use it (source
- *      'crosscheck'); otherwise the cycle is genuinely unresolved and we
- *      report 'unknown'.
- *
- * NOTE on interpretation: the brief's wording ("if primary and fallback
- * disagree on open-vs-closed, consult Statewide") literally requires two
- * concrete opinions to compare -- but by construction fallback is only ever
- * fetched when primary is 'unknown', so primary never carries an actual
- * open/closed opinion to disagree with at that point (and wydot-status.ts,
- * which this task must not modify, doesn't expose any partial signal for an
- * 'unknown' result to compare against). This implementation treats "both
- * sources failed to agree on ANY resolved status" as the trigger for the
- * Statewide consult, which is the closest safe, testable, non-invasive
- * reading: it never weakens the "never open without real evidence"
- * invariant, and it makes every clause in the brief ("still unresolved ->
- * unknown") reachable.
+ *   1. Primary definite, fallback unknown -> accept primary (source
+ *      'primary'). A fallback-page hiccup must never degrade a healthy
+ *      primary read.
+ *   2. Primary unknown, fallback definite -> accept fallback (source
+ *      'fallback').
+ *   3. Both definite and AGREE on the open-vs-closed axis (open+restricted
+ *      counts as agreeing -- both passable) -> merge them, preferring the
+ *      more restrictive status and the union of both sources'
+ *      advisories/restrictions (source 'primary'; see mergeAgreeing).
+ *   4. Both definite and DISAGREE on the open-vs-closed axis (one says
+ *      closed, the other says open/restricted) -- this is the exact
+ *      scenario a primary-only read can never catch, and is why fallback is
+ *      now fetched unconditionally. Consult the Statewide crosscheck: if it
+ *      resolves to closed/restricted, use that (source 'crosscheck');
+ *      otherwise the cycle is genuinely unresolved (source 'unresolved').
+ *      INVARIANT: this path must NEVER return 'open' -- consultStatewide
+ *      only ever hands back 'closed' | 'restricted' | null, by construction.
+ *   5. Both unknown -> neither source has an opinion to agree or disagree
+ *      with, so as a last resort consult Statewide the same way; if it
+ *      still can't resolve it, report 'unknown' (source 'primary', kept as
+ *      the historical label for this specific both-failed path so existing
+ *      snapshots/tests that depend on it are undisturbed).
  */
 export async function resolveStatus(fetcher: typeof fetch): Promise<StatusResult> {
   let primary: StatusResult;
@@ -123,7 +221,6 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<StatusResult
   } catch {
     primary = unknownStatusResult('primary');
   }
-  if (primary.status !== 'unknown') return primary;
 
   let fallback: StatusResult;
   try {
@@ -132,24 +229,26 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<StatusResult
   } catch {
     fallback = unknownStatusResult('fallback');
   }
-  if (fallback.status !== 'unknown') return fallback;
 
-  try {
-    const html = await wydotFetch(STATEWIDE_URL, fetcher);
-    const statewideStatus = html === null ? 'unknown' : parseStatewide(html);
-    // Allowlist, not a not-unknown check: this is the one place that decides
-    // whether the crosscheck source gets to set the banner, so it must
-    // itself enforce "never open without fresh primary/fallback evidence"
-    // rather than trusting parseStatewide's current behavior (which today
-    // never emits 'open', but that invariant belongs here too, not only in
-    // a module this task isn't allowed to touch).
-    if (statewideStatus === 'closed' || statewideStatus === 'restricted') {
-      return { ...unknownStatusResult('crosscheck'), status: statewideStatus };
-    }
-  } catch {
-    // fall through to unknown below
+  const primaryAxis = passAxis(primary.status);
+  const fallbackAxis = passAxis(fallback.status);
+
+  if (primaryAxis !== null && fallbackAxis === null) return primary;
+  if (primaryAxis === null && fallbackAxis !== null) return fallback;
+
+  if (primaryAxis !== null && fallbackAxis !== null) {
+    if (primaryAxis === fallbackAxis) return mergeAgreeing(primary, fallback);
+
+    // Disagreement: one authoritative page says closed, the other says
+    // open/restricted. Never resolve this as 'open' -- consult Statewide.
+    const crosscheck = await consultStatewide(fetcher);
+    if (crosscheck) return { ...unknownStatusResult('crosscheck'), status: crosscheck };
+    return unknownStatusResult('unresolved');
   }
 
+  // Both unknown.
+  const crosscheck = await consultStatewide(fetcher);
+  if (crosscheck) return { ...unknownStatusResult('crosscheck'), status: crosscheck };
   return unknownStatusResult('primary');
 }
 
@@ -350,6 +449,11 @@ export async function runPollCycle(
         windGust: reading.windGustMph,
         windDir: reading.windDir,
         visibilityFt: reading.visibilityFt,
+        // The parser's own WYDOT-report timestamp, distinct from
+        // `capturedAt` (this poller cycle's fetch time) -- see LH T2
+        // finding 4's survey: previously there was no column for this, so
+        // `capturedAt` got relabeled as `reportedAt` at the API layer.
+        reportedAt: reading.reportedAt,
       });
     }
   } catch (err) {

@@ -35,7 +35,14 @@ export interface StatusResult {
   advisories: string[]; // e.g. ['Falling Rock']
   restrictions: string[]; // e.g. ['Chain Law Level 1']
   wydotReportTime: string | null; // ISO UTC, converted from America/Denver
-  source: 'primary' | 'fallback' | 'crosscheck';
+  // 'unresolved': primary and fallback are both definite but DISAGREE on the
+  // open-vs-closed axis, and the Statewide crosscheck couldn't resolve it
+  // either (see resolveStatus in run.ts) -- distinct from a plain
+  // both-sources-failed 'unknown' (which keeps the 'primary' label for
+  // backward compatibility with pre-existing snapshots/tests) because it
+  // reflects a genuine data conflict worth being able to query for, not
+  // merely an absence of data.
+  source: 'primary' | 'fallback' | 'crosscheck' | 'unresolved';
 }
 
 export const SEGMENT_TEXT = 'Between Wilson and the Idaho State Line';

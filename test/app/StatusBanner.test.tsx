@@ -20,6 +20,7 @@ const base: ApiStatus = {
   restrictions: [],
   wydotReportTime: REPORT_AT,
   weather: null,
+  weatherStale: false,
   travelTimes: [],
   id33Advisory: null,
   detours: null,

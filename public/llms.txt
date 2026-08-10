@@ -1,0 +1,12 @@
+# Teton Pass Cam
+
+Live status for Wyoming Highway 22 over Teton Pass, between Wilson, Wyoming and Victor, Idaho. Teton Pass Cam pulls WYDOT's own road-condition reports (open / restricted / closed / unknown), cross-checks them against Idaho 511 and highway sensor data, and shows live camera images, summit weather, real-time drive-time estimates for the Victor/Driggs-to-Jackson commute, and recent community-submitted reports of crashes, slick spots, or wildlife on the roadway. This site is an independent, unofficial resource built for commuters and travelers — it is not affiliated with, endorsed by, or operated by the Wyoming Department of Transportation. WYDOT's own 511wy.com and Idaho's 511.idaho.gov remain the official and authoritative sources for closures and travel advisories.
+
+## Links
+
+- [Teton Pass Cam](https://tetonpasscam.com/) — live status, cameras, drive times, and weather
+- [Privacy policy](https://tetonpasscam.com/privacy.html) — what's stored and why
+- [Wyoming 511](https://www.wyoroad.info) — authoritative source for Wyoming road conditions and closures
+- [Idaho 511](https://511.idaho.gov) — authoritative source for Idaho road conditions and closures
+
+Page content may be cited with attribution to Teton Pass Cam. `/api/*` is an internal endpoint for this site's own frontend, not a stable public API — please don't build against it.

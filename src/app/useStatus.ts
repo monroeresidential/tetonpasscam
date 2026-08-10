@@ -17,6 +17,16 @@ const STORAGE_AT_KEY = 'last-status-at';
  *  client's own clock. */
 const OFFLINE_FORCE_UNKNOWN_MS = 2 * 3_600_000;
 
+/** How often the watchdog effect re-checks the currently-displayed data's
+ *  age against `OFFLINE_FORCE_UNKNOWN_MS`, independent of any fetch. Without
+ *  this, a run of hung/silently-failing refreshes (e.g. every request
+ *  timing out without ever reaching the catch block in a way that updates
+ *  `data`) could leave a stale 'open' presented indefinitely -- the
+ *  offline/failed-refresh guards only ever re-evaluate staleness AT THE
+ *  MOMENT a fetch settles, so with no fetch settling, nothing else would
+ *  ever re-run them. */
+const WATCHDOG_MS = 60_000;
+
 export interface UseStatusResult {
   data: ApiStatus | null;
   error: Error | null;
@@ -178,22 +188,32 @@ export function useStatus(): UseStatusResult {
       if (isOfflineError(err)) {
         setOffline(true);
         setOfflineSince(lastKnownAt.current);
-        setData((prev) => {
-          const source = prev ?? readCached();
-          if (!source) return prev;
-          const cacheAgeMs = lastKnownAt.current
-            ? Date.now() - lastKnownAt.current.getTime()
-            : Infinity;
-          const presented = withStaleGuard(source, Date.now(), cacheAgeMs);
-          // `prev` already holds this exact data (same reference) unless
-          // this is a cold start reading straight from cache -- only skip
-          // the update in the former case, so the cold-start read always
-          // actually lands in state once.
-          if (prev && presented === prev) return prev;
-          return presented;
-        });
       }
+      // Re-apply the stale-age guard against whatever's currently displayed
+      // on EVERY failed refresh, not only offline-ish ones -- an HTTP 500,
+      // a JSON parse error, or a request timeout are all "we did not get a
+      // fresh read this cycle," and the displayed data must degrade to the
+      // UNKNOWN presentation once it crosses OFFLINE_FORCE_UNKNOWN_MS
+      // regardless of why the refresh failed. (Finding 2a.)
+      setData((prev) => {
+        const source = prev ?? readCached();
+        if (!source) return prev;
+        const cacheAgeMs = lastKnownAt.current
+          ? Date.now() - lastKnownAt.current.getTime()
+          : Infinity;
+        const presented = withStaleGuard(source, Date.now(), cacheAgeMs);
+        // `prev` already holds this exact data (same reference) unless
+        // this is a cold start reading straight from cache -- only skip
+        // the update in the former case, so the cold-start read always
+        // actually lands in state once.
+        if (prev && presented === prev) return prev;
+        return presented;
+      });
     } finally {
+      // Always releases, including on an aborted (timed-out) fetch -- the
+      // AbortError from `getStatus`'s `AbortSignal.timeout` lands in the
+      // catch block above like any other rejection, so this `finally` still
+      // runs and the next poll/visibility/manual refresh is never blocked.
       inFlight.current = false;
     }
   }, []);
@@ -210,6 +230,28 @@ export function useStatus(): UseStatusResult {
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [refresh]);
+
+  // Independent watchdog (Finding 2c): re-checks the currently-displayed
+  // data's age on its own timer, WITHOUT issuing a fetch. This is the only
+  // guard that still runs if every refresh attempt hangs or fails silently
+  // (e.g. `inFlight` stuck true from a request that never settles at all,
+  // pre-timeout) -- the offline/failed-refresh guards above only ever
+  // re-evaluate staleness at the moment a fetch settles, so with nothing
+  // ever settling, this is what still degrades the presentation once the
+  // displayed data crosses the 2h boundary.
+  useEffect(() => {
+    const watchdog = setInterval(() => {
+      setData((prev) => {
+        if (!prev) return prev;
+        const cacheAgeMs = lastKnownAt.current
+          ? Date.now() - lastKnownAt.current.getTime()
+          : Infinity;
+        const presented = withStaleGuard(prev, Date.now(), cacheAgeMs);
+        return presented === prev ? prev : presented;
+      });
+    }, WATCHDOG_MS);
+    return () => clearInterval(watchdog);
+  }, []);
 
   return { data, error, refreshedAt, refresh, offline, offlineSince };
 }

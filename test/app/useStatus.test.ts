@@ -16,6 +16,7 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
     restrictions: [],
     wydotReportTime: null,
     weather: null,
+    weatherStale: false,
     travelTimes: [],
     id33Advisory: null,
     detours: null,
@@ -45,7 +46,13 @@ describe('useStatus', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/status');
+    // `getStatus` now passes an `AbortSignal.timeout(...)` alongside the URL
+    // (Finding 2b) -- assert the URL and that a signal is present, rather
+    // than an exact-args match against the bare URL.
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/status',
+      expect.objectContaining({ signal: expect.anything() }),
+    );
   });
 
   it('polls again after 120s and clears the interval on unmount', async () => {
@@ -193,6 +200,106 @@ describe('useStatus', () => {
       await waitFor(() => expect(result.current.data).not.toBeNull());
 
       expect(result.current.data?.pollerDead).toBe(false);
+    });
+  });
+
+  describe('stale-guard on every failed refresh + independent watchdog (LH T2 finding 2)', () => {
+    it('a failed (500) refresh re-evaluates the currently-displayed data\'s age, even though this is not the offline path', async () => {
+      // Only `Date` is faked -- `setInterval`/`setTimeout` stay real so
+      // POLL_MS's 120s interval and `waitFor`'s internal polling behave
+      // normally and can't spuriously fire mid-test.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify(makeStatus({ status: 'open', pollerDead: false })), { status: 200 }),
+        )
+        .mockResolvedValue(new Response('server error', { status: 500 }));
+
+      const { result } = renderHook(() => useStatus());
+      await waitFor(() => expect(result.current.data?.pollerDead).toBe(false));
+
+      // More than 2h passes with no successful refresh in between.
+      vi.setSystemTime(new Date(Date.now() + 3 * 3_600_000));
+
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      // Still not the offline path -- this is a resolved HttpStatusError, not
+      // a rejected fetch.
+      expect(result.current.offline).toBe(false);
+      expect(result.current.error).toBeInstanceOf(Error);
+      expect(result.current.data?.pollerDead).toBe(true);
+      expect(result.current.data?.status).toBe('open'); // underlying status preserved
+    });
+
+    it('an independent watchdog degrades the presentation at the 2h boundary even when every fetch hangs and never settles', async () => {
+      vi.useFakeTimers();
+      const cached = makeStatus({ status: 'open', pollerDead: false });
+      localStorage.setItem('last-status', JSON.stringify(cached));
+      localStorage.setItem('last-status-at', new Date().toISOString());
+      // Simulates a dead connection that neither resolves nor rejects --
+      // the offline/failed-refresh catch-block guards never run at all in
+      // this scenario, since the fetch never settles.
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+
+      const { result } = renderHook(() => useStatus());
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(result.current.data?.pollerDead).toBe(false);
+
+      // Advance well past the 2h boundary -- no fetch ever settles, so only
+      // the watchdog's own 60s interval can notice this.
+      await act(async () => {
+        vi.advanceTimersByTime(2 * 3_600_000 + 60_000);
+        await Promise.resolve();
+      });
+
+      expect(result.current.data?.pollerDead).toBe(true);
+      expect(result.current.data?.status).toBe('open'); // underlying status preserved
+    });
+
+    it('a timed-out fetch releases inFlight so a subsequent refresh() fires', async () => {
+      const controller = new AbortController();
+      vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+      // Only the FIRST call hangs on the (mocked) timeout signal -- the
+      // second call resolves immediately, so this test isn't itself relying
+      // on a real 15s timeout to ever fire for the follow-up refresh().
+      let callCount = 0;
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((_url, opts) => {
+        callCount += 1;
+        if (callCount === 1) {
+          return new Promise((_resolve, reject) => {
+            (opts as RequestInit)?.signal?.addEventListener('abort', () => {
+              reject(new DOMException('The operation was aborted.', 'AbortError'));
+            });
+          });
+        }
+        return Promise.resolve(new Response(JSON.stringify(makeStatus()), { status: 200 }));
+      });
+
+      const { result } = renderHook(() => useStatus());
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // Simulate the 15s fetch timeout firing.
+      await act(async () => {
+        controller.abort();
+        await Promise.resolve();
+      });
+      expect(result.current.error).toBeInstanceOf(Error);
+
+      // If `inFlight` were never released, this would silently no-op instead
+      // of firing a second fetch.
+      await act(async () => {
+        await result.current.refresh();
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
   });
 

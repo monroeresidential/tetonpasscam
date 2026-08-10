@@ -5,6 +5,13 @@ interface Tile {
   value: string;
 }
 
+const REPORTED_AT_FORMAT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Denver',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
 /**
  * Winter (Nov-Apr) vs summer (May-Oct) split, same months as the backend's
  * `denverParts` season rule -- but read from the CLIENT's local wall clock,
@@ -44,9 +51,11 @@ function visibilityValue(visibilityFt: number | null): string {
 
 export default function WeatherStrip({
   weather,
+  weatherStale = false,
   now = new Date(),
 }: {
   weather: WeatherReading | null;
+  weatherStale?: boolean;
   now?: Date;
 }) {
   if (!weather) {
@@ -70,14 +79,27 @@ export default function WeatherStrip({
   const tempTiles = isWinterMonth(now) ? [roadTile, airTile] : [airTile, roadTile];
   const tiles: Tile[] = [...tempTiles, gustTile, visibilityTile];
 
+  // A missing/unparseable reportedAt still lets the tiles render (the
+  // numeric readings are independent of it) -- the "as of" suffix simply
+  // omits the time rather than showing a fabricated one.
+  const reportedAtLabel =
+    weatherStale && weather.reportedAt ? REPORTED_AT_FORMAT.format(new Date(weather.reportedAt)) : null;
+
   return (
-    <section aria-label="Summit weather" className="mt-4 grid grid-cols-4 gap-2">
-      {tiles.map((tile) => (
-        <div key={tile.label} className="bg-card border-card-border rounded-card border p-3 text-center">
-          <p className="font-display text-lg font-extrabold">{tile.value}</p>
-          <p className="text-muted text-[10.5px] uppercase">{tile.label}</p>
-        </div>
-      ))}
+    <section aria-label="Summit weather" className="mt-4">
+      {weatherStale && (
+        <p className="text-muted mb-1 text-[11px]">
+          Weather may be outdated{reportedAtLabel ? ` — (as of ${reportedAtLabel})` : ''}
+        </p>
+      )}
+      <div className="grid grid-cols-4 gap-2">
+        {tiles.map((tile) => (
+          <div key={tile.label} className="bg-card border-card-border rounded-card border p-3 text-center">
+            <p className="font-display text-lg font-extrabold">{tile.value}</p>
+            <p className="text-muted text-[10.5px] uppercase">{tile.label}</p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

@@ -15,6 +15,25 @@ export const DEAD_HOURS = 2;
  *  `isStale` true. Independent of `pollerDead`/`status`: staleness surfaces
  *  alongside the status, it never hides or overrides it. */
 export const STALE_HOURS = 12;
+/** Small clock-skew tolerance for `wydotReportTime` reading slightly ahead of
+ *  our own clock (NTP drift, request latency). Anything further ahead than
+ *  this is implausible for a same-minute report and is treated as
+ *  untrustworthy -- i.e. stale -- rather than "fresher than expected". */
+export const FUTURE_SKEW_TOLERANCE_MIN = 15;
+/** A travel_times row older than this is dropped from the response entirely
+ *  (the route is simply absent, same "no valid placeholder" contract as a
+ *  route with zero history at all) -- a 45-minute-old drive time displayed
+ *  as if it were live would mislead a driver deciding whether to leave now. */
+export const TRAVEL_TIME_FRESHNESS_MIN = 30;
+/** Newest weather_snapshots row older than this ⇒ `weatherStale` true. The
+ *  reading itself is still returned (last-known beats nothing for a stat
+ *  strip), but the frontend must flag it as not current. */
+export const WEATHER_STALE_MIN = 60;
+/** An Idaho 511 ID-33 event whose own `captured_at` is older than this is
+ *  ignored entirely when picking `id33Advisory` -- a stale event we simply
+ *  never got a fresher read on (fetch outage, cleared-without-notice) must
+ *  not go on surfacing as if it were still active. */
+export const ID33_MAX_AGE_HOURS = 24;
 /** A route's travel-time history must span at least this many days before
  *  its `route_typicals` lookup is trusted enough to surface as `typicalSec`. */
 export const MIN_HISTORY_DAYS = 14;
@@ -46,6 +65,22 @@ export function setTestNowMs(ms: number | undefined): void {
 
 function effectiveNowMs(): number {
   return testNowMsOverride ?? Date.now();
+}
+
+/** True when `wydotReportTime` cannot be trusted as a fresh reading:
+ *  missing, unparseable, more than `STALE_HOURS` in the past, or more than
+ *  `FUTURE_SKEW_TOLERANCE_MIN` minutes in the future. Only meaningful for a
+ *  snapshot whose own `status` isn't already 'unknown' -- callers gate on
+ *  that separately (an 'unknown' snapshot has nothing to be "stale" about;
+ *  see `getStatus`). */
+function isReportTimeStale(wydotReportTime: string | null, nowMs: number): boolean {
+  if (!wydotReportTime) return true;
+  const reportMs = Date.parse(wydotReportTime);
+  if (!Number.isFinite(reportMs)) return true;
+  const ageMs = nowMs - reportMs;
+  if (ageMs > STALE_HOURS * 3_600_000) return true;
+  if (ageMs < -FUTURE_SKEW_TOLERANCE_MIN * 60_000) return true;
+  return false;
 }
 
 /** Parse a JSON-array-of-strings column (status_snapshots.advisories /
@@ -149,9 +184,18 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     advisories = safeStringArray(newest.advisories);
     restrictions = safeStringArray(newest.restrictions);
     wydotReportTime = newest.wydotReportTime;
-    if (wydotReportTime) {
-      const reportAgeMs = nowMs - Date.parse(wydotReportTime);
-      isStale = Number.isFinite(reportAgeMs) && reportAgeMs > STALE_HOURS * 3_600_000;
+    // Staleness is about trusting THIS snapshot's own report time -- an
+    // already-'unknown' snapshot (both sources failed, or an unresolved
+    // disagreement) has no report to be stale about, so it's left at the
+    // default `false` rather than flagged stale on top of already being
+    // unknown. A non-'unknown' snapshot with a missing/unparseable/
+    // implausible report time (e.g. every 'crosscheck'-sourced row, which
+    // never carries a wydotReportTime at all) DOES get flagged -- that's
+    // exactly the gap this rule closes: a crosscheck-derived 'closed'/
+    // 'restricted' status is real, but its currency can't be verified the
+    // normal way, so it must present as stale rather than silently fresh.
+    if (newest.status !== 'unknown') {
+      isStale = isReportTimeStale(wydotReportTime, nowMs);
     }
   }
 
@@ -168,9 +212,27 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
         windGustMph: weatherRow.windGust,
         windDir: weatherRow.windDir,
         visibilityFt: weatherRow.visibilityFt,
-        reportedAt: weatherRow.capturedAt,
+        // WYDOT's own report timestamp (weather_snapshots.reported_at),
+        // NOT weatherRow.capturedAt (our fetch time) -- see LH T2 finding
+        // 4's survey: pre-fix, this column didn't exist and capturedAt got
+        // relabeled as reportedAt here, so a driver reading "as of" was
+        // really seeing "when we last polled", not WYDOT's own reading
+        // time. Still nullable: the parser can fail to find/parse the
+        // timestamp text even when the numeric readings come through.
+        reportedAt: weatherRow.reportedAt,
       }
     : null;
+  // Independent of the reportedAt fix above: whether the reading itself is
+  // recent enough to present as current, based on OUR OWN capture time
+  // (same freshness-window pattern as travelTimes/id33Advisory below), not
+  // WYDOT's report time -- a poller outage should flag stale weather even
+  // if WYDOT's own timestamp on the last-fetched row still looks recent.
+  const weatherStale = weatherRow
+    ? (() => {
+        const ageMs = nowMs - Date.parse(weatherRow.capturedAt);
+        return !Number.isFinite(ageMs) || ageMs > WEATHER_STALE_MIN * 60_000;
+      })()
+    : false;
 
   // Travel times: latest travel_times row per route, joined to routes for
   // slug/name. Raw SQL (rather than drizzle's query builder) for the
@@ -211,26 +273,47 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
   const typicalByRoute = new Map(typicalRows.map((r) => [r.routeId, r.medianSec]));
 
   const minHistoryMs = MIN_HISTORY_DAYS * 24 * 3_600_000;
-  const travelTimes = latestTravelRows.map((row) => {
-    const minCapturedAt = minCapturedByRoute.get(row.routeId);
-    const historyEligible =
-      minCapturedAt !== undefined && nowMs - Date.parse(minCapturedAt) >= minHistoryMs;
-    return {
-      slug: row.slug,
-      name: row.name,
-      durationSec: row.durationSec,
-      typicalSec: historyEligible ? (typicalByRoute.get(row.routeId) ?? null) : null,
-      capturedAt: row.capturedAt,
-    };
-  });
+  const travelTimeFreshnessMs = TRAVEL_TIME_FRESHNESS_MIN * 60_000;
+  const travelTimes = latestTravelRows
+    // A route's latest row can still be older than the freshness window
+    // (the poller failed for that route this cycle, or several cycles
+    // running) -- omit it entirely rather than show a stale duration next
+    // to an implicit "current" label, same "no valid placeholder" contract
+    // as a route with zero history at all.
+    .filter((row) => {
+      const ageMs = nowMs - Date.parse(row.capturedAt);
+      return Number.isFinite(ageMs) && ageMs <= travelTimeFreshnessMs;
+    })
+    .map((row) => {
+      const minCapturedAt = minCapturedByRoute.get(row.routeId);
+      const historyEligible =
+        minCapturedAt !== undefined && nowMs - Date.parse(minCapturedAt) >= minHistoryMs;
+      return {
+        slug: row.slug,
+        name: row.name,
+        durationSec: row.durationSec,
+        typicalSec: historyEligible ? (typicalByRoute.get(row.routeId) ?? null) : null,
+        capturedAt: row.capturedAt,
+      };
+    });
 
   // Idaho 511 ID-33 advisory: newest active event, preferring a full closure
-  // over a lesser advisory when more than one is active at once.
-  const activeId33Events = await database
-    .select()
-    .from(id33Events)
-    .where(isNull(id33Events.clearedAt))
-    .orderBy(desc(id33Events.id));
+  // over a lesser advisory when more than one is active at once. Events
+  // whose own captured_at is older than ID33_MAX_AGE_HOURS are ignored --
+  // an active-but-stale event we simply haven't gotten a fresher read on
+  // (fetch outage, cleared without our poller ever seeing it) must not go
+  // on surfacing indefinitely.
+  const id33MaxAgeMs = ID33_MAX_AGE_HOURS * 3_600_000;
+  const activeId33Events = (
+    await database
+      .select()
+      .from(id33Events)
+      .where(isNull(id33Events.clearedAt))
+      .orderBy(desc(id33Events.id))
+  ).filter((e) => {
+    const ageMs = nowMs - Date.parse(e.capturedAt);
+    return Number.isFinite(ageMs) && ageMs <= id33MaxAgeMs;
+  });
   let id33Advisory: string | null = null;
   if (activeId33Events.length > 0) {
     const fullClosure = activeId33Events.find((e) => e.isFullClosure);
@@ -275,6 +358,7 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     restrictions,
     wydotReportTime,
     weather,
+    weatherStale,
     travelTimes,
     id33Advisory,
     detours,

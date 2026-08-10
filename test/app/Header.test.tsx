@@ -22,6 +22,20 @@ describe('Header', () => {
     expect(img).toHaveAttribute('alt', '');
   });
 
+  it('wraps the mark in a <picture> with a dark-mode <source> so it swaps under prefers-color-scheme', () => {
+    const { container } = render(<Header onReport={vi.fn()} now={NOW} />);
+    const picture = container.querySelector('picture');
+    expect(picture).not.toBeNull();
+
+    const source = picture!.querySelector('source');
+    expect(source).not.toBeNull();
+    expect(source).toHaveAttribute('srcset', '/icons/icon-192-dark.png');
+    expect(source).toHaveAttribute('media', '(prefers-color-scheme: dark)');
+
+    // The light-mode <img> stays the fallback, as the last child of <picture>.
+    expect(picture!.querySelector('img')).toHaveAttribute('src', '/icons/icon-192.png');
+  });
+
   it('renders the local time as "Sat 6:12 AM"-style text (weekday-short + h:mm AM/PM)', () => {
     render(<Header onReport={vi.fn()} now={NOW} />);
     expect(screen.getByText(/^[A-Z][a-z]{2} \d{1,2}:\d{2} (AM|PM)$/)).toBeInTheDocument();

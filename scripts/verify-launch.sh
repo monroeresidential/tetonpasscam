@@ -104,7 +104,7 @@ else
   fail "GET / missing exact H1 text: ${H1}"
 fi
 
-META_DESC='Live Teton Pass cameras, WYDOT road conditions, summit weather, real-time Victor and Driggs to Jackson drive times, and community alerts. Is the pass open? Check before you cross.'
+META_DESC='Live Teton Pass cameras, WYDOT road conditions, summit weather, and real-time Victor–Jackson drive times. Is the pass open? Check before you cross.'
 if echo "$INDEX_BODY" | grep -qF "$META_DESC"; then
   pass "GET / contains exact meta description text"
 else
@@ -209,6 +209,23 @@ if echo "$PRIVACY_BODY" | grep -qi "hashed"; then
   pass "GET /privacy.html contains \"hashed\""
 else
   fail "GET /privacy.html missing \"hashed\""
+fi
+
+# --- Check 8: GET /llms.txt returns 200 and starts with an H1 --------------
+LLMS_RAW="$(fetch "${BASE_URL}/llms.txt")"
+LLMS_STATUS="$(echo "$LLMS_RAW" | status_of)"
+LLMS_BODY="$(echo "$LLMS_RAW" | body_of)"
+
+if [ "$LLMS_STATUS" = "200" ]; then
+  pass "GET /llms.txt returned 200"
+else
+  fail "GET /llms.txt returned ${LLMS_STATUS} (expected 200)"
+fi
+
+if echo "$LLMS_BODY" | head -n 1 | grep -q '^# '; then
+  pass "GET /llms.txt body starts with \"# \""
+else
+  fail "GET /llms.txt body does not start with \"# \""
 fi
 
 # --- Summary -----------------------------------------------------------------

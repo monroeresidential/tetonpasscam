@@ -60,6 +60,20 @@ describe('Cameras', () => {
     expect(screen.getByRole('link', { name: /view on wyoming 511/i })).toBeInTheDocument();
   });
 
+  it('recovers from a transient error: advancing refreshedAt after an onerror retries the img instead of staying on the fallback card', () => {
+    const first = new Date('2026-08-09T18:00:00.000Z');
+    const second = new Date('2026-08-09T18:02:00.000Z'); // next poll cycle
+
+    const { rerender } = render(<Cameras refreshedAt={first} />);
+    fireEvent.error(screen.getAllByRole('img')[0]);
+    expect(screen.getAllByRole('img')).toHaveLength(2);
+    expect(screen.getByRole('link', { name: /view on wyoming 511/i })).toBeInTheDocument();
+
+    rerender(<Cameras refreshedAt={second} />);
+    expect(screen.getAllByRole('img')).toHaveLength(3);
+    expect(screen.queryByRole('link', { name: /view on wyoming 511/i })).not.toBeInTheDocument();
+  });
+
   it('beacons /api/camera-error at most once per camera per session', () => {
     render(<Cameras />);
     const images = screen.getAllByRole('img');

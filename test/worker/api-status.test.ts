@@ -120,6 +120,83 @@ describe('GET /api/status', () => {
     expect(body.isStale).toBe(true);
   });
 
+  describe('isStale (LH T2 finding 3 -- missing/invalid/future wydotReportTime)', () => {
+    it('wydotReportTime null on a non-unknown snapshot ⇒ isStale true (missing time is untrustworthy, not fresh)', async () => {
+      await insertStatusSnapshot({
+        capturedAt: new Date().toISOString(),
+        status: 'closed',
+        wydotReportTime: null,
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('closed');
+      expect(body.isStale).toBe(true);
+    });
+
+    it('wydotReportTime unparseable on a non-unknown snapshot ⇒ isStale true', async () => {
+      await insertStatusSnapshot({
+        capturedAt: new Date().toISOString(),
+        status: 'open',
+        wydotReportTime: 'not-a-date',
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('open');
+      expect(body.isStale).toBe(true);
+    });
+
+    it('wydotReportTime 20 minutes in the future ⇒ isStale true (beyond the 15min clock-skew tolerance)', async () => {
+      const now = Date.now();
+      await insertStatusSnapshot({
+        capturedAt: new Date(now).toISOString(),
+        status: 'open',
+        wydotReportTime: new Date(now + 20 * 60_000).toISOString(),
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('open');
+      expect(body.isStale).toBe(true);
+    });
+
+    it('wydotReportTime 10 minutes in the future ⇒ isStale false (within the 15min clock-skew tolerance)', async () => {
+      const now = Date.now();
+      await insertStatusSnapshot({
+        capturedAt: new Date(now).toISOString(),
+        status: 'open',
+        wydotReportTime: new Date(now + 10 * 60_000).toISOString(),
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('open');
+      expect(body.isStale).toBe(false);
+    });
+
+    it('newest snapshot is unknown (e.g. an unresolved disagreement) ⇒ isStale stays false, even with no wydotReportTime -- nothing to be stale about', async () => {
+      await insertStatusSnapshot({
+        capturedAt: new Date().toISOString(),
+        status: 'unknown',
+        wydotReportTime: null,
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('unknown');
+      expect(body.isStale).toBe(false);
+    });
+
+    it('a crosscheck-sourced row (always null wydotReportTime) now correctly presents as stale', async () => {
+      await insertStatusSnapshot({
+        capturedAt: new Date().toISOString(),
+        status: 'closed',
+        wydotReportTime: null,
+        source: 'crosscheck',
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('closed');
+      expect(body.isStale).toBe(true);
+    });
+  });
+
   it('unknown snapshot (fresh) ⇒ lastConfirmed still reports the older open row', async () => {
     const now = Date.now();
     const olderOpenAt = new Date(now - 30 * 60_000).toISOString();
@@ -156,6 +233,35 @@ describe('GET /api/status', () => {
     // row must not appear -- there's no valid placeholder for a
     // non-nullable durationSec.
     expect(body.travelTimes.some((t) => t.slug === 'driggs-airport-wb')).toBe(false);
+  });
+
+  it('travel_times freshness (LH T2 finding 4): a route whose latest row is 31 minutes old is omitted entirely', async () => {
+    // Distinct, previously-untouched slug -- this file's D1 instance is
+    // shared across tests, so reusing a slug another test already inserted
+    // rows for would make "omitted" ambiguous with "just never had a row".
+    const id = await routeId('driggs-airport-eb');
+    const staleAt = new Date(Date.now() - 31 * 60_000).toISOString();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1234)`,
+    )
+      .bind(id, staleAt)
+      .run();
+
+    const { body } = await getStatus();
+    expect(body.travelTimes.some((t) => t.slug === 'driggs-airport-eb')).toBe(false);
+  });
+
+  it('travel_times freshness (LH T2 finding 4): a route whose latest row is 29 minutes old is still included', async () => {
+    const id = await routeId('driggs-tetonvillage-wb');
+    const freshAt = new Date(Date.now() - 29 * 60_000).toISOString();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1234)`,
+    )
+      .bind(id, freshAt)
+      .run();
+
+    const { body } = await getStatus();
+    expect(body.travelTimes.some((t) => t.slug === 'driggs-tetonvillage-wb')).toBe(true);
   });
 
   it('travel time typical: < 14 days of history ⇒ typicalSec null', async () => {
@@ -278,8 +384,14 @@ describe('GET /api/status', () => {
     // Fresh open snapshot so this request's status fields reflect ONLY the
     // WYDOT-derived data, not some earlier test's stale row -- isolating
     // this test's real assertion: that a community report is display-only
-    // and never touches those fields.
-    await insertStatusSnapshot({ capturedAt: new Date().toISOString(), status: 'open' });
+    // and never touches those fields. wydotReportTime is set (fresh) too --
+    // a missing one is now itself a staleness signal (LH T2 finding 3),
+    // which isn't what this test is exercising.
+    await insertStatusSnapshot({
+      capturedAt: new Date().toISOString(),
+      status: 'open',
+      wydotReportTime: new Date().toISOString(),
+    });
 
     // Stub the Resend fetcher so this POST doesn't attempt a real network
     // call (see notify.ts's setTestEmailFetcher / api-alerts.test.ts for the
@@ -402,5 +514,70 @@ describe('GET /api/status', () => {
 
     const { body } = await getStatus();
     expect(body.id33Advisory).toBe('Full closure due to avalanche control');
+  });
+
+  it('id33Advisory (LH T2 finding 4): an active event whose captured_at is 25h old is ignored', async () => {
+    await insertStatusSnapshot({ capturedAt: new Date().toISOString(), status: 'open' });
+
+    await env.DB.prepare(
+      `INSERT INTO id33_events (captured_at, event_id, description, is_full_closure, cleared_at)
+       VALUES (?, 'evt-stale-active', 'Stale but never cleared', 1, NULL)`,
+    )
+      .bind(new Date(Date.now() - 25 * HOUR_MS).toISOString())
+      .run();
+
+    const { body } = await getStatus();
+    // The stale event is a full closure, which would otherwise always win
+    // over the still-active 'evt-full' from the previous test -- if it's
+    // still winning here, the age filter isn't being applied.
+    expect(body.id33Advisory).not.toBe('Stale but never cleared');
+    expect(body.id33Advisory).toBe('Full closure due to avalanche control');
+  });
+
+  describe('weather (LH T2 finding 4 -- reportedAt survey/fix + weatherStale)', () => {
+    async function insertWeatherSnapshot(overrides: {
+      capturedAt: string;
+      reportedAt?: string | null;
+      airF?: number | null;
+    }): Promise<void> {
+      await env.DB.prepare(
+        `INSERT INTO weather_snapshots (captured_at, air_f, reported_at) VALUES (?, ?, ?)`,
+      )
+        .bind(overrides.capturedAt, overrides.airF ?? 20, overrides.reportedAt ?? null)
+        .run();
+    }
+
+    it('weather.reportedAt reflects the parser\'s own WYDOT report time, not our capturedAt', async () => {
+      const capturedAt = new Date().toISOString();
+      const wydotReportedAt = new Date(Date.now() - 5 * 60_000).toISOString(); // WYDOT's page lagged our poll by 5min
+      await insertWeatherSnapshot({ capturedAt, reportedAt: wydotReportedAt, airF: 31 });
+
+      const { body } = await getStatus();
+      expect(body.weather?.airF).toBe(31);
+      expect(body.weather?.reportedAt).toBe(wydotReportedAt);
+      expect(body.weather?.reportedAt).not.toBe(capturedAt);
+    });
+
+    it('weatherStale is false when the newest weather row is 59 minutes old', async () => {
+      await insertWeatherSnapshot({
+        capturedAt: new Date(Date.now() - 59 * 60_000).toISOString(),
+        airF: 32,
+      });
+
+      const { body } = await getStatus();
+      expect(body.weather?.airF).toBe(32);
+      expect(body.weatherStale).toBe(false);
+    });
+
+    it('weatherStale is true when the newest weather row is 61 minutes old, but the reading is still returned', async () => {
+      await insertWeatherSnapshot({
+        capturedAt: new Date(Date.now() - 61 * 60_000).toISOString(),
+        airF: 33,
+      });
+
+      const { body } = await getStatus();
+      expect(body.weather?.airF).toBe(33); // last-known still returned
+      expect(body.weatherStale).toBe(true);
+    });
   });
 });

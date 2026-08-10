@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { seedRoutes } from '../../src/worker/db/seed-routes';
 import { runNightly } from '../../src/worker/poller/aggregate';
+import { denverParts } from '../../src/worker/tz';
 
 const DAY_MS = 24 * 3_600_000;
 
@@ -107,6 +108,42 @@ describe('runNightly — typicals rebuild', () => {
 
     expect(secondPass).toEqual(firstPass);
     expect(secondPass.length).toBe(firstPass.length);
+  });
+});
+
+describe('runNightly — typicals window (audit finding 6, bounded aggregation)', () => {
+  // Distinct routes from every other test in this file, so each test's
+  // single seeded row is the *only* travel_times row for that route -- if
+  // the rebuild wrongly includes/excludes it, the group's presence/absence
+  // (or its median) is unambiguous, with no other row in the same bucket
+  // to mask the bug.
+  const NOW_MS = Date.parse('2026-08-10T18:00:00.000Z');
+
+  it('excludes a travel_times row older than the 365-day window (400d old)', async () => {
+    const id = await routeId('driggs-tetonvillage-wb');
+    const oldCapturedAt = new Date(NOW_MS - 400 * DAY_MS).toISOString();
+    // Distinct/extreme duration: if this row leaked into the rebuild despite
+    // being outside the window, it would be the sole member of its group and
+    // show up directly as that group's median.
+    await insertTravelTime(id, oldCapturedAt, 9999);
+
+    await runNightly(env as any, NOW_MS);
+
+    const dims = denverParts(Date.parse(oldCapturedAt));
+    const row = await typicalsFor(id, dims.weekdayClass, dims.hour, dims.season);
+    expect(row).toBeFalsy(); // sole contributing row is outside the window -> no group at all (D1's .first() returns null, not undefined)
+  });
+
+  it('includes a travel_times row 364 days old (just inside the 365-day window)', async () => {
+    const id = await routeId('driggs-tetonvillage-eb');
+    const keptCapturedAt = new Date(NOW_MS - 364 * DAY_MS).toISOString();
+    await insertTravelTime(id, keptCapturedAt, 4242);
+
+    await runNightly(env as any, NOW_MS);
+
+    const dims = denverParts(Date.parse(keptCapturedAt));
+    const row = await typicalsFor(id, dims.weekdayClass, dims.hour, dims.season);
+    expect(row).toEqual({ medianSec: 4242, p25Sec: 4242, p75Sec: 4242 });
   });
 });
 

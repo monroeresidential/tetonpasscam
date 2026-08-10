@@ -27,7 +27,7 @@ export default function Sponsor() {
         </a>
         <div className="flex-1">
           <p className="text-sponsor-label text-[10.5px] font-bold uppercase tracking-wide">
-            Created by{' '}
+            Hosted by{' '}
             <a href={sponsorUrl('sponsor-label')} rel="sponsored noopener" className="underline">
               Teton Flats
             </a>
