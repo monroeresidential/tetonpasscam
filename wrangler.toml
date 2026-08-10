@@ -2,6 +2,12 @@ name = "tetonpasscam"
 main = "src/worker/index.ts"
 compatibility_date = "2026-08-01"
 
+# Custom domains (require the tetonpasscam.com zone on this Cloudflare account)
+routes = [
+  { pattern = "tetonpasscam.com", custom_domain = true },
+  { pattern = "www.tetonpasscam.com", custom_domain = true },
+]
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
@@ -10,7 +16,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "tetonpasscam"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "8a763eb6-ec40-4db2-ae0b-501f137a12d6"
 
 [triggers]
 # "*/10 11-6 * * *" would wrap around midnight UTC, which Cloudflare cron
