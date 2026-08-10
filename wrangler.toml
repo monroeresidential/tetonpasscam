@@ -12,6 +12,24 @@ routes = [
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
+# SEO audit fix #2: without this, Cloudflare's assets layer serves a request
+# matching a file on disk (the homepage's "/" -> index.html) directly,
+# bypassing the Worker's fetch() entirely -- confirmed empirically via
+# `wrangler dev` (CF-Cache-Status: HIT, no data-live-status div, none of our
+# code ran at all).
+#
+# `run_worker_first` was first tried scoped to just `["/"]`, but that broke
+# every /api/* route (404/405 -- verify-launch.sh caught it): with no
+# `run_worker_first` at all, unmatched paths (no static file, e.g. /api/*)
+# implicitly fall back to the Worker, which is how /api/* worked pre-SEO-T2.
+# Setting an explicit array turns that implicit fallback off for paths NOT
+# in the list, so /api/* stopped reaching the Worker at all. `true` routes
+# every request through the Worker first instead -- index.ts's own routing
+# already does the right thing for every path that isn't the homepage or
+# /api/* (`return env.ASSETS.fetch(req)`), so this is behaviorally
+# equivalent to the old default for those, just with the Worker as an extra
+# (cheap) hop in front.
+run_worker_first = true
 
 [[d1_databases]]
 binding = "DB"

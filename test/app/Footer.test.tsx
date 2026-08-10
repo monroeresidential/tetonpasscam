@@ -39,7 +39,7 @@ describe('Footer', () => {
       'href',
       'https://511notify.wyoroad.info',
     );
-    expect(screen.getByRole('link', { name: /privacy/i })).toHaveAttribute('href', '/privacy.html');
+    expect(screen.getByRole('link', { name: /privacy/i })).toHaveAttribute('href', '/privacy');
   });
 
   it('shows the "Not affiliated with WYDOT" disclaimer', () => {

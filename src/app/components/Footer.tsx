@@ -13,7 +13,7 @@ const COLUMN_1_LINKS = [
 
 const COLUMN_2_LINKS = [
   { href: 'https://511notify.wyoroad.info', label: '511 Notify (get text/email alerts)' },
-  { href: '/privacy.html', label: 'Privacy policy' },
+  { href: '/privacy', label: 'Privacy policy' },
 ];
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
