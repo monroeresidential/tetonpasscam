@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { CAMERAS, type CameraDef } from '../cameras';
 import type { CameraId } from '../../shared/types';
@@ -208,6 +208,21 @@ export default function Cameras({ refreshedAt = null }: { refreshedAt?: Date | n
   const [mountTs] = useState(() => Date.now());
   const ts = refreshedAt ? refreshedAt.getTime() : mountTs;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // A single WYDOT image blip shouldn't kill a camera for the rest of the
+  // tab's life: every time `ts` advances (a new poll cycle's cache-buster),
+  // give errored tiles a fresh chance by clearing the map, so the <img> for
+  // that camera re-renders and retries. Skips the very first run (ts hasn't
+  // "advanced" yet, nothing is errored, and this would just be a same-value
+  // set) via a ref rather than depending on `errored` itself, which would
+  // otherwise re-trigger this effect on every onError.
+  const prevTs = useRef(ts);
+  useEffect(() => {
+    if (prevTs.current !== ts) {
+      prevTs.current = ts;
+      setErrored({});
+    }
+  }, [ts]);
 
   return (
     <section aria-label="Teton Pass cameras" className="mt-4">

@@ -11,7 +11,7 @@ describe('Sponsor', () => {
     render(<Sponsor />);
     const section = screen.getByLabelText('Sponsor');
     expect(section.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Created by Teton Flats — 1 & 2 bed apartments in Victor, 35 minutes from Jackson, save thousands in rent.',
+      'Hosted by Teton Flats — 1 & 2 bed apartments in Victor, 35 minutes from Jackson, save thousands in rent.',
     );
 
     const labelLink = screen.getByRole('link', { name: 'Teton Flats' });
@@ -29,10 +29,10 @@ describe('Sponsor', () => {
     expect(imageLink).toHaveAttribute('rel', 'sponsored noopener');
   });
 
-  it('styles the "Created by Teton Flats" label as an uppercase sponsor-label tag', () => {
+  it('styles the "Hosted by Teton Flats" label as an uppercase sponsor-label tag', () => {
     render(<Sponsor />);
     const label = screen.getByText(
-      (_content, element) => /created by teton flats/i.test(element?.textContent ?? ''),
+      (_content, element) => /hosted by teton flats/i.test(element?.textContent ?? ''),
       { selector: 'p' },
     );
     expect(label.className).toMatch(/\buppercase\b/);
