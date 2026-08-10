@@ -47,6 +47,9 @@ describe('WeatherStrip', () => {
       [2640, '0.5 mi'],
       [2639, '2639 ft'],
       [500, '500 ft'],
+      // 15839 ft = 2.99981... mi -- rounds to 3.0 at 1 decimal, so this must
+      // take the whole-number branch ("3 mi"), not "3.0 mi" (review fix).
+      [15839, '3 mi'],
     ])('formats %i ft as %s', (visibilityFt, expected) => {
       render(
         <WeatherStrip

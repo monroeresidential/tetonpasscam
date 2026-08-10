@@ -34,7 +34,12 @@ function visibilityValue(visibilityFt: number | null): string {
   if (visibilityFt === null) return '—';
   if (visibilityFt < MILE_THRESHOLD_FT) return `${visibilityFt} ft`;
   const miles = visibilityFt / FEET_PER_MILE;
-  return miles < 3 ? `${miles.toFixed(1)} mi` : `${Math.round(miles)} mi`;
+  // Decide the <3mi cutoff on the value AFTER rounding to 1 decimal, not
+  // before -- otherwise e.g. 2.9998mi (15839 ft) takes the <3 branch and
+  // prints "3.0 mi" instead of rounding up front to "3 mi" like the whole-
+  // number branch would.
+  const rounded = Math.round(miles * 10) / 10;
+  return rounded < 3 ? `${rounded.toFixed(1)} mi` : `${Math.round(miles)} mi`;
 }
 
 export default function WeatherStrip({

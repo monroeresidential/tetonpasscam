@@ -35,6 +35,18 @@ describe('ReportModal', () => {
     expect(wrapper).toContainElement(trigger);
   });
 
+  // Regression pin (review fix): `bg-gradient-to-t` here would put the
+  // opaque `to-page` color at the TOP of the fade (a hard cut against
+  // scrolling content) and transparent at the BOTTOM (a seam against the
+  // solid button container) -- backwards from the intended soft landing.
+  // Pins `to-b` so a future flip fails loudly instead of silently inverting.
+  it('fades top-to-bottom (transparent at top, page color at bottom, not inverted)', () => {
+    render(<ReportModal />);
+    const gradient = screen.getByTestId('report-pill-fade-gradient');
+    expect(gradient.className).toContain('bg-gradient-to-b');
+    expect(gradient.className).toContain('to-page');
+  });
+
   it('renders the sheet title and 7 emoji-labeled type buttons after opening', async () => {
     const user = userEvent.setup();
     render(<ReportModal />);

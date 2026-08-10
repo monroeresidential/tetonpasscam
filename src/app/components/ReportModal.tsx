@@ -140,17 +140,23 @@ export default function ReportModal({
         // on content behind it, e.g. Cameras/Sponsor peeking through the
         // transparent top of the fade, must still land) -- only the pill
         // itself re-enables pointer-events. The gradient fades from
-        // transparent to the page background color so the pill reads as
-        // sitting on an intentional shelf rather than clipping content.
-        // Tailwind v4 generates `to-page`/`from-page`-style utilities for
-        // any `--color-page` @theme token automatically (confirmed against
-        // the build output), so no arbitrary-value CSS var syntax is
-        // needed here.
+        // transparent (top, against scrolling content) to the page
+        // background color (bottom, against the solid button container) --
+        // `to-b` (not `to-t`: that would invert it, putting solid color at
+        // the top as a hard cut and transparent at the seam against the
+        // button container below) -- so the pill reads as sitting on an
+        // intentional shelf rather than clipping content. Tailwind v4
+        // generates `to-page`/`from-page`-style utilities for any
+        // `--color-page` @theme token automatically (confirmed against the
+        // build output), so no arbitrary-value CSS var syntax is needed here.
         <div
           data-testid="report-pill-fade"
           className="pointer-events-none fixed inset-x-0 bottom-0 z-40 lg:hidden"
         >
-          <div className="h-20 bg-gradient-to-t from-transparent to-page" />
+          <div
+            data-testid="report-pill-fade-gradient"
+            className="h-20 bg-gradient-to-b from-transparent to-page"
+          />
           <div className="bg-page px-4 pb-4">
             <button
               type="button"
