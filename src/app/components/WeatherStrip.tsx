@@ -23,6 +23,20 @@ function gustValue(weather: WeatherReading): string {
   return weather.windDir !== null ? `${weather.windGustMph} mph ${weather.windDir}` : `${weather.windGustMph} mph`;
 }
 
+const FEET_PER_MILE = 5280;
+// Below half a mile, feet is the more legible unit for a driver (a "0.09 mi"
+// reading doesn't parse at a glance); at or above it, switch to miles --
+// one decimal under 3 mi (where the digit matters most for a go/no-go
+// decision), whole miles at or above 3.
+const MILE_THRESHOLD_FT = FEET_PER_MILE / 2;
+
+function visibilityValue(visibilityFt: number | null): string {
+  if (visibilityFt === null) return '—';
+  if (visibilityFt < MILE_THRESHOLD_FT) return `${visibilityFt} ft`;
+  const miles = visibilityFt / FEET_PER_MILE;
+  return miles < 3 ? `${miles.toFixed(1)} mi` : `${Math.round(miles)} mi`;
+}
+
 export default function WeatherStrip({
   weather,
   now = new Date(),
@@ -44,10 +58,7 @@ export default function WeatherStrip({
     value: weather.surfaceF !== null ? `${weather.surfaceF}°F` : '—',
   };
   const gustTile: Tile = { label: 'Gust', value: gustValue(weather) };
-  const visibilityTile: Tile = {
-    label: 'Visibility',
-    value: weather.visibilityFt !== null ? `${weather.visibilityFt} ft` : '—',
-  };
+  const visibilityTile: Tile = { label: 'Visibility', value: visibilityValue(weather.visibilityFt) };
 
   // Road (surface) temp matters most in winter (ice risk); air temp leads
   // the rest of the year.

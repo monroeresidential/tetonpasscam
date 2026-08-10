@@ -39,4 +39,32 @@ describe('WeatherStrip', () => {
     render(<WeatherStrip weather={null} />);
     expect(screen.getByText(/weather data unavailable/i)).toBeInTheDocument();
   });
+
+  describe('visibility formatting (feet -> miles)', () => {
+    it.each([
+      [52800, '10 mi'],
+      [13200, '2.5 mi'],
+      [2640, '0.5 mi'],
+      [2639, '2639 ft'],
+      [500, '500 ft'],
+    ])('formats %i ft as %s', (visibilityFt, expected) => {
+      render(
+        <WeatherStrip
+          weather={{ ...reading, visibilityFt }}
+          now={new Date('2026-01-15T12:00:00.000Z')}
+        />,
+      );
+      expect(screen.getByText(expected)).toBeInTheDocument();
+    });
+
+    it('leaves the placeholder unchanged when visibility is null', () => {
+      render(
+        <WeatherStrip
+          weather={{ ...reading, visibilityFt: null }}
+          now={new Date('2026-01-15T12:00:00.000Z')}
+        />,
+      );
+      expect(screen.getByText('—')).toBeInTheDocument();
+    });
+  });
 });

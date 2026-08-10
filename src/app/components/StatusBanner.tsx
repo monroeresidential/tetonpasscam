@@ -89,7 +89,7 @@ export default function StatusBanner({ data }: { data: ApiStatus }) {
         </>
       )}
 
-      <div className="mt-2 text-[13px] opacity-90">
+      <div className="mt-2 text-[13px]">
         {data.lastConfirmed ? (
           <p>
             Last confirmed {data.lastConfirmed.status} {formatDenverTime(data.lastConfirmed.at)} ·

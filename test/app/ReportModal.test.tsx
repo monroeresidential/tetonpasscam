@@ -22,6 +22,19 @@ describe('ReportModal', () => {
     vi.unstubAllGlobals();
   });
 
+  // Regression pin (design call): the fixed pill on phone is now wrapped in
+  // a fade container so it reads as an intentional soft landing rather than
+  // a hard overlap of list content. The wrapper must stay pointer-events-none
+  // so taps on content showing through the transparent top of the fade still
+  // land -- only the pill itself (nested inside) re-enables pointer events.
+  it('wraps the fixed pill in a pointer-events-none fade container', () => {
+    render(<ReportModal />);
+    const trigger = screen.getByRole('button', { name: /report conditions/i });
+    const wrapper = screen.getByTestId('report-pill-fade');
+    expect(wrapper).toHaveClass('pointer-events-none');
+    expect(wrapper).toContainElement(trigger);
+  });
+
   it('renders the sheet title and 7 emoji-labeled type buttons after opening', async () => {
     const user = userEvent.setup();
     render(<ReportModal />);

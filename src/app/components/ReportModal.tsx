@@ -133,13 +133,34 @@ export default function ReportModal({
   return (
     <>
       {renderTrigger && (
-        <button
-          type="button"
-          onClick={openModal}
-          className="fixed inset-x-4 bottom-4 z-40 min-h-12 rounded-full bg-btn-bg px-4 py-3 font-display font-bold text-btn-ink shadow-lg lg:hidden"
+        // Soft-landing wrapper (post-restyle design call): the pill itself
+        // stays FIXED (decided -- not scroll-following), but it used to
+        // overlap list content with a hard edge on first paint. This outer
+        // div is a full-width fixed strip that is pointer-events-none (taps
+        // on content behind it, e.g. Cameras/Sponsor peeking through the
+        // transparent top of the fade, must still land) -- only the pill
+        // itself re-enables pointer-events. The gradient fades from
+        // transparent to the page background color so the pill reads as
+        // sitting on an intentional shelf rather than clipping content.
+        // Tailwind v4 generates `to-page`/`from-page`-style utilities for
+        // any `--color-page` @theme token automatically (confirmed against
+        // the build output), so no arbitrary-value CSS var syntax is
+        // needed here.
+        <div
+          data-testid="report-pill-fade"
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 lg:hidden"
         >
-          ⚠ Report conditions
-        </button>
+          <div className="h-20 bg-gradient-to-t from-transparent to-page" />
+          <div className="bg-page px-4 pb-4">
+            <button
+              type="button"
+              onClick={openModal}
+              className="pointer-events-auto min-h-12 w-full rounded-full bg-btn-bg px-4 py-3 font-display font-bold text-btn-ink shadow-lg"
+            >
+              ⚠ Report conditions
+            </button>
+          </div>
+        </div>
       )}
 
       {showToast && (

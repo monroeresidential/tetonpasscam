@@ -200,4 +200,13 @@ describe('StatusBanner', () => {
     render(<StatusBanner data={base} />);
     expect(screen.getByText('Last confirmed open 5:48 PM · WYDOT')).toBeInTheDocument();
   });
+
+  // Regression pin (design call): the sub-line used to render at opacity-90;
+  // that's been removed so the "Last confirmed..." meta reads at full
+  // opacity like the rest of the banner.
+  it('renders the last-confirmed sub-line at full opacity (no opacity-90)', () => {
+    render(<StatusBanner data={base} />);
+    const line = screen.getByText('Last confirmed open 5:48 PM · WYDOT');
+    expect(line.parentElement).not.toHaveClass('opacity-90');
+  });
 });
