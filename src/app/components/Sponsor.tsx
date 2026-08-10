@@ -1,5 +1,9 @@
-const SPONSOR_URL =
-  'https://tetonflats.com/?utm_source=tetonpasscam&utm_medium=referral&utm_campaign=sponsor';
+const SPONSOR_BASE_URL = 'https://tetonflats.com/';
+const SPONSOR_UTM = 'utm_source=tetonpasscam&utm_medium=referral&utm_campaign=sponsor';
+
+function sponsorUrl(content: string): string {
+  return `${SPONSOR_BASE_URL}?${SPONSOR_UTM}&utm_content=${content}`;
+}
 
 export default function Sponsor() {
   return (
@@ -9,23 +13,28 @@ export default function Sponsor() {
             kitchen-interior photo -- see that script's comment for why this
             is a .jpg (deliberately outside the PWA precache glob) rather
             than a .png like the app icons. */}
-        <img
-          src="/sponsor-tetonflats.jpg"
-          alt="Teton Flats apartment interior"
-          loading="lazy"
-          className="w-28 shrink-0 self-stretch rounded-[10px] object-cover"
-        />
+        <a
+          href={sponsorUrl('sponsor-image')}
+          rel="sponsored noopener"
+          aria-label="Teton Flats — 1 & 2 bed apartments in Victor"
+        >
+          <img
+            src="/sponsor-tetonflats.jpg"
+            alt="Teton Flats apartment interior"
+            loading="lazy"
+            className="w-28 shrink-0 self-stretch rounded-[10px] object-cover"
+          />
+        </a>
         <div className="flex-1">
           <p className="text-sponsor-label text-[10.5px] font-bold uppercase tracking-wide">
             Created by{' '}
-            <a href={SPONSOR_URL} className="underline">
+            <a href={sponsorUrl('sponsor-label')} rel="sponsored noopener" className="underline">
               Teton Flats
             </a>
           </p>
           <p className="mt-1 text-sm">
             {' '}
-            — 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson, save thousands of
-            dollars.
+            — 1 &amp; 2 bed apartments in Victor, 35 minutes from Jackson, save thousands in rent.
           </p>
         </div>
       </div>
