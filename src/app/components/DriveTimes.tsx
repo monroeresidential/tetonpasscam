@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { ApiStatus } from '../../shared/types';
+import ShareButton from './ShareButton';
 
 type Direction = 'eb' | 'wb';
 type TravelTime = ApiStatus['travelTimes'][number];
@@ -70,24 +71,37 @@ function DriveTimeCard({ travelTime }: { travelTime: TravelTime }) {
   );
 }
 
-export default function DriveTimes({ travelTimes }: { travelTimes: ApiStatus['travelTimes'] }) {
+export default function DriveTimes({
+  travelTimes,
+  statusSnapshotId = null,
+}: {
+  travelTimes: ApiStatus['travelTimes'];
+  // Additive/optional (share-cards T2): defaults to null so every existing
+  // caller/test that doesn't pass it gets the same "share button hidden"
+  // behavior as an explicit null, rather than needing to update every call
+  // site just to keep compiling.
+  statusSnapshotId?: number | null;
+}) {
   const [direction, setDirection] = useState<Direction>('eb');
   const rows = travelTimes.filter((t) => directionOf(t.slug) === direction);
 
   return (
     <section aria-labelledby="drive-times-heading" className="mt-4">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between gap-3">
         <h2 id="drive-times-heading" className="font-display text-[15px] font-bold">
           Drive times right now
         </h2>
-        <button
-          type="button"
-          aria-pressed={direction === 'wb'}
-          onClick={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
-          className="text-accent text-xs font-bold"
-        >
-          ⇄ Flip direction
-        </button>
+        <div className="flex items-baseline gap-3">
+          <button
+            type="button"
+            aria-pressed={direction === 'wb'}
+            onClick={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
+            className="text-accent text-xs font-bold"
+          >
+            ⇄ Flip direction
+          </button>
+          <ShareButton statusSnapshotId={statusSnapshotId} direction={direction} />
+        </div>
       </div>
       <ul className="mt-2 flex flex-col gap-2">
         {rows.map((t) => (

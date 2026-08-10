@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { AlertType } from '../../shared/types';
 import { TYPE_ICON, TYPE_LABEL, TYPE_ORDER } from '../alertTypes';
 import { getDeviceId } from '../deviceId';
+import Toast from './Toast';
 
 const TYPE_OPTIONS = TYPE_ORDER.map((type) => ({
   type,
@@ -169,15 +170,7 @@ export default function ReportModal({
         </div>
       )}
 
-      {showToast && (
-        <p
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-20 inset-x-4 z-40 rounded bg-status-open px-4 py-2 text-center text-white sm:inset-x-auto sm:right-4"
-        >
-          Thanks — report submitted.
-        </p>
-      )}
+      <Toast show={showToast}>Thanks — report submitted.</Toast>
 
       {isOpen && (
         <div

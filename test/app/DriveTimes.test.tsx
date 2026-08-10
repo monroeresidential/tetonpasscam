@@ -148,6 +148,27 @@ describe('DriveTimes routes-omitted contract', () => {
   });
 });
 
+// share-cards T2: DriveTimes only needs to thread statusSnapshotId through to
+// ShareButton correctly -- ShareButton's own behavior (URL construction,
+// navigator.share/clipboard fallback, toast) is covered in
+// ShareButton.test.tsx, not duplicated here.
+describe('DriveTimes share button wiring', () => {
+  it('is hidden when statusSnapshotId is omitted (existing callers/tests keep working unchanged)', () => {
+    render(<DriveTimes travelTimes={[row({})]} />);
+    expect(screen.queryByRole('button', { name: /share current conditions/i })).not.toBeInTheDocument();
+  });
+
+  it('is hidden when statusSnapshotId is explicitly null (pollerDead/no snapshot)', () => {
+    render(<DriveTimes travelTimes={[row({})]} statusSnapshotId={null} />);
+    expect(screen.queryByRole('button', { name: /share current conditions/i })).not.toBeInTheDocument();
+  });
+
+  it('renders when statusSnapshotId is present', () => {
+    render(<DriveTimes travelTimes={[row({})]} statusSnapshotId={7} />);
+    expect(screen.getByRole('button', { name: /share current conditions/i })).toBeInTheDocument();
+  });
+});
+
 // Moved from StatusBanner.test.tsx (Task 9 file-hygiene pass) -- this test
 // exercises DriveTimes directly and had no business living in
 // StatusBanner.test.tsx's file. Assertions kept identical.
