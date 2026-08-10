@@ -31,4 +31,16 @@ describe('Header', () => {
     await user.click(button);
     expect(onReport).toHaveBeenCalledTimes(1);
   });
+
+  it('prefixes the desktop-variant time with the "Live cams & conditions ·" tagline', () => {
+    render(<Header onReport={vi.fn()} now={NOW} variant="desktop" />);
+    expect(
+      screen.getByText(/^Live cams & conditions · [A-Z][a-z]{2} \d{1,2}:\d{2} (AM|PM)$/),
+    ).toBeInTheDocument();
+  });
+
+  it('does not render the desktop tagline in the default (phone) variant', () => {
+    render(<Header onReport={vi.fn()} now={NOW} />);
+    expect(screen.queryByText(/live cams & conditions/i)).not.toBeInTheDocument();
+  });
 });

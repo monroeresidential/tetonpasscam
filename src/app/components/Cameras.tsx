@@ -107,7 +107,7 @@ export default function Cameras({ refreshedAt = null }: { refreshedAt?: Date | n
   return (
     <section aria-label="Teton Pass cameras" className="p-4">
       <h2 className="font-display text-[15px] font-bold">Cameras</h2>
-      <div className="mt-2 grid grid-cols-2 gap-3">
+      <div className="mt-2 grid grid-cols-2 gap-2">
         {CAMERAS.map((cam) => (
           <CameraTile
             key={cam.id}

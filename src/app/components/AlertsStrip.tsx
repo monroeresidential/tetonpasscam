@@ -25,7 +25,7 @@ function ageLabel(createdAt: string, now: Date): string {
 
 function AlertCard({ alert, now }: { alert: PublicAlert; now: Date }) {
   return (
-    <li className="bg-card border-card-border rounded-card border p-3">
+    <li className="bg-card border-card-border rounded-card border px-3.5 py-3">
       <div className="flex items-start gap-2.5">
         <div
           aria-hidden="true"

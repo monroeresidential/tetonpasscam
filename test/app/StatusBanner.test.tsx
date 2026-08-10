@@ -76,27 +76,6 @@ describe('StatusBanner', () => {
     expect(screen.queryByText(/reopen|estimate/i)).not.toBeInTheDocument();
   });
 
-  it('drive time row hides delta when typicalSec null, shows ±min colored when present', async () => {
-    const { default: DriveTimes } = await import('../../src/app/components/DriveTimes');
-    const { rerender } = render(
-      <DriveTimes
-        travelTimes={[
-          { slug: 'victor-jackson-eb', name: 'Victor to Jackson', durationSec: 1500, typicalSec: null, capturedAt: REPORT_AT },
-        ]}
-      />,
-    );
-    expect(screen.queryByText(/usual/)).not.toBeInTheDocument();
-
-    rerender(
-      <DriveTimes
-        travelTimes={[
-          { slug: 'victor-jackson-eb', name: 'Victor to Jackson', durationSec: 1500, typicalSec: 1200, capturedAt: REPORT_AT },
-        ]}
-      />,
-    );
-    expect(screen.getByText(/usual/)).toBeInTheDocument();
-  });
-
   // Cross-task safety flag from Task 9's review: pollerDead must force the
   // UNKNOWN presentation, and the API's last-known conditionText/advisories/
   // restrictions must NEVER be rendered as if they describe the CURRENT

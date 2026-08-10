@@ -39,7 +39,11 @@ export default function Header({
         Teton Pass Cam
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-[11px] text-muted">{formatHeaderTime(now)}</span>
+        <span className="text-[11px] text-muted lg:text-[12px]">
+          {variant === 'desktop'
+            ? `Live cams & conditions · ${formatHeaderTime(now)}`
+            : formatHeaderTime(now)}
+        </span>
         {variant === 'desktop' && (
           <button
             type="button"

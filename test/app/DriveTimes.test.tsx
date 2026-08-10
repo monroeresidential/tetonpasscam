@@ -147,3 +147,40 @@ describe('DriveTimes routes-omitted contract', () => {
     expect(screen.queryByText(/min/)).not.toBeInTheDocument();
   });
 });
+
+// Moved from StatusBanner.test.tsx (Task 9 file-hygiene pass) -- this test
+// exercises DriveTimes directly and had no business living in
+// StatusBanner.test.tsx's file. Assertions kept identical.
+describe('DriveTimes delta visibility on rerender', () => {
+  it('drive time row hides delta when typicalSec null, shows ±min colored when present', () => {
+    const { rerender } = render(
+      <DriveTimes
+        travelTimes={[
+          {
+            slug: 'victor-jackson-eb',
+            name: 'Victor to Jackson',
+            durationSec: 1500,
+            typicalSec: null,
+            capturedAt: '2026-08-09T23:48:00.000Z',
+          },
+        ]}
+      />,
+    );
+    expect(screen.queryByText(/usual/)).not.toBeInTheDocument();
+
+    rerender(
+      <DriveTimes
+        travelTimes={[
+          {
+            slug: 'victor-jackson-eb',
+            name: 'Victor to Jackson',
+            durationSec: 1500,
+            typicalSec: 1200,
+            capturedAt: '2026-08-09T23:48:00.000Z',
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText(/usual/)).toBeInTheDocument();
+  });
+});
