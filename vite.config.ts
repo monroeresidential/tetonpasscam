@@ -60,12 +60,15 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        // Trailhead palette (restyle task 1): dark ink for the OS chrome
-        // accent, warm-paper page background for the splash screen. The
-        // logo-4c brand kit (route-22 icon set) only specifies index.html's
-        // media-scoped <meta name="theme-color"> pair -- its README is
-        // silent on manifest colors, so these stay as-is.
-        theme_color: '#2b2620',
+        // Cream for both the OS chrome accent and the splash-screen
+        // background (LH T5, Drew/controller-approved): the manifest has no
+        // media-query mechanism, so a single static theme_color has to pick
+        // a side, and cream matches both the splash background below and
+        // the majority of installs (light-mode default). Dark-mode adaptive
+        // chrome for the non-installed/browser-tab case is still handled by
+        // index.html's media-scoped <meta name="theme-color"> pair -- this
+        // manifest value only affects the installed-app chrome/splash.
+        theme_color: '#faf7f0',
         background_color: '#faf7f0',
         // Icon set from design/logo-4c/ (route-22 mark): "any" variants are
         // the rounded plate on transparency, "maskable" variants keep the
