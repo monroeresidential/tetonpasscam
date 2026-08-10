@@ -50,7 +50,10 @@ describe('StatusBanner', () => {
   it('renders UNKNOWN with 511 link', () => {
     render(<StatusBanner data={{ ...base, status: 'unknown' }} />);
     const link = screen.getByRole('link', { name: /wyoming 511/i });
-    expect(link).toHaveAttribute('href', expect.stringContaining('wyoroad.info'));
+    expect(link).toHaveAttribute(
+      'href',
+      'https://www.wyoroad.info/highway/conditions/RoadClosures.html',
+    );
   });
 
   it('always shows last-confirmed line', () => {

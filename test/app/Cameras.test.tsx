@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Cameras from '../../src/app/components/Cameras';
@@ -21,7 +21,7 @@ describe('Cameras', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders 3 lazy-loaded images with captions linking to Wyoming 511', () => {
+  it('renders 3 lazy-loaded images with captions', () => {
     render(<Cameras />);
     const images = screen.getAllByRole('img');
     expect(images).toHaveLength(3);
@@ -31,11 +31,18 @@ describe('Cameras', () => {
     expect(screen.getByText('Jackson Hole Valley')).toBeInTheDocument();
     expect(screen.getByText('Teton Pass — East')).toBeInTheDocument();
     expect(screen.getByText('Teton Pass — West')).toBeInTheDocument();
+  });
 
-    const links = screen.getAllByRole('link', { name: /wyoming 511/i });
-    expect(links.length).toBeGreaterThan(0);
-    for (const link of links) {
-      expect(link).toHaveAttribute('href', 'https://www.wyoroad.info');
+  // Change 3: per-image "— Wyoming 511" links were removed from captions
+  // (the single attribution line below the grid, and the onerror
+  // fallback card's own link, both still carry a Wyoming 511 link -- this
+  // test is scoped to the caption rows themselves, not those two).
+  it('captions no longer contain per-image Wyoming 511 links', () => {
+    render(<Cameras />);
+    for (const figcaption of document.querySelectorAll('figcaption')) {
+      expect(
+        within(figcaption as HTMLElement).queryByRole('link', { name: /wyoming 511/i }),
+      ).not.toBeInTheDocument();
     }
   });
 
@@ -132,5 +139,98 @@ describe('Cameras', () => {
     render(<Cameras refreshedAt={null} />);
     expect(screen.queryByText(/invalid date/i)).not.toBeInTheDocument();
     expect(screen.getAllByText(/^\d{1,2}:\d{2}\s?(AM|PM)$/i)).toHaveLength(3);
+  });
+
+  describe('lightbox', () => {
+    it('clicking a camera tile opens a dialog with the full-res image (incl. cache-buster) and caption', () => {
+      render(<Cameras refreshedAt={new Date('2026-08-09T18:00:00.000Z')} />);
+      fireEvent.click(screen.getByRole('button', { name: /view jackson hole valley full size/i }));
+
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+      const images = within(dialog).getAllByRole('img');
+      expect(images).toHaveLength(1);
+      expect(images[0]).toHaveAttribute('alt', 'Jackson Hole Valley');
+      expect(tParam(images[0].getAttribute('src')!)).toBe(String(new Date('2026-08-09T18:00:00.000Z').getTime()));
+      expect(within(dialog).getByText('Jackson Hole Valley')).toBeInTheDocument();
+    });
+
+    it('Escape closes the lightbox', () => {
+      render(<Cameras />);
+      fireEvent.click(screen.getByRole('button', { name: /view jackson hole valley full size/i }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('the × close button closes the lightbox', () => {
+      render(<Cameras />);
+      fireEvent.click(screen.getByRole('button', { name: /view jackson hole valley full size/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^close$/i }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('backdrop click closes the lightbox', () => {
+      render(<Cameras />);
+      fireEvent.click(screen.getByRole('button', { name: /view jackson hole valley full size/i }));
+      fireEvent.click(screen.getByRole('dialog'));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('clicking the image itself does not close the lightbox', () => {
+      render(<Cameras />);
+      fireEvent.click(screen.getByRole('button', { name: /view jackson hole valley full size/i }));
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('img'));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('ArrowRight cycles to the next camera, wrapping from last back to first', () => {
+      render(<Cameras />);
+      fireEvent.click(screen.getByRole('button', { name: /view teton pass — west full size/i }));
+      expect(within(screen.getByRole('dialog')).getByText('Teton Pass — West')).toBeInTheDocument();
+
+      fireEvent.keyDown(document, { key: 'ArrowRight' });
+      expect(within(screen.getByRole('dialog')).getByText('Jackson Hole Valley')).toBeInTheDocument();
+    });
+
+    it('ArrowLeft cycles to the previous camera, wrapping from first back to last', () => {
+      render(<Cameras />);
+      fireEvent.click(screen.getByRole('button', { name: /view jackson hole valley full size/i }));
+
+      fireEvent.keyDown(document, { key: 'ArrowLeft' });
+      expect(within(screen.getByRole('dialog')).getByText('Teton Pass — West')).toBeInTheDocument();
+    });
+
+    it('prev/next arrow buttons navigate the carousel', () => {
+      render(<Cameras />);
+      fireEvent.click(screen.getByRole('button', { name: /view jackson hole valley full size/i }));
+
+      fireEvent.click(screen.getByRole('button', { name: /next camera/i }));
+      expect(within(screen.getByRole('dialog')).getByText('Teton Pass — East')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /previous camera/i }));
+      fireEvent.click(screen.getByRole('button', { name: /previous camera/i }));
+      expect(within(screen.getByRole('dialog')).getByText('Teton Pass — West')).toBeInTheDocument();
+    });
+
+    it('an errored camera tile falls back to the link card and cannot open the lightbox', () => {
+      render(<Cameras />);
+      fireEvent.error(screen.getAllByRole('img')[0]);
+      expect(
+        screen.queryByRole('button', { name: /view jackson hole valley full size/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /view on wyoming 511/i })).toBeInTheDocument();
+    });
+
+    it('locks body scroll while open and restores it on close', () => {
+      render(<Cameras />);
+      fireEvent.click(screen.getByRole('button', { name: /view jackson hole valley full size/i }));
+      expect(document.body.style.overflow).toBe('hidden');
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(document.body.style.overflow).not.toBe('hidden');
+    });
   });
 });

@@ -72,7 +72,10 @@ export default function StatusBanner({ data }: { data: ApiStatus }) {
         // Wyoming 511" tail.
         <p data-testid="banner-headline" className={HEADLINE_CLASS}>
           <span>UNKNOWN</span> — check{' '}
-          <a href="https://www.wyoroad.info" className="underline">
+          <a
+            href="https://www.wyoroad.info/highway/conditions/RoadClosures.html"
+            className="underline"
+          >
             Wyoming 511
           </a>
         </p>
