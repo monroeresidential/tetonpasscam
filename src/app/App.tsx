@@ -59,12 +59,8 @@ function App() {
 
   if (!data) {
     return (
-      <main className="min-h-screen bg-white dark:bg-neutral-900 p-4">
-        <p
-          role="status"
-          aria-live="polite"
-          className="text-center text-neutral-500 dark:text-neutral-400"
-        >
+      <main className="min-h-screen bg-page p-4">
+        <p role="status" aria-live="polite" className="text-center text-muted">
           {error ? 'Unable to load pass status. Retrying…' : 'Loading pass status…'}
         </p>
       </main>
@@ -74,7 +70,7 @@ function App() {
   return (
     <main className="min-h-screen bg-page pb-28 lg:pb-10">
       {offline && (
-        <div role="alert" className="w-full bg-red-800 p-3 text-center font-bold text-white">
+        <div role="alert" className="w-full bg-status-closed p-3 text-center font-bold text-white">
           OFFLINE — showing last known status from{' '}
           {offlineSince ? OFFLINE_TIME_FORMAT.format(offlineSince) : 'an earlier visit'}
         </div>

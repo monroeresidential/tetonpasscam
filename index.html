@@ -17,9 +17,13 @@
       root (see the comment on #seo-shell), so it can't reference the
       `--color-*`/`--font-*` custom properties src/app/index.css defines --
       those only exist once that stylesheet has loaded. Scoped to
-      `#seo-shell` only, light values only (this is a no-JS/pre-hydration
-      fallback, not styled surface -- no dark-mode variant needed here).
-      Keep these literals in sync with the light `@theme` block in
+      `#seo-shell` only. The shell stays visible alongside the live app
+      permanently (see the comment on #seo-shell), including after dark
+      mode's `--color-*` overrides have taken effect, so it needs its own
+      `prefers-color-scheme: dark` override here too -- otherwise it reads
+      as a permanent light-mode band sitting on top of the dark app. Keep
+      these literals in sync with the light `@theme` block and its dark
+      `@media (prefers-color-scheme: dark) { :root { ... } }` override in
       src/app/index.css by hand; there is no build-time link between them.
     -->
     <style>
@@ -33,6 +37,17 @@
       #seo-shell p {
         font-family: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
         color: #8a8072;
+      }
+      @media (prefers-color-scheme: dark) {
+        #seo-shell {
+          background: #211d17;
+        }
+        #seo-shell h1 {
+          color: #f0ebe1;
+        }
+        #seo-shell p {
+          color: #a39880;
+        }
       }
     </style>
     <script type="application/ld+json">
@@ -73,9 +88,9 @@
       visitors and crawlers, satisfying "H1 must remain in the DOM" by
       construction rather than by a runtime toggle.
     -->
-    <div id="seo-shell" class="mx-auto max-w-2xl px-4 pt-6 pb-2 dark:text-neutral-100">
+    <div id="seo-shell" class="mx-auto max-w-2xl px-4 pt-6 pb-2">
       <h1 class="text-2xl font-bold tracking-tight">Teton Pass — live cams & conditions</h1>
-      <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+      <p class="mt-2 text-sm text-neutral-600">
         Teton Pass Cam shows the current status of Wyoming Highway 22 over Teton Pass, between
         Wilson, Wyoming and Victor, Idaho, refreshed automatically about every 10 minutes. The
         live banner above reflects WYDOT road-condition reports, cross-checked against Idaho 511

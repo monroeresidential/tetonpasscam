@@ -42,6 +42,13 @@ const darkTheme = darkMatch[1];
 // strings) since this is a design-token consistency check, not SEO content.
 const html = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
 
+// Isolates index.html's own <style> block so the dark-shell assertion below
+// can't accidentally match some unrelated part of the document (e.g. the
+// JSON-LD script or a future style block elsewhere in <head>).
+const htmlStyleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
+if (!htmlStyleMatch) throw new Error('tokens.test.ts: could not find <style> block in index.html');
+const htmlStyle = htmlStyleMatch[1];
+
 describe('design tokens (src/app/index.css)', () => {
   it('pins the light-mode status colors', () => {
     expect(lightTheme).toMatch(/--color-status-open:\s*oklch\(0\.55 0\.13 150\);/);
@@ -72,5 +79,15 @@ describe('design tokens (src/app/index.css)', () => {
 
   it("index.html's theme-color meta matches the manifest and --color-ink", () => {
     expect(html).toContain('<meta name="theme-color" content="#2b2620" />');
+  });
+
+  it("index.html's static SEO shell has a dark-mode override (no permanent light band over the dark app)", () => {
+    // The dark override block exists at all and repaints #seo-shell's
+    // background to the same dark `--color-page` literal src/app/index.css
+    // uses (#211d17).
+    const darkBlockMatch = htmlStyle.match(/@media \(prefers-color-scheme: dark\)\s*{([\s\S]*)}/);
+    expect(darkBlockMatch).not.toBeNull();
+    const darkBlock = darkBlockMatch![1];
+    expect(darkBlock).toMatch(/#seo-shell\s*{[^}]*background:\s*#211d17;/);
   });
 });

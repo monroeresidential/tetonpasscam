@@ -146,7 +146,7 @@ export default function ReportModal({
         <p
           role="status"
           aria-live="polite"
-          className="fixed bottom-20 inset-x-4 z-40 rounded bg-green-700 px-4 py-2 text-center text-white sm:inset-x-auto sm:right-4"
+          className="fixed bottom-20 inset-x-4 z-40 rounded bg-status-open px-4 py-2 text-center text-white sm:inset-x-auto sm:right-4"
         >
           Thanks — report submitted.
         </p>
