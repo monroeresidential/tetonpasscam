@@ -12,6 +12,16 @@ describe('Header', () => {
     expect(screen.getByText('Teton Pass Cam')).toBeInTheDocument();
   });
 
+  it('renders the route-22 mark before the wordmark, decorative (empty alt)', () => {
+    const { container } = render(<Header onReport={vi.fn()} now={NOW} />);
+    const img = container.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img).toHaveAttribute('src', '/icons/icon-192.png');
+    expect(img).toHaveAttribute('width', '40');
+    expect(img).toHaveAttribute('height', '40');
+    expect(img).toHaveAttribute('alt', '');
+  });
+
   it('renders the local time as "Sat 6:12 AM"-style text (weekday-short + h:mm AM/PM)', () => {
     render(<Header onReport={vi.fn()} now={NOW} />);
     expect(screen.getByText(/^[A-Z][a-z]{2} \d{1,2}:\d{2} (AM|PM)$/)).toBeInTheDocument();

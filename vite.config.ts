@@ -61,12 +61,31 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         // Trailhead palette (restyle task 1): dark ink for the OS chrome
-        // accent, warm-paper page background for the splash screen.
+        // accent, warm-paper page background for the splash screen. The
+        // logo-4c brand kit (route-22 icon set) only specifies index.html's
+        // media-scoped <meta name="theme-color"> pair -- its README is
+        // silent on manifest colors, so these stay as-is.
         theme_color: '#2b2620',
         background_color: '#faf7f0',
+        // Icon set from design/logo-4c/ (route-22 mark): "any" variants are
+        // the rounded plate on transparency, "maskable" variants keep the
+        // art in an 80% safe zone for OS icon masks. Regenerate by
+        // re-copying from design/logo-4c/ if the brand kit changes.
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          {
+            src: '/icons/icon-192-maskable.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: '/icons/icon-512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {

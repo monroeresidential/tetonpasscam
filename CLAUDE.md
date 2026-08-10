@@ -47,7 +47,10 @@ src/app/             React SPA (client-render only, no SSR)
 src/shared/types.ts   Types shared between worker and app (PassStatus, ApiStatus, PublicAlert, CameraId, etc.)
 
 migrations/           drizzle-kit-generated D1 migrations (0000_polite_blur.sql, 0001_mysterious_masked_marvel.sql)
-scripts/              verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts), generate-icons.mjs
+scripts/              verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts).
+                      App icons/favicons come from design/logo-4c/ (the route-22 brand kit,
+                      not generated) -- regenerate by re-copying its PNGs into public/ and
+                      public/icons/ per that directory's README.
 docs/                 RUNBOOK.md (ops), superpowers/ (spec + plan + SDD task artifacts)
 
 test/

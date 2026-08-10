@@ -35,9 +35,10 @@ const lightTheme = themeMatch[1];
 const darkTheme = darkMatch[1];
 
 // index.html's <meta name="theme-color"> drives browser-chrome tinting for
-// a plain tab view, same as the PWA manifest's theme_color drives it for an
-// installed view -- the two must agree or the accent color visibly jumps
-// depending on how the site is opened. Pinned here (not in
+// a plain tab view (route-22 brand kit: cream light / ink dark, media-scoped
+// so it also flips with the OS). The PWA manifest's theme_color (installed
+// view) is a separate, unscoped value the logo-4c brand kit doesn't touch --
+// see vite.config.ts's comment. Pinned here (not in
 // test/parsers/index-html.test.ts, which stays byte-frozen to the SEO-shell
 // strings) since this is a design-token consistency check, not SEO content.
 const html = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
@@ -77,8 +78,17 @@ describe('design tokens (src/app/index.css)', () => {
     expect(darkTheme).not.toMatch(/--color-status-unknown:/);
   });
 
-  it("index.html's theme-color meta matches the manifest and --color-ink", () => {
-    expect(html).toContain('<meta name="theme-color" content="#2b2620" />');
+  it("index.html has media-scoped theme-color metas for light/dark browser chrome (route-22 brand kit)", () => {
+    // These track the logo-4c brand kit's cream/ink palette (#faf7f0 light,
+    // #211d17 dark), not the PWA manifest's theme_color (#2b2620, unchanged
+    // -- the brand kit's README is silent on manifest colors, so
+    // vite.config.ts keeps the pre-existing --color-ink value there).
+    expect(html).toContain(
+      '<meta name="theme-color" content="#faf7f0" media="(prefers-color-scheme: light)" />',
+    );
+    expect(html).toContain(
+      '<meta name="theme-color" content="#211d17" media="(prefers-color-scheme: dark)" />',
+    );
   });
 
   it("index.html's static SEO shell has a dark-mode override (no permanent light band over the dark app)", () => {
