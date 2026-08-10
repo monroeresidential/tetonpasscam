@@ -6,7 +6,7 @@
     <title>Teton Pass Cam — Live Cameras, Conditions & Drive Times</title>
     <meta
       name="description"
-      content="Live Teton Pass cameras, WYDOT road conditions, summit weather, real-time Victor and Driggs to Jackson drive times, and community alerts. Is the pass open? Check before you cross."
+      content="Live Teton Pass cameras, WYDOT road conditions, summit weather, and real-time Victor–Jackson drive times. Is the pass open? Check before you cross."
     />
     <link rel="canonical" href="https://tetonpasscam.com/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -15,6 +15,26 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#faf7f0" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#211d17" media="(prefers-color-scheme: dark)" />
+    <!-- Social sharing (Drew's audit): OG/Twitter tags for link previews on
+         Facebook/Slack/iMessage/etc. -- title/description mirror the tags
+         above rather than diverging, and og:image points at a cropped,
+         cache-buster-free still from a live cam (scripts/generate-og-image.mjs)
+         since there's no separate hand-designed share graphic. No
+         twitter:site -- there's no @handle for this project. -->
+    <meta property="og:title" content="Teton Pass Cam — Live Cameras, Conditions & Drive Times" />
+    <meta
+      property="og:description"
+      content="Live Teton Pass cameras, WYDOT road conditions, summit weather, and real-time Victor–Jackson drive times. Is the pass open? Check before you cross."
+    />
+    <meta property="og:url" content="https://tetonpasscam.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Teton Pass Cam" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://tetonpasscam.com/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://tetonpasscam.com/og.jpg" />
     <!--
       Trailhead token colors, hardcoded as literals for the static SEO shell
       below (#seo-shell): this markup is a plain HTML sibling of the React

@@ -92,7 +92,7 @@ feedback(id, created_at, body, email_optional)
 ## SEO (light touch — utility, not content)
 
 - Title: `Teton Pass Cam — Live Cameras, Conditions & Drive Times`
-- Meta: `Live Teton Pass cameras, WYDOT road conditions, summit weather, real-time Victor and Driggs to Jackson drive times, and community alerts. Is the pass open? Check before you cross.`
+- Meta: `Live Teton Pass cameras, WYDOT road conditions, summit weather, real-time Victor and Driggs to Jackson drive times, and community alerts. Is the pass open? Check before you cross.` **Amendment (LH T5, 2026-08-10):** shortened to `Live Teton Pass cameras, WYDOT road conditions, summit weather, and real-time Victor–Jackson drive times. Is the pass open? Check before you cross.` (Drew-directed copy change, also reused verbatim as og:description/twitter card text so the social preview and the `<meta name="description">` never diverge).
 - H1: `Teton Pass — live cams & conditions`
 - FAQPage schema: "Is Teton Pass open right now?", "How long is the drive from Victor to Jackson?" (answer can honestly cite the historic median once data accrues — uniquely quotable).
 - Prerendered shell with one 100–150-word explanatory paragraph; sitemap; indexable; GSC from day 1.

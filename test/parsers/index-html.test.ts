@@ -20,7 +20,7 @@ describe('index.html static SEO shell', () => {
 
   it('has the exact spec meta description', () => {
     expect(html).toContain(
-      'Live Teton Pass cameras, WYDOT road conditions, summit weather, real-time Victor and Driggs to Jackson drive times, and community alerts. Is the pass open? Check before you cross.',
+      'Live Teton Pass cameras, WYDOT road conditions, summit weather, and real-time Victor–Jackson drive times. Is the pass open? Check before you cross.',
     );
   });
 
