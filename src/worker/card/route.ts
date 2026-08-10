@@ -60,9 +60,11 @@ export async function handleOgRequest(req: Request, env: Env): Promise<Response 
         // cache forever, both at the browser and (via the explicit
         // caches.default write below) at Cloudflare's edge. This still holds
         // under codes: a code names a fixed Denver-local minute, and once
-        // that minute is in the past its snapshot (if any) never changes,
-        // so "newest snapshot in that minute" is stable forever after the
-        // minute passes.
+        // that minute is in the past its snapshot (if any) never changes --
+        // the poller's cadence is never faster than 5min (see CLAUDE.md's
+        // hard rules), so two snapshots ever sharing one Denver-local
+        // minute is impossible, meaning "newest snapshot naming this code"
+        // is stable forever after the minute passes.
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });

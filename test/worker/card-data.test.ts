@@ -142,7 +142,7 @@ describe('resolveShareCode', () => {
     expect(await resolveShareCode(env as any, '20990101-0000')).toBeNull();
   });
 
-  it('resolves via the PRIMARY window on a normal (non-DST-boundary) day', async () => {
+  it('resolves a normal (non-DST-boundary) day via the constant-offset window guess', async () => {
     const capturedAt = new Date('2026-08-10T20:00:00.000Z').toISOString();
     const id = await insertSnapshot({ capturedAt, status: 'open' });
     const code = formatShareCode(capturedAt);
@@ -150,13 +150,33 @@ describe('resolveShareCode', () => {
     expect(await resolveShareCode(env as any, code)).toBe(id);
   });
 
-  it('resolves via the FALLBACK scan just after the spring-forward DST jump, where the primary window guess drifts 1h', async () => {
+  it('resolves a snapshot just after the spring-forward DST jump, where the window guess drifts 1h', async () => {
     const capturedAt = new Date('2026-03-08T09:30:00.000Z').toISOString();
     const id = await insertSnapshot({ capturedAt, status: 'open' });
     const code = formatShareCode(capturedAt);
     expect(code).toBe('20260308-0330');
 
     expect(await resolveShareCode(env as any, code)).toBe(id);
+  });
+
+  it('fall-back night: two distinct real snapshots an hour apart share the same code (the repeated 1am hour) -- the NEWER one must win, not whichever the window guess happens to land on', async () => {
+    // 2026-11-01 02:00 America/Denver falls back to 01:00: 01:30 MDT
+    // (2026-11-01T07:30:00Z) and 01:30 MST (2026-11-01T08:30:00Z, an hour
+    // later in real time) both format to "20261101-0130". The window guess
+    // (shareCodeToUtcWindow) always lands on the FIRST (older, MDT)
+    // occurrence -- a short-circuit on that alone would silently return the
+    // older snapshot here, which is the exact bug this test pins.
+    const olderCapturedAt = new Date('2026-11-01T07:30:00.000Z').toISOString();
+    const newerCapturedAt = new Date('2026-11-01T08:30:00.000Z').toISOString();
+    const olderCode = formatShareCode(olderCapturedAt);
+    const newerCode = formatShareCode(newerCapturedAt);
+    expect(olderCode).toBe('20261101-0130');
+    expect(newerCode).toBe(olderCode);
+
+    await insertSnapshot({ capturedAt: olderCapturedAt, status: 'open' });
+    const newerId = await insertSnapshot({ capturedAt: newerCapturedAt, status: 'closed' });
+
+    expect(await resolveShareCode(env as any, olderCode)).toBe(newerId);
   });
 
   it('multiple snapshots naming the same minute resolve to the newest (highest id)', async () => {

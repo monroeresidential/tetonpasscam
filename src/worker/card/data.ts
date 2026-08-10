@@ -6,15 +6,23 @@ import type { Env } from '../env';
 import { formatShareCode, shareCodeToUtcWindow } from '../share-code';
 import type { CardInput, CardRoute } from './render';
 
-/** Width of the fallback DB scan on either side of the share code's PRIMARY
- *  (constant-offset) window guess -- only reached on the ~2 DST-transition
- *  days/year where that guess can drift by the DST delta (1h). Wide enough
- *  to comfortably contain the true instant on either side; rows in this
- *  range are then filtered in code by re-formatting each one's own
- *  `capturedAt` and comparing it to the requested code, so the width here is
- *  a performance/safety margin, not a source of false matches. */
-const FALLBACK_BEFORE_MS = 2 * 3_600_000;
-const FALLBACK_AFTER_MS = 3 * 3_600_000;
+/** Width of the DB scan on either side of the share code's constant-offset
+ *  window guess (`shareCodeToUtcWindow`'s `start`). This guess is exactly
+ *  right on every ordinary day, but on the ~2 DST-transition days/year it
+ *  can be off in either direction:
+ *  - Spring-forward: the guess can land up to 1h AFTER the true instant
+ *    (the day's midnight is still pre-jump standard time, so the guess's
+ *    constant offset overshoots once the code's HH:mm is past the jump).
+ *  - Fall-back: the repeated 1:00-1:59am local hour means TWO distinct real
+ *    snapshots (one before the jump, one after, exactly 1h apart) can
+ *    format to the identical code -- the guess only ever lands on the
+ *    FIRST (older) of the two.
+ *  Wide enough to comfortably contain every real candidate on either side;
+ *  rows in this range are then filtered in code by re-formatting each one's
+ *  own `capturedAt` and comparing it to the requested code, so the width
+ *  here is a performance/safety margin, not a source of false matches. */
+const WINDOW_BEFORE_MS = 2 * 3_600_000;
+const WINDOW_AFTER_MS = 3 * 3_600_000;
 
 /** Travel-time rows within this many minutes of the snapshot's own
  *  `capturedAt` count as "that cycle's" reading for a route (design doc:
@@ -62,23 +70,23 @@ function resolveAsOfIso(capturedAt: string, wydotReportTime: string | null): str
 /**
  * Resolves a share code (`YYYYMMDD-HHmm`, America/Denver) to the
  * `status_snapshots.id` it names, or `null` if the code is malformed or
- * names no snapshot. Two-step lookup:
+ * names no snapshot.
  *
- * 1. PRIMARY: query the single Denver-local minute the code's constant-
- *    offset guess (`shareCodeToUtcWindow`) resolves to. This is correct
- *    every day except the ~2/year where the code's HH:mm falls on the far
- *    side of a DST transition from that calendar day's midnight.
- * 2. FALLBACK (only when step 1 finds nothing): scan a wide window around
- *    that guess and re-derive each candidate row's OWN code via
- *    `formatShareCode`, keeping only exact string matches -- this is always
- *    correct regardless of DST, just slower, so it's only paid when step 1
- *    comes up empty.
- *
- * A code naming a Denver-local minute with more than one snapshot (not
- * possible at the poller's 10-min cadence, but not something to crash on)
- * resolves to the newest (highest id). No match in either step -> `null`;
- * callers (route.ts) turn that into the same 404/redirect as a request that
- * never touched the DB at all.
+ * Deliberately does NOT short-circuit on the constant-offset window guess
+ * (`shareCodeToUtcWindow`'s `[start, end)`) alone: on fall-back night, that
+ * guess only ever lands on the FIRST of two distinct real snapshots that
+ * can share the same code (see `WINDOW_BEFORE_MS`/`WINDOW_AFTER_MS`'s
+ * comment), so trusting a hit there without also checking the rest of the
+ * window would silently return the OLDER snapshot on that one night/year.
+ * Instead, every row across the whole bounded window is fetched (newest
+ * first), each candidate's OWN code is re-derived via `formatShareCode`,
+ * and the first (i.e. newest, highest id) exact string match wins --
+ * correct on an ordinary day (where at most one row is ever in range and
+ * poller cadence never runs faster than every 5min, so two snapshots
+ * sharing one Denver-local minute is impossible there anyway) and on both
+ * kinds of DST-transition day. No match anywhere -> `null`; callers
+ * (route.ts) turn that into the same 404/redirect as a request that never
+ * touched the DB at all.
  */
 export async function resolveShareCode(env: Env, code: string): Promise<number | null> {
   const window = shareCodeToUtcWindow(code);
@@ -86,31 +94,18 @@ export async function resolveShareCode(env: Env, code: string): Promise<number |
 
   const database = db(env);
 
-  const [primary] = await database
-    .select({ id: statusSnapshots.id })
-    .from(statusSnapshots)
-    .where(
-      and(
-        gte(statusSnapshots.capturedAt, new Date(window.start).toISOString()),
-        lt(statusSnapshots.capturedAt, new Date(window.end).toISOString()),
-      ),
-    )
-    .orderBy(desc(statusSnapshots.id))
-    .limit(1);
-  if (primary) return primary.id;
-
-  const fallbackRows = await database
+  const rows = await database
     .select({ id: statusSnapshots.id, capturedAt: statusSnapshots.capturedAt })
     .from(statusSnapshots)
     .where(
       and(
-        gte(statusSnapshots.capturedAt, new Date(window.start - FALLBACK_BEFORE_MS).toISOString()),
-        lt(statusSnapshots.capturedAt, new Date(window.start + FALLBACK_AFTER_MS).toISOString()),
+        gte(statusSnapshots.capturedAt, new Date(window.start - WINDOW_BEFORE_MS).toISOString()),
+        lt(statusSnapshots.capturedAt, new Date(window.start + WINDOW_AFTER_MS).toISOString()),
       ),
     )
     .orderBy(desc(statusSnapshots.id));
 
-  const match = fallbackRows.find((row) => formatShareCode(row.capturedAt) === code);
+  const match = rows.find((row) => formatShareCode(row.capturedAt) === code);
   return match ? match.id : null;
 }
 

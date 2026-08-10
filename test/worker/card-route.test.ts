@@ -105,12 +105,12 @@ describe('GET /og/{code}-{dir}.png', () => {
     expect(secondBytes).toEqual(firstBytes);
   }, 20000);
 
-  it('resolves a snapshot captured just after the spring-forward DST jump via the fallback scan', async () => {
+  it('resolves a snapshot captured just after the spring-forward DST jump via the window scan', async () => {
     // 2026-03-08 02:00 America/Denver -> 03:00 (spring forward): a snapshot
     // captured at 2026-03-08T09:15:00Z reads as 03:15 MDT (GMT-6), but the
-    // PRIMARY window guess (constant-offset from that day's midnight, still
+    // constant-offset window guess (from that day's midnight, still
     // MST/GMT-7 at 00:00) lands on 10:15 UTC, an hour off -- only the
-    // fallback scan (data.ts's resolveShareCode) finds this row.
+    // bounded window scan (data.ts's resolveShareCode) finds this row.
     const capturedAt = new Date('2026-03-08T09:15:00.000Z').toISOString();
     const { code } = await insertSnapshot({ capturedAt, status: 'open' });
     expect(code).toBe('20260308-0315');
@@ -177,13 +177,32 @@ describe('GET /s/{code}', () => {
     expect(res.headers.get('location')).toBe('https://tetonpasscam.com/');
   });
 
-  it('resolves a snapshot captured just after the spring-forward DST jump via the fallback scan', async () => {
+  it('resolves a snapshot captured just after the spring-forward DST jump via the window scan', async () => {
     const capturedAt = new Date('2026-03-08T09:20:00.000Z').toISOString();
     const { code } = await insertSnapshot({ capturedAt, status: 'open' });
     expect(code).toBe('20260308-0320');
 
     const res = await get(`/s/${code}`);
     expect(res.status).toBe(200);
+  });
+
+  it('fall-back night: a code shared by two real snapshots an hour apart resolves to the NEWER one', async () => {
+    // 2026-11-01 02:00 America/Denver falls back to 01:00 -- 01:45 MDT
+    // (2026-11-01T07:45:00Z) and 01:45 MST (2026-11-01T08:45:00Z, an hour
+    // later) both format to the same code. The og:title reflecting the
+    // NEWER (closed) snapshot's status, not the older (open) one's, proves
+    // resolveShareCode's newest-wins fix end-to-end, not just at the id
+    // level (see card-data.test.ts's more direct regression test).
+    const olderCapturedAt = new Date('2026-11-01T07:45:00.000Z').toISOString();
+    const newerCapturedAt = new Date('2026-11-01T08:45:00.000Z').toISOString();
+    const older = await insertSnapshot({ capturedAt: olderCapturedAt, status: 'open' });
+    const newer = await insertSnapshot({ capturedAt: newerCapturedAt, status: 'closed' });
+    expect(newer.code).toBe(older.code);
+
+    const res = await get(`/s/${newer.code}`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('Teton Pass is CLOSED — live conditions');
   });
 
   it('sets the homepage-style short-cache headers, strips ETag/Last-Modified', async () => {
