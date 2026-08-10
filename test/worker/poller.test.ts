@@ -269,6 +269,7 @@ describe('runPollCycle', () => {
       env as any,
       fakeFetch({
         'RoadClosures.html': roadclosuresOpen,
+        'SelectedRoute=WY22': routesresultsWy22Open,
         'Sensors.StationResults': sensorsTetonpass,
         'routes.googleapis.com': GOOGLE_ROUTES_STUB,
         '511.idaho.gov': '[]',
@@ -324,6 +325,10 @@ describe('resolveStatus', () => {
         }),
       );
       expect(result.status).toBe('unknown');
+      // Pins the distinct 'unresolved' label for this path -- separate from
+      // the both-primary-and-fallback-unknown path, which keeps its
+      // historical 'primary' label (see resolveStatus's doc comment).
+      expect(result.source).toBe('unresolved');
     },
     20_000,
   );
@@ -499,6 +504,7 @@ describe('Idaho 511 event upsert semantics', () => {
       env as any,
       fakeFetch({
         'RoadClosures.html': roadclosuresOpen,
+        'SelectedRoute=WY22': routesresultsWy22Open,
         'Sensors.StationResults': sensorsTetonpass,
         'routes.googleapis.com': GOOGLE_ROUTES_STUB,
         '511.idaho.gov': seedEvent,
@@ -517,6 +523,7 @@ describe('Idaho 511 event upsert semantics', () => {
       env as any,
       fakeFetch({
         'RoadClosures.html': roadclosuresOpen,
+        'SelectedRoute=WY22': routesresultsWy22Open,
         'Sensors.StationResults': sensorsTetonpass,
         'routes.googleapis.com': GOOGLE_ROUTES_STUB,
         '511.idaho.gov': 500,
@@ -547,6 +554,7 @@ describe('Idaho 511 event upsert semantics', () => {
       env as any,
       fakeFetch({
         'RoadClosures.html': roadclosuresOpen,
+        'SelectedRoute=WY22': routesresultsWy22Open,
         'Sensors.StationResults': sensorsTetonpass,
         'routes.googleapis.com': GOOGLE_ROUTES_STUB,
         '511.idaho.gov': seedEvent,
@@ -565,6 +573,7 @@ describe('Idaho 511 event upsert semantics', () => {
       env as any,
       fakeFetch({
         'RoadClosures.html': roadclosuresOpen,
+        'SelectedRoute=WY22': routesresultsWy22Open,
         'Sensors.StationResults': sensorsTetonpass,
         'routes.googleapis.com': GOOGLE_ROUTES_STUB,
         '511.idaho.gov': '[]',
