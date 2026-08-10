@@ -8,7 +8,7 @@ import type { ApiStatus } from '../../src/shared/types';
 function row(overrides: Partial<ApiStatus['travelTimes'][number]>): ApiStatus['travelTimes'][number] {
   return {
     slug: 'victor-jackson-eb',
-    name: 'Victor to Jackson',
+    name: 'Victor → Jackson',
     durationSec: 1500,
     typicalSec: 1200,
     capturedAt: '2026-08-09T23:48:00.000Z',
@@ -16,46 +16,108 @@ function row(overrides: Partial<ApiStatus['travelTimes'][number]>): ApiStatus['t
   };
 }
 
-// Delta thresholds (from the plan): diff = durationSec - typicalSec.
-//   diff <= +5min (300s)         => green
-//   +5min < diff <= +15min (900s) => amber
-//   diff > +15min                 => red
-// Boundaries are pinned exactly at 300s and 900s below since "≤"/">" makes
-// the edge behavior a real product decision, not an implementation detail.
-describe('DriveTimes delta thresholds', () => {
-  it('diff exactly +5min (300s) is green, not amber', () => {
-    render(<DriveTimes travelTimes={[row({ durationSec: 1500, typicalSec: 1200 })]} />);
-    const chip = screen.getByText(/vs typical/);
-    expect(chip.className).toMatch(/green/);
-  });
-
-  it('diff just over +5min is amber', () => {
-    render(<DriveTimes travelTimes={[row({ durationSec: 1501, typicalSec: 1200 })]} />);
-    const chip = screen.getByText(/vs typical/);
-    expect(chip.className).toMatch(/amber/);
-  });
-
-  it('diff exactly +15min (900s) is amber, not red', () => {
-    render(<DriveTimes travelTimes={[row({ durationSec: 2100, typicalSec: 1200 })]} />);
-    const chip = screen.getByText(/vs typical/);
-    expect(chip.className).toMatch(/amber/);
-  });
-
-  it('diff just over +15min is red', () => {
-    render(<DriveTimes travelTimes={[row({ durationSec: 2101, typicalSec: 1200 })]} />);
-    const chip = screen.getByText(/vs typical/);
-    expect(chip.className).toMatch(/red/);
-  });
-
-  it('a negative diff (faster than typical) is green', () => {
+// Verbal delta mapping (spec, verbatim): diffSec = durationSec - typicalSec.
+// The threshold comparison happens on the un-rounded SECOND value, and only
+// once a band is crossed do we round to whole minutes for display -- doing
+// it the other way (round to minutes, then threshold on minutes) would flip
+// -299s (4.98 rounded min) into the "faster" band, contradicting the pinned
+// -299s => "about usual" case below. See DriveTimes.tsx for the same note.
+describe('DriveTimes verbal delta mapping', () => {
+  it('diff exactly -300s (5 min faster) reads "5 min faster than usual"', () => {
     render(<DriveTimes travelTimes={[row({ durationSec: 900, typicalSec: 1200 })]} />);
-    const chip = screen.getByText(/vs typical/);
-    expect(chip.className).toMatch(/green/);
+    const delta = screen.getByText('5 min faster than usual');
+    expect(delta.className).toMatch(/delta-pos/);
+  });
+
+  it('diff -299s (just inside the band) reads "about usual"', () => {
+    render(<DriveTimes travelTimes={[row({ durationSec: 901, typicalSec: 1200 })]} />);
+    expect(screen.getByText('about usual')).toBeInTheDocument();
+    expect(screen.queryByText(/faster than usual/)).not.toBeInTheDocument();
+  });
+
+  it('diff +299s (just inside the band) reads "about usual"', () => {
+    render(<DriveTimes travelTimes={[row({ durationSec: 1499, typicalSec: 1200 })]} />);
+    expect(screen.getByText('about usual')).toBeInTheDocument();
+    expect(screen.queryByText(/slower than usual/)).not.toBeInTheDocument();
+  });
+
+  it('diff exactly +300s (5 min slower) reads "5 min slower than usual"', () => {
+    render(<DriveTimes travelTimes={[row({ durationSec: 1500, typicalSec: 1200 })]} />);
+    const delta = screen.getByText('5 min slower than usual');
+    expect(delta.className).toMatch(/delta-neg/);
+  });
+
+  it('diff +480s (8 min slower) reads "8 min slower than usual"', () => {
+    render(<DriveTimes travelTimes={[row({ durationSec: 1680, typicalSec: 1200 })]} />);
+    const delta = screen.getByText('8 min slower than usual');
+    expect(delta.className).toMatch(/delta-neg/);
+  });
+
+  it('a null typicalSec renders no delta text at all', () => {
+    render(<DriveTimes travelTimes={[row({ durationSec: 1500, typicalSec: null })]} />);
+    expect(screen.queryByText(/usual/)).not.toBeInTheDocument();
+  });
+
+  it('"about usual" uses the muted token, not a delta color', () => {
+    render(<DriveTimes travelTimes={[row({ durationSec: 1200, typicalSec: 1200 })]} />);
+    const delta = screen.getByText('about usual');
+    expect(delta.className).toMatch(/text-muted/);
   });
 });
 
-describe('DriveTimes direction toggle', () => {
-  it('filters rows by eb/wb suffix and toggling flips the visible set', async () => {
+describe('DriveTimes layout', () => {
+  it('renders the section heading and flip control copy', () => {
+    render(<DriveTimes travelTimes={[row({})]} />);
+    expect(screen.getByText('Drive times right now')).toBeInTheDocument();
+    expect(screen.getByText('⇄ Flip direction')).toBeInTheDocument();
+  });
+
+  it('renders route name, destination sublabel, and numeral for a card', () => {
+    render(
+      <DriveTimes
+        travelTimes={[row({ slug: 'victor-tetonvillage-eb', name: 'Victor → Teton Village' })]}
+      />,
+    );
+    expect(screen.getByText('Victor → Teton Village')).toBeInTheDocument();
+    expect(screen.getByText('JHMR')).toBeInTheDocument();
+    expect(screen.getByText('25 min')).toBeInTheDocument();
+  });
+
+  it('derives "Town Square" and "Airport" sublabels from the other route slugs', () => {
+    render(
+      <DriveTimes
+        travelTimes={[
+          row({ slug: 'victor-jackson-eb', name: 'Victor → Jackson' }),
+          row({ slug: 'victor-airport-eb', name: 'Victor → Airport' }),
+        ]}
+      />,
+    );
+    expect(screen.getByText('Town Square')).toBeInTheDocument();
+    expect(screen.getByText('Airport')).toBeInTheDocument();
+  });
+
+  it('renders all 6 routes for a direction as cards', () => {
+    const slugPrefixes = [
+      'victor-jackson',
+      'driggs-jackson',
+      'victor-tetonvillage',
+      'driggs-tetonvillage',
+      'victor-airport',
+      'driggs-airport',
+    ];
+    render(
+      <DriveTimes
+        travelTimes={slugPrefixes.map((prefix) => row({ slug: `${prefix}-eb`, name: prefix }))}
+      />,
+    );
+    for (const prefix of slugPrefixes) {
+      expect(screen.getByText(prefix)).toBeInTheDocument();
+    }
+  });
+});
+
+describe('DriveTimes flip-direction toggle', () => {
+  it('filters rows by eb/wb suffix and flipping the toggle flips the visible set', async () => {
     const user = userEvent.setup();
     render(
       <DriveTimes
@@ -69,12 +131,19 @@ describe('DriveTimes direction toggle', () => {
     expect(screen.getByText('Victor to Jackson (EB)')).toBeInTheDocument();
     expect(screen.queryByText('Jackson to Victor (WB)')).not.toBeInTheDocument();
 
-    const wbButton = screen.getByRole('button', { name: /westbound/i });
-    expect(wbButton).toHaveAttribute('aria-pressed', 'false');
-    await user.click(wbButton);
-    expect(wbButton).toHaveAttribute('aria-pressed', 'true');
+    const flipButton = screen.getByRole('button', { name: /flip direction/i });
+    expect(flipButton).toHaveAttribute('aria-pressed', 'false');
+    await user.click(flipButton);
+    expect(flipButton).toHaveAttribute('aria-pressed', 'true');
 
     expect(screen.queryByText('Victor to Jackson (EB)')).not.toBeInTheDocument();
     expect(screen.getByText('Jackson to Victor (WB)')).toBeInTheDocument();
+  });
+});
+
+describe('DriveTimes routes-omitted contract', () => {
+  it('shows nothing extra when a direction has no travel-time rows', () => {
+    render(<DriveTimes travelTimes={[row({ slug: 'victor-jackson-wb' })]} />);
+    expect(screen.queryByText(/min/)).not.toBeInTheDocument();
   });
 });

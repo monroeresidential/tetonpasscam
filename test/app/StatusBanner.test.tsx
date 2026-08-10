@@ -85,7 +85,7 @@ describe('StatusBanner', () => {
         ]}
       />,
     );
-    expect(screen.queryByText(/vs typical/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/usual/)).not.toBeInTheDocument();
 
     rerender(
       <DriveTimes
@@ -94,7 +94,7 @@ describe('StatusBanner', () => {
         ]}
       />,
     );
-    expect(screen.getByText(/vs typical/)).toBeInTheDocument();
+    expect(screen.getByText(/usual/)).toBeInTheDocument();
   });
 
   // Cross-task safety flag from Task 9's review: pollerDead must force the

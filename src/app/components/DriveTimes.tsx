@@ -11,48 +11,61 @@ function directionOf(slug: string): Direction | null {
   return null;
 }
 
-// Delta thresholds (plan): diff = durationSec - typicalSec.
-//   diff <= +5min (300s)          => green
-//   +5min < diff <= +15min (900s) => amber
-//   diff >  +15min                => red
-// Boundaries are inclusive on the low side of each band ("≤"/">" in the
-// plan), so a diff of exactly 300s is green and exactly 900s is amber.
-const DELTA_GREEN_MAX_SEC = 5 * 60;
-const DELTA_AMBER_MAX_SEC = 15 * 60;
-
-type DeltaColor = 'green' | 'amber' | 'red';
-
-function deltaChip(durationSec: number, typicalSec: number | null): { minutes: number; color: DeltaColor } | null {
-  if (typicalSec === null) return null;
-  const diffSec = durationSec - typicalSec;
-  const minutes = Math.round(diffSec / 60);
-  const color: DeltaColor =
-    diffSec <= DELTA_GREEN_MAX_SEC ? 'green' : diffSec <= DELTA_AMBER_MAX_SEC ? 'amber' : 'red';
-  return { minutes, color };
+// Destination sublabel is a route-pair identity, not a direction: it comes
+// from the slug's non-Idaho-side segment (see seed-routes.ts slugPrefixes),
+// so the same route reads "Town Square"/"JHMR"/"Airport" whichever way it's
+// flipped.
+function sublabelFor(slug: string): string {
+  if (slug.includes('tetonvillage')) return 'JHMR';
+  if (slug.includes('airport')) return 'Airport';
+  return 'Town Square';
 }
 
-const CHIP_COLOR_CLASS: Record<DeltaColor, string> = {
-  green: 'text-green-700 dark:text-green-400',
-  amber: 'text-amber-700 dark:text-amber-500',
-  red: 'text-red-700 dark:text-red-400',
+type DeltaTone = 'pos' | 'neg' | 'muted';
+
+const DELTA_TONE_CLASS: Record<DeltaTone, string> = {
+  pos: 'text-delta-pos',
+  neg: 'text-delta-neg',
+  muted: 'text-muted',
 };
 
-function DriveTimeRow({ travelTime }: { travelTime: TravelTime }) {
-  const chip = deltaChip(travelTime.durationSec, travelTime.typicalSec);
+// Verbal delta mapping (spec, verbatim): diffSec = durationSec - typicalSec.
+// Threshold-then-round, in that order: the +-5min band ("about usual") is
+// decided on the raw SIGNED SECOND value (-300s/+300s exactly at the edge),
+// and only once a band is crossed do we round the seconds to whole minutes
+// for display. Rounding to minutes first and thresholding on that would pull
+// -299s (Math.round(-299/60) = -5) into the "faster" band, contradicting the
+// -299s => "about usual" pin -- so the raw-second comparison must come first.
+function deltaCopy(durationSec: number, typicalSec: number | null): { text: string; tone: DeltaTone } | null {
+  if (typicalSec === null) return null;
+  const diffSec = durationSec - typicalSec;
+  if (diffSec <= -300) {
+    const diffMin = Math.round(diffSec / 60);
+    return { text: `${-diffMin} min faster than usual`, tone: 'pos' };
+  }
+  if (diffSec >= 300) {
+    const diffMin = Math.round(diffSec / 60);
+    return { text: `${diffMin} min slower than usual`, tone: 'neg' };
+  }
+  return { text: 'about usual', tone: 'muted' };
+}
+
+function DriveTimeCard({ travelTime }: { travelTime: TravelTime }) {
+  const delta = deltaCopy(travelTime.durationSec, travelTime.typicalSec);
   const minutes = Math.round(travelTime.durationSec / 60);
 
   return (
-    <li className="flex items-center justify-between py-2">
-      <span>{travelTime.name}</span>
-      <span className="flex items-center gap-2">
-        <span className="font-semibold">{minutes} min</span>
-        {chip && (
-          <span className={`text-sm font-medium ${CHIP_COLOR_CLASS[chip.color]}`}>
-            {chip.minutes >= 0 ? '+' : ''}
-            {chip.minutes} min vs typical
-          </span>
+    <li className="bg-card border border-card-border rounded-card flex items-center justify-between px-3.5 py-3">
+      <div>
+        <div className="text-sm font-bold">{travelTime.name}</div>
+        <div className="text-muted text-[11.5px]">{sublabelFor(travelTime.slug)}</div>
+      </div>
+      <div className="text-right">
+        <div className="font-display text-[22px] font-extrabold">{minutes} min</div>
+        {delta && (
+          <div className={`text-[11.5px] font-bold ${DELTA_TONE_CLASS[delta.tone]}`}>{delta.text}</div>
         )}
-      </span>
+      </div>
     </li>
   );
 }
@@ -63,37 +76,25 @@ export default function DriveTimes({ travelTimes }: { travelTimes: ApiStatus['tr
 
   return (
     <section aria-labelledby="drive-times-heading" className="p-4">
-      <div className="flex items-center justify-between">
-        <h2 id="drive-times-heading" className="text-lg font-bold">
-          Drive times
+      <div className="flex items-baseline justify-between">
+        <h2 id="drive-times-heading" className="font-display text-[15px] font-bold">
+          Drive times right now
         </h2>
-        <div role="group" aria-label="Direction" className="flex gap-1">
-          <button
-            type="button"
-            aria-pressed={direction === 'eb'}
-            onClick={() => setDirection('eb')}
-            className="rounded px-2 py-1 text-sm aria-pressed:bg-neutral-800 aria-pressed:text-white dark:aria-pressed:bg-neutral-200 dark:aria-pressed:text-black"
-          >
-            Eastbound
-          </button>
-          <button
-            type="button"
-            aria-pressed={direction === 'wb'}
-            onClick={() => setDirection('wb')}
-            className="rounded px-2 py-1 text-sm aria-pressed:bg-neutral-800 aria-pressed:text-white dark:aria-pressed:bg-neutral-200 dark:aria-pressed:text-black"
-          >
-            Westbound
-          </button>
-        </div>
+        <button
+          type="button"
+          aria-pressed={direction === 'wb'}
+          onClick={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
+          className="text-accent text-xs font-bold"
+        >
+          ⇄ Flip direction
+        </button>
       </div>
-      <ul className="mt-2 divide-y divide-neutral-200 dark:divide-neutral-700">
+      <ul className="mt-2 flex flex-col gap-2">
         {rows.map((t) => (
-          <DriveTimeRow key={t.slug} travelTime={t} />
+          <DriveTimeCard key={t.slug} travelTime={t} />
         ))}
         {rows.length === 0 && (
-          <li className="py-2 text-sm text-neutral-500 dark:text-neutral-400">
-            No drive-time data for this direction yet.
-          </li>
+          <li className="text-muted py-2 text-sm">No drive-time data for this direction yet.</li>
         )}
       </ul>
     </section>
