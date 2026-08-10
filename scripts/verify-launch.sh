@@ -228,6 +228,14 @@ else
   fail "GET /llms.txt body does not start with \"# \""
 fi
 
+# --- Check 9: GET /some-random-missing-path returns a real 404 -------------
+MISSING_STATUS="$(curl -sS "${CURL_TIMEOUT_OPTS[@]}" -o /dev/null -w '%{http_code}' "${BASE_URL}/some-random-missing-path" 2>/dev/null)"
+if [ "$MISSING_STATUS" = "404" ]; then
+  pass "GET /some-random-missing-path returned 404"
+else
+  fail "GET /some-random-missing-path returned ${MISSING_STATUS} (expected 404)"
+fi
+
 # --- Summary -----------------------------------------------------------------
 echo
 echo "== ${PASS_COUNT} passed, ${FAIL_COUNT} failed =="

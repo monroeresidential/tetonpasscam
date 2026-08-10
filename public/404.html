@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page not found — Teton Pass Cam</title>
+    <meta name="description" content="This page doesn't exist on Teton Pass Cam. Head back to the live status page." />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!--
+      Same brand tokens as index.html's #seo-shell (see that file's comment
+      for why these are hardcoded literals rather than the app's --color-*
+      custom properties): this is a plain static file served directly by
+      Cloudflare's [assets] not_found_handling, with no React/build step
+      involved, so it needs its own copy of the light/dark palette.
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        background: #faf7f0;
+        color: #8a8072;
+        font-family: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+        max-width: 32rem;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+        line-height: 1.6;
+        text-align: center;
+      }
+      h1 {
+        font-family: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+        color: #2b2620;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+      a {
+        color: #2b2620;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #211d17;
+          color: #a39880;
+        }
+        h1,
+        a {
+          color: #f0ebe1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Page not found</h1>
+    <p>
+      That page doesn't exist on Teton Pass Cam. Head back to the
+      <a href="/">live status page</a>, or check
+      <a href="https://www.wyoroad.info">Wyoming 511</a> for official Teton Pass conditions.
+    </p>
+  </body>
+</html>
