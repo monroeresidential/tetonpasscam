@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!--
+    Hand-built favicon (no font dependency: the brand kit's mark.svg needs
+    Bricolage Grotesque loaded, which a favicon can't rely on). Mirrors the
+    route-22 mark's plate geometry (design/design_handoff_tetonpasscam/): a
+    rounded-square plate with a matching-color ring and centered "22", using
+    a system bold sans as a close-enough stand-in for Bricolage at favicon
+    sizes. prefers-color-scheme: dark swaps to the kit's documented dark
+    alternate (cream plate, ink digits): same colors index.html's
+    #seo-shell already hardcodes for the light/dark theme-color meta tags.
+  -->
+  <style>
+    #plate {
+      fill: #2b2620;
+      stroke: #faf7f0;
+      stroke-width: 6;
+    }
+    #digits {
+      fill: #faf7f0;
+    }
+    @media (prefers-color-scheme: dark) {
+      #plate {
+        fill: #faf7f0;
+        stroke: #2b2620;
+      }
+      #digits {
+        fill: #2b2620;
+      }
+    }
+  </style>
+  <rect id="plate" x="4" y="4" width="92" height="92" rx="20" />
+  <text
+    id="digits"
+    x="50"
+    y="50"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-weight="800"
+    font-size="46"
+    text-anchor="middle"
+    dominant-baseline="central"
+  >22</text>
+</svg>
