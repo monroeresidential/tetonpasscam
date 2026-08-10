@@ -59,6 +59,11 @@ describe('design tokens (src/app/index.css)', () => {
     expect(darkTheme).toMatch(/--color-icon-tile:\s*oklch\(0\.34 0\.03 60\);/);
   });
 
+  it('pins the danger token (light and dark) -- error/rate-limit copy in ReportModal/Footer', () => {
+    expect(lightTheme).toMatch(/--color-danger:\s*oklch\(0\.55 0\.15 30\);/);
+    expect(darkTheme).toMatch(/--color-danger:\s*oklch\(0\.72 0\.14 30\);/);
+  });
+
   it('does not override status-restricted/closed/unknown in dark mode (unchanged per spec)', () => {
     expect(darkTheme).not.toMatch(/--color-status-restricted:/);
     expect(darkTheme).not.toMatch(/--color-status-closed:/);

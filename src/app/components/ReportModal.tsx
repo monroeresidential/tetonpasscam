@@ -256,12 +256,12 @@ export default function ReportModal({
             </div>
 
             {submitState === 'rate-limited' && (
-              <p className="mt-2.5 text-sm font-semibold text-red-600 dark:text-red-400">
+              <p className="mt-2.5 text-sm font-semibold text-danger">
                 You&apos;re reporting too often
               </p>
             )}
             {submitState === 'error' && (
-              <p className="mt-2.5 text-sm font-semibold text-red-600 dark:text-red-400">
+              <p className="mt-2.5 text-sm font-semibold text-danger">
                 Something went wrong. Try again.
               </p>
             )}

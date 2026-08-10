@@ -105,7 +105,7 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
             </div>
 
             {state === 'error' && (
-              <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+              <p className="text-sm font-semibold text-danger">
                 Something went wrong. Try again.
               </p>
             )}
