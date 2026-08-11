@@ -73,7 +73,7 @@ export function setTestNowMs(ms: number | undefined): void {
   testNowMsOverride = ms;
 }
 
-function effectiveNowMs(): number {
+export function effectiveNowMs(): number {
   return testNowMsOverride ?? Date.now();
 }
 

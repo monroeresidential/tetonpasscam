@@ -1,5 +1,5 @@
 import type { ApiStatus, PassStatus } from '../shared/types';
-import { getStatus } from './api/status';
+import { effectiveNowMs, getStatus } from './api/status';
 import { denverHour } from './tz';
 import type { Env } from './env';
 
@@ -374,7 +374,10 @@ function clampDir(rawDir: string | null): Dir | 'auto' {
  * bare request all collapse onto the same eb entry, and `?dir=auto` shares
  * whichever of the eb/wb entries it resolves to (its rendered content is
  * identical to that direction's explicit request). This also means spam
- * query strings can't fragment the cache into unbounded entries.
+ * query strings can't fragment the cache into unbounded entries. `auto`
+ * resolves via `effectiveNowMs()` (status.ts's exported clock, which honors
+ * its test-only `setTestNowMs` override) BEFORE the cache lookup, so it's
+ * just as cheap as a literal eb/wb request -- no D1 access on a cache hit.
  */
 export async function handleEmbedRequest(req: Request, env: Env): Promise<Response | null> {
   const url = new URL(req.url);
@@ -387,28 +390,14 @@ export async function handleEmbedRequest(req: Request, env: Env): Promise<Respon
   const variant = match[1] as Variant;
   const cache = cacheApi();
   const parsedDir = clampDir(url.searchParams.get('dir'));
+  const dir: Dir = parsedDir === 'auto' ? (denverHour(effectiveNowMs()) < 12 ? 'eb' : 'wb') : parsedDir;
 
   try {
-    // `auto` needs "now" to resolve, and the only "now" this module can read
-    // that also honors status.ts's test-only clock override (`setTestNowMs`)
-    // is `getStatus`'s own `generatedAt` -- so an `auto` request pays for a
-    // status fetch up front, before the cache lookup, unlike the eb/wb/bogus
-    // literal path below which can still be served straight from cache
-    // without ever touching D1.
-    let apiStatus: ApiStatus | undefined;
-    let dir: Dir;
-    if (parsedDir === 'auto') {
-      apiStatus = await getStatus(env);
-      dir = denverHour(Date.parse(apiStatus.generatedAt)) < 12 ? 'eb' : 'wb';
-    } else {
-      dir = parsedDir;
-    }
-
     const canonicalReq = new Request(`${url.origin}/embed/${variant}?dir=${dir}`);
     const cached = await cache.match(canonicalReq);
     if (cached) return cached;
 
-    if (!apiStatus) apiStatus = await getStatus(env);
+    const apiStatus = await getStatus(env);
     const html = renderWidget(variant, apiStatus, dir);
     const response = new Response(html, {
       status: 200,
