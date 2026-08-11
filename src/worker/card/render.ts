@@ -15,9 +15,11 @@ export interface CardInput {
   /** Mirrors StatusBanner's `data.restrictions[0]` usage -- only the first
    *  restriction string is shown, same as the live banner. */
   restrictions: string[];
-  /** Up to 4 rows, already filtered to the sharer's direction and ordered;
+  /** Up to 3 rows, already filtered to the sharer's direction and ordered;
    *  see data.ts's `loadCardData`. Empty when the cycle had no fresh travel
-   *  time for any of the 4 routes. */
+   *  time for any of the routes. Capped at 3 (not 4) here so the larger
+   *  share-legibility typography (option 3a) doesn't overflow the fixed
+   *  630px card height. */
   routes: CardRoute[];
   /** The timestamp the "as of" footer reports -- resolved by the caller to
    *  whichever of wydotReportTime/capturedAt is trustworthy (same
@@ -144,12 +146,12 @@ export function buildCardHtml(input: CardInput): string {
   const footer = `as of ${TIME_FMT.format(asOfDate)} MT · ${DATE_FMT.format(asOfDate)} · tetonpasscam.com`;
 
   const routeRowsHtml = input.routes
-    .slice(0, 4)
+    .slice(0, 3)
     .map(
       (r) => `
-        <div style="display:flex;flex-direction:row;justify-content:space-between;align-items:center;width:100%;padding:16px 0;border-bottom:2px solid ${CARD_BORDER};">
-          <span style="display:flex;font-family:'${CARD_FONT_NAME_BODY}';font-weight:400;font-size:30px;color:${INK};">${routeNameHtml(r.name)}</span>
-          <span style="font-family:'${CARD_FONT_NAME_DISPLAY}';font-weight:700;font-size:34px;color:${INK};">${minutesLabel(r.durationSec)}</span>
+        <div style="display:flex;flex-direction:row;justify-content:space-between;align-items:center;width:100%;padding:20px 0;border-bottom:2px solid ${CARD_BORDER};">
+          <span style="display:flex;font-family:'${CARD_FONT_NAME_BODY}';font-weight:700;font-size:60px;color:${INK};">${routeNameHtml(r.name)}</span>
+          <span style="font-family:'${CARD_FONT_NAME_DISPLAY}';font-weight:700;font-size:64px;color:${INK};">${minutesLabel(r.durationSec)}</span>
         </div>`,
     )
     .join('');
@@ -157,7 +159,7 @@ export function buildCardHtml(input: CardInput): string {
   return `
   <div style="display:flex;flex-direction:column;width:1200px;height:630px;background-color:${CREAM_BG};font-family:'${CARD_FONT_NAME_BODY}';color:${INK};">
     <div style="display:flex;flex-direction:column;width:100%;background-color:${color};color:#ffffff;padding:56px 64px 40px 64px;">
-      <div style="display:flex;font-family:'${CARD_FONT_NAME_DISPLAY}';font-weight:800;font-size:60px;line-height:1.08;">${headline}</div>
+      <div style="display:flex;font-family:'${CARD_FONT_NAME_DISPLAY}';font-weight:800;font-size:72px;line-height:1.08;">${headline}</div>
       ${
         status === 'closed'
           ? `<div style="display:flex;margin-top:18px;font-size:26px;font-weight:700;">${sanitizeText(CLOSED_LEGAL_COPY)}</div>`

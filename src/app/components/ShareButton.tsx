@@ -26,14 +26,32 @@ type NavigatorWithShare = Navigator & {
   share?: (data: { title?: string; url?: string }) => Promise<void>;
 };
 
+function ShareIcon() {
+  return (
+    <svg
+      width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.6" y1="10.6" x2="15.4" y2="6.4" />
+      <line x1="8.6" y1="13.4" x2="15.4" y2="17.6" />
+    </svg>
+  );
+}
+
 export default function ShareButton({
   shareCode,
   direction,
+  toneClass = 'text-ink',
 }: {
   // Withheld entirely (not just disabled) when null -- see ApiStatus.shareCode's
   // doc comment: pollerDead/no-snapshot means there is nothing current to share.
   shareCode: string | null;
   direction: 'eb' | 'wb';
+  toneClass?: string;
 }) {
   const [showToast, setShowToast] = useState(false);
 
@@ -71,9 +89,10 @@ export default function ShareButton({
         type="button"
         onClick={handleShare}
         aria-label="Share current conditions"
-        className="text-accent text-xs font-bold"
+        className={`flex flex-none items-center gap-1.5 rounded-full bg-white px-4 py-2.5 font-display text-[13px] font-extrabold shadow-md ${toneClass}`}
       >
-        🔗 Share
+        <ShareIcon />
+        Share
       </button>
       <Toast show={showToast}>Link copied</Toast>
     </>

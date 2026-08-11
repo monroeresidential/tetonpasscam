@@ -157,6 +157,56 @@ describe('App', () => {
     });
   });
 
+  describe('direction lift (share-3a)', () => {
+    // Direction moved from local DriveTimes state up to App so the
+    // StatusBanner share pill and DriveTimes's flip button agree on one
+    // source of truth -- this exercises the flip end-to-end through App
+    // rather than DriveTimes in isolation.
+    it('flipping direction in DriveTimes swaps the visible rows', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : (input as Request).url;
+        if (url === '/api/status') {
+          return new Response(
+            JSON.stringify(
+              makeStatus({
+                travelTimes: [
+                  {
+                    slug: 'victor-jackson-eb',
+                    name: 'Victor to Jackson (EB)',
+                    durationSec: 1500,
+                    typicalSec: 1200,
+                    capturedAt: '2026-08-09T23:48:00.000Z',
+                  },
+                  {
+                    slug: 'victor-jackson-wb',
+                    name: 'Jackson to Victor (WB)',
+                    durationSec: 1500,
+                    typicalSec: 1200,
+                    capturedAt: '2026-08-09T23:48:00.000Z',
+                  },
+                ],
+              }),
+            ),
+            { status: 200 },
+          );
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+
+      render(<App />);
+      await screen.findByText('The pass is OPEN');
+
+      expect(screen.getByText('Victor to Jackson (EB)')).toBeInTheDocument();
+      expect(screen.queryByText('Jackson to Victor (WB)')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /flip direction/i }));
+
+      expect(screen.queryByText('Victor to Jackson (EB)')).not.toBeInTheDocument();
+      expect(screen.getByText('Jackson to Victor (WB)')).toBeInTheDocument();
+    });
+  });
+
   describe('explainer relocation (scope addition)', () => {
     // main.tsx's #seo-shell hide/show logic lives outside App (it never
     // renders index.html's static markup -- App is only ever mounted into a

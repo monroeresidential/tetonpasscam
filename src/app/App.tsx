@@ -57,6 +57,7 @@ function App() {
   const { data, error, refreshedAt, refresh, offline, offlineSince } = useStatus();
   const isDesktop = useIsDesktop();
   const [reportOpen, setReportOpen] = useState(false);
+  const [direction, setDirection] = useState<'eb' | 'wb'>('eb');
 
   if (!data) {
     return (
@@ -87,11 +88,15 @@ function App() {
       <div className="mx-auto max-w-[30rem] px-3.5 lg:max-w-[720px] lg:px-7">
         <Header onReport={() => setReportOpen(true)} variant={isDesktop ? 'desktop' : 'phone'} />
 
-        <StatusBanner data={data} />
+        <StatusBanner data={data} direction={direction} />
 
         <div className="mt-2 flex flex-col gap-2">
           <div>
-            <DriveTimes travelTimes={data.travelTimes} shareCode={data.shareCode} />
+            <DriveTimes
+              travelTimes={data.travelTimes}
+              direction={direction}
+              onFlip={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
+            />
           </div>
           <div>
             <AlertsStrip alerts={data.alerts} id33Advisory={data.id33Advisory} />

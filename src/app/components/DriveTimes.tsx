@@ -1,7 +1,4 @@
-import { useState } from 'react';
-
 import type { ApiStatus } from '../../shared/types';
-import ShareButton from './ShareButton';
 
 type Direction = 'eb' | 'wb';
 type TravelTime = ApiStatus['travelTimes'][number];
@@ -73,16 +70,13 @@ function DriveTimeCard({ travelTime }: { travelTime: TravelTime }) {
 
 export default function DriveTimes({
   travelTimes,
-  shareCode = null,
+  direction,
+  onFlip,
 }: {
   travelTimes: ApiStatus['travelTimes'];
-  // Additive/optional (share-cards T2): defaults to null so every existing
-  // caller/test that doesn't pass it gets the same "share button hidden"
-  // behavior as an explicit null, rather than needing to update every call
-  // site just to keep compiling.
-  shareCode?: string | null;
+  direction: Direction;
+  onFlip: () => void;
 }) {
-  const [direction, setDirection] = useState<Direction>('eb');
   const rows = travelTimes.filter((t) => directionOf(t.slug) === direction);
 
   return (
@@ -95,12 +89,11 @@ export default function DriveTimes({
           <button
             type="button"
             aria-pressed={direction === 'wb'}
-            onClick={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
+            onClick={onFlip}
             className="text-accent text-xs font-bold"
           >
             ⇄ Flip direction
           </button>
-          <ShareButton shareCode={shareCode} direction={direction} />
         </div>
       </div>
       <ul className="mt-2 flex flex-col gap-2">

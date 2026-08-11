@@ -95,13 +95,14 @@ describe('buildCardHtml', () => {
     expect(html).toContain('as of 2:15 PM MT · Aug 10 · tetonpasscam.com');
   });
 
-  it('caps route rows at 4 even if more are passed in', () => {
+  it('caps route rows at 3 even if more are passed in', () => {
     const routes = Array.from({ length: 6 }, (_, i) => ({
       name: `Route ${i}`,
       durationSec: (30 + i) * 60,
     }));
     const html = buildCardHtml(baseInput({ routes }));
-    for (let i = 0; i < 4; i++) expect(html).toContain(`Route ${i}`);
+    for (let i = 0; i < 3; i++) expect(html).toContain(`Route ${i}`);
+    expect(html).not.toContain('Route 3');
     expect(html).not.toContain('Route 4');
     expect(html).not.toContain('Route 5');
   });
@@ -121,5 +122,17 @@ describe('buildCardHtml', () => {
     );
     expect(html).not.toContain('<b>Victor</b>');
     expect(html).toContain('b>Victor/b> > Jackson');
+  });
+
+  // Share-legibility restyle (option 3a): bigger, bolder route-row and
+  // headline typography so the card reads at share-sheet thumbnail sizes.
+  it('uses the larger option-3a typography for headline and route rows', () => {
+    const html = buildCardHtml(
+      baseInput({ routes: [{ name: 'Victor → Jackson', durationSec: 38 * 60 }] }),
+    );
+    expect(html).toContain('font-size:72px'); // headline
+    expect(html).toContain('font-weight:700;font-size:60px'); // route name
+    expect(html).toContain('font-size:64px'); // route time
+    expect(html).toContain('padding:20px 0'); // row padding
   });
 });

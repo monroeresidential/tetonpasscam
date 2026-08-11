@@ -52,6 +52,24 @@ describe('ShareButton', () => {
     expect(screen.getByRole('button', { name: /share current conditions/i })).toBeInTheDocument();
   });
 
+  // Option 3a restyle: a white pill (rounded-full, white bg, shadow) rather
+  // than the old text-link styling.
+  it('renders as a white pill with the default ink tone when toneClass is omitted', () => {
+    render(<ShareButton shareCode={CODE} direction="eb" />);
+    const button = screen.getByRole('button', { name: /share current conditions/i });
+    expect(button.className).toMatch(/rounded-full/);
+    expect(button.className).toMatch(/bg-white/);
+    expect(button.className).toMatch(/shadow-md/);
+    expect(button.className).toMatch(/text-ink/);
+  });
+
+  it('applies a caller-supplied toneClass to the pill text color', () => {
+    render(<ShareButton shareCode={CODE} direction="eb" toneClass="text-status-closed" />);
+    const button = screen.getByRole('button', { name: /share current conditions/i });
+    expect(button.className).toMatch(/text-status-closed/);
+    expect(button.className).not.toMatch(/text-ink/);
+  });
+
   describe('when navigator.share is available', () => {
     it('calls navigator.share with the snapshot-pinned URL and title, and shows no toast', async () => {
       const user = setupUser();

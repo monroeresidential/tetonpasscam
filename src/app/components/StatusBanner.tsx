@@ -1,6 +1,7 @@
 import { CLOSED_LEGAL_COPY } from '../../shared/legal';
 import type { ApiStatus, PassStatus } from '../../shared/types';
 import DetourBlock from './DetourBlock';
+import ShareButton from './ShareButton';
 
 const TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/Denver',
@@ -23,7 +24,20 @@ const STATUS_FILL: Record<PassStatus, string> = {
 const HEADLINE_CLASS =
   'font-display text-[40px] font-extrabold leading-none tracking-tight lg:text-[46px]';
 
-export default function StatusBanner({ data }: { data: ApiStatus }) {
+const SHARE_TONE: Record<PassStatus, string> = {
+  open: 'text-status-open',
+  restricted: 'text-status-restricted',
+  closed: 'text-status-closed',
+  unknown: 'text-status-unknown',
+};
+
+export default function StatusBanner({
+  data,
+  direction,
+}: {
+  data: ApiStatus;
+  direction: 'eb' | 'wb';
+}) {
   // CROSS-TASK SAFETY FLAG (Task 9 review, binding): pollerDead means the
   // API's status/conditionText/advisories/restrictions are last-known, not
   // current -- force the UNKNOWN presentation and never render those
@@ -38,46 +52,55 @@ export default function StatusBanner({ data }: { data: ApiStatus }) {
       aria-live="polite"
       className={`rounded-banner p-5 text-white ${STATUS_FILL[effectiveStatus]}`}
     >
-      {effectiveStatus === 'open' && (
-        <p data-testid="banner-headline" className={HEADLINE_CLASS}>
-          The pass is OPEN
-        </p>
-      )}
+      <div className="flex items-start gap-3.5">
+        <div className="flex-1">
+          {effectiveStatus === 'open' && (
+            <p data-testid="banner-headline" className={HEADLINE_CLASS}>
+              The pass is OPEN
+            </p>
+          )}
 
-      {effectiveStatus === 'restricted' && (
-        <p data-testid="banner-headline" className={HEADLINE_CLASS}>
-          RESTRICTED{data.restrictions.length > 0 ? ` — ${data.restrictions[0]}` : ''}
-        </p>
-      )}
+          {effectiveStatus === 'restricted' && (
+            <p data-testid="banner-headline" className={HEADLINE_CLASS}>
+              RESTRICTED{data.restrictions.length > 0 ? ` — ${data.restrictions[0]}` : ''}
+            </p>
+          )}
 
-      {effectiveStatus === 'closed' && (
-        // The byte-frozen legal sentence below starts with these same
-        // words. Splitting them across two <span>s keeps this headline's
-        // own text from ever forming the contiguous "Closed — do not
-        // attempt" substring in a single node -- otherwise the frozen
-        // test's getByText(/Closed — do not attempt/) would match both
-        // this headline and the legal sentence and throw for finding
-        // multiple elements. Reads identically to a driver either way.
-        <p data-testid="banner-headline" className={HEADLINE_CLASS}>
-          <span>Closed —</span> <span>do not attempt</span>
-        </p>
-      )}
+          {effectiveStatus === 'closed' && (
+            // The byte-frozen legal sentence below starts with these same
+            // words. Splitting them across two <span>s keeps this headline's
+            // own text from ever forming the contiguous "Closed — do not
+            // attempt" substring in a single node -- otherwise the frozen
+            // test's getByText(/Closed — do not attempt/) would match both
+            // this headline and the legal sentence and throw for finding
+            // multiple elements. Reads identically to a driver either way.
+            <p data-testid="banner-headline" className={HEADLINE_CLASS}>
+              <span>Closed —</span> <span>do not attempt</span>
+            </p>
+          )}
 
-      {effectiveStatus === 'unknown' && (
-        // Same reasoning as CLOSED above: the frozen pollerDead tests do
-        // an exact getByText('UNKNOWN') match, so "UNKNOWN" needs to be
-        // some element's own text on its own, separate from the " check
-        // Wyoming 511" tail.
-        <p data-testid="banner-headline" className={HEADLINE_CLASS}>
-          <span>UNKNOWN</span> — check{' '}
-          <a
-            href="https://www.wyoroad.info/highway/conditions/RoadClosures.html"
-            className="underline"
-          >
-            Wyoming 511
-          </a>
-        </p>
-      )}
+          {effectiveStatus === 'unknown' && (
+            // Same reasoning as CLOSED above: the frozen pollerDead tests do
+            // an exact getByText('UNKNOWN') match, so "UNKNOWN" needs to be
+            // some element's own text on its own, separate from the " check
+            // Wyoming 511" tail.
+            <p data-testid="banner-headline" className={HEADLINE_CLASS}>
+              <span>UNKNOWN</span> — check{' '}
+              <a
+                href="https://www.wyoroad.info/highway/conditions/RoadClosures.html"
+                className="underline"
+              >
+                Wyoming 511
+              </a>
+            </p>
+          )}
+        </div>
+        <ShareButton
+          shareCode={data.pollerDead ? null : data.shareCode}
+          direction={direction}
+          toneClass={SHARE_TONE[effectiveStatus]}
+        />
+      </div>
 
       {effectiveStatus === 'closed' && (
         // The statutory warning is the banner's most important line in its

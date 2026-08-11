@@ -37,6 +37,7 @@ describe('StatusBanner', () => {
           status: 'closed',
           detours: [{ route: 'US26', conditionText: 'Wet' }],
         }}
+        direction="eb"
       />,
     );
     expect(screen.getByText(/Closed — do not attempt/)).toBeInTheDocument();
@@ -45,12 +46,17 @@ describe('StatusBanner', () => {
   });
 
   it('renders RESTRICTED with the restriction named', () => {
-    render(<StatusBanner data={{ ...base, status: 'restricted', restrictions: ['Chain Law Level 1'] }} />);
+    render(
+      <StatusBanner
+        data={{ ...base, status: 'restricted', restrictions: ['Chain Law Level 1'] }}
+        direction="eb"
+      />,
+    );
     expect(screen.getByText(/Chain Law Level 1/)).toBeInTheDocument();
   });
 
   it('renders UNKNOWN with 511 link', () => {
-    render(<StatusBanner data={{ ...base, status: 'unknown' }} />);
+    render(<StatusBanner data={{ ...base, status: 'unknown' }} direction="eb" />);
     const link = screen.getByRole('link', { name: /wyoming 511/i });
     expect(link).toHaveAttribute(
       'href',
@@ -59,7 +65,7 @@ describe('StatusBanner', () => {
   });
 
   it('always shows last-confirmed line', () => {
-    render(<StatusBanner data={base} />);
+    render(<StatusBanner data={base} direction="eb" />);
     // Both the WYDOT-report line and the last-confirmed line legitimately
     // contain "5:48 PM" in this fixture -- scope the time assertion to the
     // last-confirmed element specifically rather than matching it globally.
@@ -76,6 +82,7 @@ describe('StatusBanner', () => {
           status: 'closed',
           detours: [{ route: 'US26', conditionText: 'Wet' }],
         }}
+        direction="eb"
       />,
     );
     expect(screen.queryByText(/reopen|estimate/i)).not.toBeInTheDocument();
@@ -98,6 +105,7 @@ describe('StatusBanner', () => {
           advisories: ['Falling Rock'],
           restrictions: [],
         }}
+        direction="eb"
       />,
     );
     expect(screen.getByText('UNKNOWN')).toBeInTheDocument();
@@ -120,6 +128,7 @@ describe('StatusBanner', () => {
           pollerDead: true,
           advisories: ['Falling Rock'],
         }}
+        direction="eb"
       />,
     );
     expect(screen.queryByText(/falling rock/i)).not.toBeInTheDocument();
@@ -139,6 +148,7 @@ describe('StatusBanner', () => {
           pollerDead: true,
           restrictions: ['Chain Law Level 1'],
         }}
+        direction="eb"
       />,
     );
     expect(screen.getByText('UNKNOWN')).toBeInTheDocument();
@@ -146,7 +156,7 @@ describe('StatusBanner', () => {
   });
 
   it('shows an amber stale chip with the WYDOT report time when isStale', () => {
-    render(<StatusBanner data={{ ...base, isStale: true }} />);
+    render(<StatusBanner data={{ ...base, isStale: true }} direction="eb" />);
     expect(screen.getByText(/data may be outdated/i)).toBeInTheDocument();
   });
 
@@ -156,7 +166,7 @@ describe('StatusBanner', () => {
   // entirely would still leave the byte-frozen legal `<p>` alone to satisfy
   // a container-wide substring check, silently losing headline coverage.
   it('OPEN headline reads "The pass is OPEN"', () => {
-    render(<StatusBanner data={base} />);
+    render(<StatusBanner data={base} direction="eb" />);
     expect(screen.getByTestId('banner-headline')).toHaveTextContent('The pass is OPEN');
   });
 
@@ -168,6 +178,7 @@ describe('StatusBanner', () => {
           status: 'restricted',
           restrictions: ['Chain Law Level 1', 'High-profile vehicles'],
         }}
+        direction="eb"
       />,
     );
     expect(screen.getByTestId('banner-headline')).toHaveTextContent(
@@ -176,7 +187,7 @@ describe('StatusBanner', () => {
   });
 
   it('UNKNOWN headline reads "UNKNOWN — check Wyoming 511"', () => {
-    render(<StatusBanner data={{ ...base, status: 'unknown' }} />);
+    render(<StatusBanner data={{ ...base, status: 'unknown' }} direction="eb" />);
     expect(screen.getByTestId('banner-headline')).toHaveTextContent(
       'UNKNOWN — check Wyoming 511',
     );
@@ -189,7 +200,9 @@ describe('StatusBanner', () => {
   // correctly (testid-scoped) and that it's immediately followed by the
   // complete byte-frozen legal sentence.
   it('CLOSED headline is followed by the complete byte-frozen legal sentence', () => {
-    const { container } = render(<StatusBanner data={{ ...base, status: 'closed' }} />);
+    const { container } = render(
+      <StatusBanner data={{ ...base, status: 'closed' }} direction="eb" />,
+    );
     expect(screen.getByTestId('banner-headline')).toHaveTextContent('Closed — do not attempt');
     expect(container.textContent).toContain(
       'Closed — do not attempt. Traveling a closed Wyoming road is illegal (up to $750 fine).',
@@ -197,12 +210,12 @@ describe('StatusBanner', () => {
   });
 
   it('renders a standing advisory as an "Advisory: ... (standing)" pill', () => {
-    render(<StatusBanner data={{ ...base, advisories: ['Falling Rock'] }} />);
+    render(<StatusBanner data={{ ...base, advisories: ['Falling Rock'] }} direction="eb" />);
     expect(screen.getByText('Advisory: falling rock (standing)')).toBeInTheDocument();
   });
 
   it('last-confirmed line uses the "<status> <time> · WYDOT" format', () => {
-    render(<StatusBanner data={base} />);
+    render(<StatusBanner data={base} direction="eb" />);
     expect(screen.getByText('Last confirmed open 5:48 PM · WYDOT')).toBeInTheDocument();
   });
 
@@ -210,8 +223,33 @@ describe('StatusBanner', () => {
   // that's been removed so the "Last confirmed..." meta reads at full
   // opacity like the rest of the banner.
   it('renders the last-confirmed sub-line at full opacity (no opacity-90)', () => {
-    render(<StatusBanner data={base} />);
+    render(<StatusBanner data={base} direction="eb" />);
     const line = screen.getByText('Last confirmed open 5:48 PM · WYDOT');
     expect(line.parentElement).not.toHaveClass('opacity-90');
+  });
+
+  // Option 3a: the Share pill lives on the banner itself now (top-right of
+  // the headline row), not down in DriveTimes -- these three pin the same
+  // withholding contract ShareButton.test.tsx already covers in isolation,
+  // exercised here through StatusBanner's own wiring.
+  describe('share pill', () => {
+    it('renders the share pill when a share code is present', () => {
+      render(<StatusBanner data={base} direction="eb" />);
+      expect(screen.getByRole('button', { name: /share current conditions/i })).toBeInTheDocument();
+    });
+
+    it('omits the share pill when shareCode is null', () => {
+      render(<StatusBanner data={{ ...base, shareCode: null }} direction="eb" />);
+      expect(
+        screen.queryByRole('button', { name: /share current conditions/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('omits the share pill when pollerDead, even with a shareCode set in the fixture', () => {
+      render(<StatusBanner data={{ ...base, pollerDead: true }} direction="eb" />);
+      expect(
+        screen.queryByRole('button', { name: /share current conditions/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 });
