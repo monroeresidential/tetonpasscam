@@ -75,12 +75,17 @@ export default function ShareSheet({
       aria-modal="true"
       aria-label="Share current conditions"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onClick={onClose}
+      // Close on mousedown (not click) directly on the backdrop: a click that
+      // STARTS inside the panel and releases over the backdrop (text-selection
+      // drag on the preview) synthesizes a click whose target is the backdrop,
+      // which onClick would misread as an outside tap.
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         ref={sheetRef}
         tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
         className="w-[min(92vw,560px)] rounded-[24px] bg-[#2b251d] p-5"
       >
         <div className="flex items-start justify-between gap-2">

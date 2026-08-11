@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -145,6 +145,19 @@ describe('ShareSheet', () => {
       render(<ShareSheet shareCode={CODE} direction="eb" onClose={onClose} />);
 
       await user.click(screen.getByText(/share current conditions/i));
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('does not close when a drag starts inside the panel and releases on the backdrop', () => {
+      const onClose = vi.fn();
+      render(<ShareSheet shareCode={CODE} direction="eb" onClose={onClose} />);
+
+      // Text-selection drag: mousedown on panel content, mouseup + the
+      // browser-synthesized click both land on the backdrop.
+      const dialog = screen.getByRole('dialog');
+      fireEvent.mouseDown(screen.getByText(/share current conditions/i));
+      fireEvent.mouseUp(dialog);
+      fireEvent.click(dialog);
       expect(onClose).not.toHaveBeenCalled();
     });
 
