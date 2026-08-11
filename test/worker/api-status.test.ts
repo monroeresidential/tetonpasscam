@@ -249,10 +249,11 @@ describe('GET /api/status', () => {
     expect(body.travelTimes.some((t) => t.slug === 'driggs-airport-wb')).toBe(false);
   });
 
-  it('travel_times freshness (LH T2 finding 4): a route whose latest row is 31 minutes old is omitted entirely', async () => {
+  it('travel_times freshness (LH T2 finding 4, updated by stale-drive-times): a route whose latest row is 31 minutes old is now included, but flagged stale rather than omitted', async () => {
     // Distinct, previously-untouched slug -- this file's D1 instance is
     // shared across tests, so reusing a slug another test already inserted
-    // rows for would make "omitted" ambiguous with "just never had a row".
+    // rows for would make "included/omitted" ambiguous with "just never had
+    // a row".
     const id = await routeId('driggs-airport-eb');
     const staleAt = new Date(Date.now() - 31 * 60_000).toISOString();
     await env.DB.prepare(
@@ -262,10 +263,12 @@ describe('GET /api/status', () => {
       .run();
 
     const { body } = await getStatus();
-    expect(body.travelTimes.some((t) => t.slug === 'driggs-airport-eb')).toBe(false);
+    const entry = body.travelTimes.find((t) => t.slug === 'driggs-airport-eb');
+    expect(entry).toBeTruthy();
+    expect(entry!.stale).toBe(true);
   });
 
-  it('travel_times freshness (LH T2 finding 4): a route whose latest row is 29 minutes old is still included', async () => {
+  it('travel_times freshness (LH T2 finding 4): a route whose latest row is 29 minutes old is still included with stale:false', async () => {
     const id = await routeId('driggs-tetonvillage-wb');
     const freshAt = new Date(Date.now() - 29 * 60_000).toISOString();
     await env.DB.prepare(
@@ -275,7 +278,75 @@ describe('GET /api/status', () => {
       .run();
 
     const { body } = await getStatus();
-    expect(body.travelTimes.some((t) => t.slug === 'driggs-tetonvillage-wb')).toBe(true);
+    const entry = body.travelTimes.find((t) => t.slug === 'driggs-tetonvillage-wb');
+    expect(entry).toBeTruthy();
+    expect(entry!.stale).toBe(false);
+  });
+
+  it('overnight gap: a row 2h old is included with stale:true and typicalSec forced null even with matching history/typicals', async () => {
+    await insertStatusSnapshot({ capturedAt: new Date().toISOString(), status: 'open' });
+
+    const id = await routeId('victor-jackson-wb');
+    const { weekdayClass, hour, season } = denverTypicalsKey(Date.now());
+    await env.DB.prepare(
+      `INSERT INTO route_typicals (route_id, weekday_class, hour, season, median_sec, p25_sec, p75_sec)
+       VALUES (?, ?, ?, ?, 1800, 1700, 1900)`,
+    )
+      .bind(id, weekdayClass, hour, season)
+      .run();
+
+    // ≥ 14 days of history, so this row would otherwise be historyEligible.
+    const oldestAt = new Date(Date.now() - 20 * DAY_MS).toISOString();
+    const staleAt = new Date(Date.now() - 2 * HOUR_MS).toISOString();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1500)`,
+    )
+      .bind(id, oldestAt)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1650)`,
+    )
+      .bind(id, staleAt)
+      .run();
+
+    const { body } = await getStatus();
+    const entry = body.travelTimes.find((t) => t.slug === 'victor-jackson-wb');
+    expect(entry).toBeTruthy();
+    expect(entry!.durationSec).toBe(1650);
+    expect(entry!.capturedAt).toBe(staleAt);
+    expect(entry!.stale).toBe(true);
+    // A 2h-old reading compared to the CURRENT hour's typical would be
+    // meaningless, so typicalSec is forced null despite the matching
+    // route_typicals row and sufficient history above.
+    expect(entry!.typicalSec).toBeNull();
+  });
+
+  it('overnight gap: a row 13h old (past TRAVEL_TIME_MAX_AGE_HOURS) is omitted entirely', async () => {
+    const id = await routeId('victor-tetonvillage-wb');
+    const tooOldAt = new Date(Date.now() - 13 * HOUR_MS).toISOString();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1234)`,
+    )
+      .bind(id, tooOldAt)
+      .run();
+
+    const { body } = await getStatus();
+    expect(body.travelTimes.some((t) => t.slug === 'victor-tetonvillage-wb')).toBe(false);
+  });
+
+  it('a fresh row (within TRAVEL_TIME_FRESHNESS_MIN) reports stale:false', async () => {
+    const id = await routeId('victor-airport-wb');
+    const freshAt = new Date(Date.now() - 5 * 60_000).toISOString();
+    await env.DB.prepare(
+      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1234)`,
+    )
+      .bind(id, freshAt)
+      .run();
+
+    const { body } = await getStatus();
+    const entry = body.travelTimes.find((t) => t.slug === 'victor-airport-wb');
+    expect(entry).toBeTruthy();
+    expect(entry!.stale).toBe(false);
   });
 
   it('travel time typical: < 14 days of history ⇒ typicalSec null', async () => {

@@ -48,6 +48,17 @@ function deltaCopy(durationSec: number, typicalSec: number | null): { text: stri
   return { text: 'about usual', tone: 'muted' };
 }
 
+// "10:50 PM" -- no date, since overnight staleness is never ambiguous (a
+// reading timestamped 10:50 PM read at 3 AM obviously means the evening
+// before).
+function formatAsOf(capturedAt: string): string {
+  return new Date(capturedAt).toLocaleString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Denver',
+  });
+}
+
 function DriveTimeCard({ travelTime }: { travelTime: TravelTime }) {
   const delta = deltaCopy(travelTime.durationSec, travelTime.typicalSec);
   const minutes = Math.round(travelTime.durationSec / 60);
@@ -59,9 +70,21 @@ function DriveTimeCard({ travelTime }: { travelTime: TravelTime }) {
         <div className="text-muted text-[11.5px]">{sublabelFor(travelTime.slug)}</div>
       </div>
       <div className="text-right">
-        <div className="font-display text-[22px] font-extrabold">{minutes} min</div>
-        {delta && (
-          <div className={`text-[11.5px] font-bold ${DELTA_TONE_CLASS[delta.tone]}`}>{delta.text}</div>
+        <div
+          className={
+            travelTime.stale
+              ? 'text-muted font-display text-[22px] font-extrabold'
+              : 'font-display text-[22px] font-extrabold'
+          }
+        >
+          {minutes} min
+        </div>
+        {travelTime.stale ? (
+          <div className="text-muted text-[11.5px] font-bold">as of {formatAsOf(travelTime.capturedAt)}</div>
+        ) : (
+          delta && (
+            <div className={`text-[11.5px] font-bold ${DELTA_TONE_CLASS[delta.tone]}`}>{delta.text}</div>
+          )
         )}
       </div>
     </li>

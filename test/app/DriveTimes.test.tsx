@@ -12,6 +12,7 @@ function row(overrides: Partial<ApiStatus['travelTimes'][number]>): ApiStatus['t
     durationSec: 1500,
     typicalSec: 1200,
     capturedAt: '2026-08-09T23:48:00.000Z',
+    stale: false,
     ...overrides,
   };
 }
@@ -235,6 +236,53 @@ describe('DriveTimes routes-omitted contract', () => {
   });
 });
 
+// Overnight gap (stale-drive-times): the server keeps a route's last reading
+// up to TRAVEL_TIME_MAX_AGE_HOURS and flags it `stale` once past the live
+// freshness window, instead of omitting it -- these assert the muted/"as of"
+// treatment that replaces the normal duration + delta chip.
+describe('DriveTimes stale rows', () => {
+  it('a stale row shows the duration muted, an "as of" label, and no delta chip', () => {
+    render(
+      <DriveTimes
+        travelTimes={[
+          row({
+            durationSec: 2100,
+            typicalSec: null,
+            capturedAt: '2026-08-10T04:50:00.000Z', // 10:50 PM America/Denver
+            stale: true,
+          }),
+        ]}
+        direction="eb"
+        onFlip={noop}
+      />,
+    );
+
+    const duration = screen.getByText('35 min');
+    expect(duration.className).toMatch(/text-muted/);
+
+    const asOf = screen.getByText('as of 10:50 PM');
+    expect(asOf).toBeInTheDocument();
+    expect(asOf.className).toMatch(/text-muted/);
+
+    expect(screen.queryByText(/usual/)).not.toBeInTheDocument();
+  });
+
+  it('a fresh row renders exactly as before: emphasized duration, no "as of" label', () => {
+    render(
+      <DriveTimes
+        travelTimes={[row({ durationSec: 1500, typicalSec: 1200, stale: false })]}
+        direction="eb"
+        onFlip={noop}
+      />,
+    );
+
+    const duration = screen.getByText('25 min');
+    expect(duration.className).not.toMatch(/text-muted/);
+    expect(screen.queryByText(/^as of /)).not.toBeInTheDocument();
+    expect(screen.getByText('5 min slower than usual')).toBeInTheDocument();
+  });
+});
+
 // Moved from StatusBanner.test.tsx (Task 9 file-hygiene pass) -- this test
 // exercises DriveTimes directly and had no business living in
 // StatusBanner.test.tsx's file. Assertions kept identical.
@@ -249,6 +297,7 @@ describe('DriveTimes delta visibility on rerender', () => {
             durationSec: 1500,
             typicalSec: null,
             capturedAt: '2026-08-09T23:48:00.000Z',
+            stale: false,
           },
         ]}
         direction="eb"
@@ -266,6 +315,7 @@ describe('DriveTimes delta visibility on rerender', () => {
             durationSec: 1500,
             typicalSec: 1200,
             capturedAt: '2026-08-09T23:48:00.000Z',
+            stale: false,
           },
         ]}
         direction="eb"

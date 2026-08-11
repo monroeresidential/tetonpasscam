@@ -21,11 +21,20 @@ export const STALE_HOURS = 12;
  *  this is implausible for a same-minute report and is treated as
  *  untrustworthy -- i.e. stale -- rather than "fresher than expected". */
 export const FUTURE_SKEW_TOLERANCE_MIN = 15;
-/** A travel_times row older than this is dropped from the response entirely
- *  (the route is simply absent, same "no valid placeholder" contract as a
- *  route with zero history at all) -- a 45-minute-old drive time displayed
- *  as if it were live would mislead a driver deciding whether to leave now. */
+/** A travel_times row older than this is flagged `stale` in the response
+ *  (see `TRAVEL_TIME_MAX_AGE_HOURS` below for when it's dropped instead) --
+ *  a 45-minute-old drive time displayed as if it were live would mislead a
+ *  driver deciding whether to leave now, so past this point it's shown
+ *  muted/labeled rather than as current. */
 export const TRAVEL_TIME_FRESHNESS_MIN = 30;
+/** A travel_times row older than this is dropped from the response entirely,
+ *  same as `TRAVEL_TIME_FRESHNESS_MIN` above -- but rows between the two
+ *  cutoffs are still returned, flagged `stale: true`, so the overnight
+ *  polling gap (Google Routes only runs 05:00-23:00 America/Denver, max
+ *  ~6.5h between the last evening poll and the next morning one) shows the
+ *  last evening reading instead of "no data" without ever resurfacing a
+ *  multi-day-old reading after a poller outage. */
+export const TRAVEL_TIME_MAX_AGE_HOURS = 12;
 /** Newest weather_snapshots row older than this ⇒ `weatherStale` true. The
  *  reading itself is still returned (last-known beats nothing for a stat
  *  strip), but the frontend must flag it as not current. */
@@ -275,17 +284,20 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
 
   const minHistoryMs = MIN_HISTORY_DAYS * 24 * 3_600_000;
   const travelTimeFreshnessMs = TRAVEL_TIME_FRESHNESS_MIN * 60_000;
+  const travelTimeMaxAgeMs = TRAVEL_TIME_MAX_AGE_HOURS * 3_600_000;
   const travelTimes = latestTravelRows
-    // A route's latest row can still be older than the freshness window
-    // (the poller failed for that route this cycle, or several cycles
-    // running) -- omit it entirely rather than show a stale duration next
-    // to an implicit "current" label, same "no valid placeholder" contract
-    // as a route with zero history at all.
+    // A route's latest row can still be older than the max-age cap (the
+    // poller failed for that route across the whole overnight gap, or
+    // longer) -- omit it entirely, same "no valid placeholder" contract as a
+    // route with zero history at all. Rows within the cap but past the
+    // freshness window are kept and flagged `stale` below instead.
     .filter((row) => {
       const ageMs = nowMs - Date.parse(row.capturedAt);
-      return Number.isFinite(ageMs) && ageMs <= travelTimeFreshnessMs;
+      return Number.isFinite(ageMs) && ageMs <= travelTimeMaxAgeMs;
     })
     .map((row) => {
+      const ageMs = nowMs - Date.parse(row.capturedAt);
+      const stale = ageMs > travelTimeFreshnessMs;
       const minCapturedAt = minCapturedByRoute.get(row.routeId);
       const historyEligible =
         minCapturedAt !== undefined && nowMs - Date.parse(minCapturedAt) >= minHistoryMs;
@@ -293,8 +305,13 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
         slug: row.slug,
         name: row.name,
         durationSec: row.durationSec,
-        typicalSec: historyEligible ? (typicalByRoute.get(row.routeId) ?? null) : null,
+        // A stale reading (e.g. last night's 10:50 PM drive time) compared
+        // against the CURRENT hour's typical would produce a meaningless
+        // delta, so typicalSec is forced null whenever stale regardless of
+        // history eligibility.
+        typicalSec: stale || !historyEligible ? null : (typicalByRoute.get(row.routeId) ?? null),
         capturedAt: row.capturedAt,
+        stale,
       };
     });
 
