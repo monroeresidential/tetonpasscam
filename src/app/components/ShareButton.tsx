@@ -1,8 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
-import Toast from './Toast';
-
-const TOAST_MS = 4000;
+import ShareSheet from './ShareSheet';
 
 /**
  * `window.location.origin` (not a hardcoded production constant) -- this
@@ -18,13 +16,6 @@ export function buildShareUrl(code: string, direction: 'eb' | 'wb'): string {
   const base = `${window.location.origin}/s/${code}`;
   return direction === 'wb' ? `${base}?dir=wb` : base;
 }
-
-// navigator.share isn't universally declared across DOM lib versions/
-// environments (and isn't present at all in jsdom), so it's accessed through
-// a narrow local type rather than assuming lib.dom.d.ts already has it.
-type NavigatorWithShare = Navigator & {
-  share?: (data: { title?: string; url?: string }) => Promise<void>;
-};
 
 function ShareIcon() {
   return (
@@ -53,48 +44,35 @@ export default function ShareButton({
   direction: 'eb' | 'wb';
   toneClass?: string;
 }) {
-  const [showToast, setShowToast] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   if (shareCode === null) return null;
 
-  async function copyToClipboard(url: string) {
-    await navigator.clipboard.writeText(url);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), TOAST_MS);
-  }
-
-  async function handleShare() {
-    const url = buildShareUrl(shareCode as string, direction);
-    const nav = navigator as NavigatorWithShare;
-
-    if (typeof nav.share === 'function') {
-      try {
-        await nav.share({ title: 'Teton Pass conditions', url });
-        return;
-      } catch (err) {
-        // AbortError == the user dismissed the native share sheet -- that's
-        // a deliberate cancel, not a failure, so it's a silent no-op (no
-        // toast, no clipboard fallback). Any other rejection (e.g. no share
-        // target chosen, permission denied) falls through to clipboard below.
-        if ((err as { name?: string } | null)?.name === 'AbortError') return;
-      }
-    }
-
-    await copyToClipboard(url);
+  function closeSheet() {
+    setSheetOpen(false);
+    // Return focus to the pill that opened the sheet (matches the "on
+    // close, return focus to the Share pill" requirement) -- ShareSheet
+    // itself has no reference to this button, so the pill's own onClose
+    // handler is where that restoration has to happen.
+    buttonRef.current?.focus();
   }
 
   return (
     <>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={handleShare}
+        onClick={() => setSheetOpen(true)}
         aria-label="Share current conditions"
         className={`flex flex-none items-center gap-1.5 rounded-full bg-white px-4 py-2.5 font-display text-[13px] font-extrabold shadow-md ${toneClass}`}
       >
         <ShareIcon />
         Share
       </button>
-      <Toast show={showToast}>Link copied</Toast>
+      {sheetOpen && (
+        <ShareSheet shareCode={shareCode} direction={direction} onClose={closeSheet} />
+      )}
     </>
   );
 }

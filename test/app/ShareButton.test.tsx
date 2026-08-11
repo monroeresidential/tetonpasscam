@@ -1,29 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import ShareButton, { buildShareUrl } from '../../src/app/components/ShareButton';
 
-function defineNavProp(name: string, value: unknown) {
-  Object.defineProperty(navigator, name, { value, configurable: true, writable: true });
-}
-
-// @testing-library/user-event's `setup()` installs its own real
-// `navigator.clipboard.writeText` polyfill as a side effect (needed for its
-// own copy/paste keyboard-shortcut support) -- calling it AFTER our
-// `defineNavProp('clipboard', ...)` mock silently clobbers the mock with
-// user-event's real implementation, which is what caused
-// `expect(navigator.clipboard.writeText).toHaveBeenCalledWith(...)` to fail
-// with "is not a spy" on a first pass at this file. So every test below
-// calls `userEvent.setup()` FIRST, then installs the navigator mocks.
-function setupUser() {
-  const user = userEvent.setup();
-  defineNavProp('clipboard', { writeText: vi.fn().mockResolvedValue(undefined) });
-  return user;
-}
-
 const CODE = '20260810-1412';
-const CODE_2 = '20260811-0930';
 
 describe('buildShareUrl', () => {
   it('eb (default direction) has no query param', () => {
@@ -38,10 +19,6 @@ describe('buildShareUrl', () => {
 });
 
 describe('ShareButton', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('renders nothing when shareCode is null (pollerDead/no snapshot)', () => {
     render(<ShareButton shareCode={null} direction="eb" />);
     expect(screen.queryByRole('button', { name: /share current conditions/i })).not.toBeInTheDocument();
@@ -70,61 +47,30 @@ describe('ShareButton', () => {
     expect(button.className).not.toMatch(/text-ink/);
   });
 
-  describe('when navigator.share is available', () => {
-    it('calls navigator.share with the snapshot-pinned URL and title, and shows no toast', async () => {
-      const user = setupUser();
-      defineNavProp('share', vi.fn().mockResolvedValue(undefined));
-
-      render(<ShareButton shareCode={CODE} direction="wb" />);
-      await user.click(screen.getByRole('button', { name: /share current conditions/i }));
-
-      expect(navigator.share).toHaveBeenCalledWith({
-        title: 'Teton Pass conditions',
-        url: `${window.location.origin}/s/${CODE}?dir=wb`,
-      });
-      expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    });
-
-    it('AbortError (user cancelled the native share sheet) is a silent no-op: no toast, no clipboard fallback', async () => {
-      const user = setupUser();
-      const abortError = Object.assign(new Error('cancelled'), { name: 'AbortError' });
-      defineNavProp('share', vi.fn().mockRejectedValue(abortError));
-
-      render(<ShareButton shareCode={CODE} direction="eb" />);
-      await user.click(screen.getByRole('button', { name: /share current conditions/i }));
-
-      await waitFor(() => expect(navigator.share).toHaveBeenCalled());
-      expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    });
-
-    it('a non-abort share() rejection falls back to clipboard + toast', async () => {
-      const user = setupUser();
-      defineNavProp('share', vi.fn().mockRejectedValue(new Error('no share target')));
-
-      render(<ShareButton shareCode={CODE} direction="eb" />);
-      await user.click(screen.getByRole('button', { name: /share current conditions/i }));
-
-      await waitFor(() =>
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/s/${CODE}`),
-      );
-      expect(await screen.findByRole('status')).toHaveTextContent(/link copied/i);
-    });
+  it('does not render a share sheet before the pill is clicked', () => {
+    render(<ShareButton shareCode={CODE} direction="eb" />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  describe('when navigator.share is unavailable', () => {
-    it('copies the URL to the clipboard and shows a "Link copied" toast', async () => {
-      const user = setupUser();
-      defineNavProp('share', undefined);
+  it('clicking the pill opens the share preview sheet instead of calling navigator.share directly', async () => {
+    const user = userEvent.setup();
+    render(<ShareButton shareCode={CODE} direction="eb" />);
 
-      render(<ShareButton shareCode={CODE_2} direction="wb" />);
-      await user.click(screen.getByRole('button', { name: /share current conditions/i }));
+    await user.click(screen.getByRole('button', { name: /share current conditions/i }));
 
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        `${window.location.origin}/s/${CODE_2}?dir=wb`,
-      );
-      expect(await screen.findByRole('status')).toHaveTextContent(/link copied/i);
-    });
+    expect(screen.getByRole('dialog', { name: /share current conditions/i })).toBeInTheDocument();
+  });
+
+  it('closing the sheet (Escape) returns focus to the pill', async () => {
+    const user = userEvent.setup();
+    render(<ShareButton shareCode={CODE} direction="eb" />);
+
+    const pill = screen.getByRole('button', { name: /share current conditions/i });
+    await user.click(pill);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(pill).toHaveFocus();
   });
 });
