@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Embed a free, auto-updating Teton Pass status widget on your site." />
+    <title>Embed Teton Pass status</title>
+    <style>
+      /* Self-hosted, same three files the widget endpoints themselves
+         declare (src/worker/embed.ts's FONT_FACE_CSS) -- this page needs its
+         own copy since it's a separate multi-page vite entry, not part of
+         the React app's index.css bundle. */
+      @font-face {
+        font-family: 'Bricolage Grotesque';
+        src: url('/fonts/bricolage-latin-wght.woff2') format('woff2-variations');
+        font-weight: 200 800;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Atkinson Hyperlegible';
+        src: url('/fonts/atkinson-latin-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Atkinson Hyperlegible';
+        src: url('/fonts/atkinson-latin-700.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #faf7f0;
+        color: #2b2620;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        padding: 32px 16px 48px;
+      }
+      .panel {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #211d17;
+        color: #f0ebe1;
+        border: 1px solid #3a342b;
+        border-radius: 18px;
+        padding: 28px 24px;
+      }
+      h1 {
+        font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+        font-weight: 800;
+        font-size: 26px;
+        margin: 0;
+      }
+      .subtitle {
+        color: #a39880;
+        font-size: 13.5px;
+        margin: 8px 0 0;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        margin: 22px 0 0;
+        flex-wrap: wrap;
+      }
+      .chip {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 12.5px;
+        color: #f0ebe1;
+        background: #2b2620;
+        border: 1px solid #3a342b;
+        border-radius: 999px;
+        padding: 7px 14px;
+        cursor: pointer;
+      }
+      .chip[aria-pressed='true'] {
+        background: oklch(0.75 0.11 60);
+        border-color: oklch(0.75 0.11 60);
+        color: #211d17;
+      }
+      .preview {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+      }
+      .preview iframe {
+        border: 0;
+        max-width: 100%;
+      }
+      .snippet-label {
+        margin-top: 22px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #a39880;
+      }
+      .snippet-row {
+        margin-top: 8px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      pre {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        background: #15120e;
+        color: #f0ebe1;
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      #copy-btn {
+        flex: none;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 12.5px;
+        color: #211d17;
+        background: #f0ebe1;
+        border: 0;
+        border-radius: 999px;
+        padding: 9px 16px;
+        cursor: pointer;
+      }
+      footer {
+        margin-top: 28px;
+        text-align: center;
+      }
+      footer a {
+        color: #8a8072;
+        font-size: 12.5px;
+        text-decoration: underline;
+      }
+      @media (max-width: 420px) {
+        .snippet-row {
+          flex-direction: column;
+        }
+        #copy-btn {
+          align-self: flex-end;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>Embed Teton Pass status</h1>
+      <p class="subtitle">
+        Free for any site. Auto-updates every 5 minutes. Links back to tetonpasscam.com.
+      </p>
+
+      <div class="chips" role="group" aria-label="Widget size">
+        <button type="button" class="chip" data-variant="badge" aria-pressed="true">Badge 320×88</button>
+        <button type="button" class="chip" data-variant="card" aria-pressed="false">Card 300×250</button>
+        <button type="button" class="chip" data-variant="strip" aria-pressed="false">Strip full-width</button>
+      </div>
+
+      <div class="preview">
+        <iframe
+          id="preview-frame"
+          src="/embed/badge"
+          width="320"
+          height="88"
+          style="border: 0"
+          title="Teton Pass status"
+          loading="lazy"
+        ></iframe>
+      </div>
+
+      <p class="snippet-label">Copy-paste this into your page:</p>
+      <div class="snippet-row">
+        <pre id="snippet-code"></pre>
+        <button type="button" id="copy-btn">Copy code</button>
+      </div>
+    </div>
+
+    <footer><a href="/">← tetonpasscam.com</a></footer>
+
+    <script>
+      // No framework, on purpose -- same static-page pattern as admin.html
+      // (this is a public marketing/utility page, not part of the React
+      // app's bundle).
+      var VARIANTS = {
+        badge: { width: '320', height: '88' },
+        card: { width: '300', height: '250' },
+        strip: { width: '100%', height: '64' },
+      };
+
+      var previewFrame = document.getElementById('preview-frame');
+      var snippetCode = document.getElementById('snippet-code');
+      var copyBtn = document.getElementById('copy-btn');
+      var chips = document.querySelectorAll('.chip');
+      var copyResetTimer = null;
+
+      function snippetFor(variant) {
+        var dims = VARIANTS[variant];
+        var widthAttr = variant === 'strip' ? ' width="100%"' : ' width="' + dims.width + '"';
+        return (
+          '<iframe src="https://tetonpasscam.com/embed/' +
+          variant +
+          '"' +
+          widthAttr +
+          ' height="' +
+          dims.height +
+          '" style="border:0" title="Teton Pass status" loading="lazy"></iframe>'
+        );
+      }
+
+      function selectVariant(variant) {
+        var dims = VARIANTS[variant];
+        previewFrame.src = '/embed/' + variant;
+        previewFrame.width = variant === 'strip' ? '100%' : dims.width;
+        previewFrame.height = dims.height;
+        previewFrame.style.width = variant === 'strip' ? '100%' : dims.width + 'px';
+        snippetCode.textContent = snippetFor(variant);
+
+        chips.forEach(function (chip) {
+          chip.setAttribute('aria-pressed', String(chip.dataset.variant === variant));
+        });
+
+        if (copyResetTimer) {
+          clearTimeout(copyResetTimer);
+          copyResetTimer = null;
+        }
+        copyBtn.textContent = 'Copy code';
+      }
+
+      chips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          selectVariant(chip.dataset.variant);
+        });
+      });
+
+      copyBtn.addEventListener('click', function () {
+        navigator.clipboard.writeText(snippetCode.textContent).then(function () {
+          copyBtn.textContent = 'Copied ✓';
+          if (copyResetTimer) clearTimeout(copyResetTimer);
+          copyResetTimer = setTimeout(function () {
+            copyBtn.textContent = 'Copy code';
+          }, 2000);
+        });
+      });
+
+      selectVariant('badge');
+    </script>
+  </body>
+</html>

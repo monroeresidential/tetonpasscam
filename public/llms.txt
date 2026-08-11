@@ -5,6 +5,7 @@ Live status for Wyoming Highway 22 over Teton Pass, between Wilson, Wyoming and 
 ## Links
 
 - [Teton Pass Cam](https://tetonpasscam.com/) — live status, cameras, drive times, and weather
+- [Embed Teton Pass status](https://tetonpasscam.com/embed) — free status widgets for other sites to iframe
 - [Privacy policy](https://tetonpasscam.com/privacy) — what's stored and why
 - [Wyoming 511](https://www.wyoroad.info) — authoritative source for Wyoming road conditions and closures
 - [Idaho 511](https://511.idaho.gov) — authoritative source for Idaho road conditions and closures

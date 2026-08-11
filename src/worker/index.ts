@@ -1,5 +1,6 @@
 import { api } from './api/router';
 import { handleOgRequest, handleShareRequest } from './card/route';
+import { handleEmbedRequest } from './embed';
 import type { Env } from './env';
 import { runNightly } from './poller/aggregate';
 import { runPollCycle } from './poller/run';
@@ -80,6 +81,11 @@ export default {
     if (ogResponse) return ogResponse;
     const shareResponse = await handleShareRequest(req, env, ctx);
     if (shareResponse) return shareResponse;
+    // Same no-op-outside-its-own-prefix contract as og/share above -- bare
+    // `/embed` (the picker page) and anything else outside `/embed/{badge,
+    // card,strip}` falls straight through this to the routes below.
+    const embedResponse = await handleEmbedRequest(req, env);
+    if (embedResponse) return embedResponse;
 
     if (url.pathname.startsWith('/api/')) {
       return api.fetch(new Request(new URL(url.pathname.slice(4) + url.search, url.origin), req), env, ctx);

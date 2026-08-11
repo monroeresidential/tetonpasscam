@@ -1,10 +1,11 @@
 import { useState } from 'react';
 
-// Two-column layout (Drew-requested): column-major, three links each, so the
-// DOM order below IS the reading order -- each column is its own flex stack
-// rather than six flat items in one grid, since a plain `grid-cols-2` over
-// six DOM siblings would fill row-major (1&2 side by side, 3&4 next, ...)
-// instead of the wanted column split.
+// Two-column layout (Drew-requested): column-major, so the DOM order below
+// IS the reading order -- each column is its own flex stack rather than
+// flat items in one grid, since a plain `grid-cols-2` over flat siblings
+// would fill row-major (1&2 side by side, 3&4 next, ...) instead of the
+// wanted column split. Columns don't need to match length (column 2 has one
+// more entry than column 1, plus the Feedback button appended below).
 const COLUMN_1_LINKS = [
   { href: 'https://www.wyoroad.info', label: 'Wyoming 511' },
   { href: 'https://511.idaho.gov', label: 'Idaho 511' },
@@ -14,6 +15,7 @@ const COLUMN_1_LINKS = [
 const COLUMN_2_LINKS = [
   { href: 'https://511notify.wyoroad.info', label: '511 Notify (get text/email alerts)' },
   { href: '/privacy', label: 'Privacy policy' },
+  { href: '/embed', label: 'Embed this status' },
 ];
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';

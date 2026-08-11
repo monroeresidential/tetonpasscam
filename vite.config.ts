@@ -16,20 +16,22 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
  *  build-html plugin rather than tracked in the Rollup `bundle` object
  *  (confirmed empirically -- `generateBundle` only sees the JS/CSS assets),
  *  so the fix has to run after files hit disk: `writeBundle` moves the file
- *  once the real build finishes. Safe because `admin.html` has no relative
- *  asset references of its own (inline `<style>`/`<script>` only, no bundled
- *  JS/CSS) -- nothing else in the output points at its old path, so moving
- *  it doesn't break any reference. */
+ *  once the real build finishes. Safe because `admin.html`/`embed.html` have
+ *  no relative asset references of their own (inline `<style>`/`<script>`
+ *  only, no bundled JS/CSS) -- nothing else in the output points at their
+ *  old path, so moving them doesn't break any reference. */
 function flattenAdminHtml() {
   return {
     name: 'flatten-admin-html',
     apply: 'build' as const,
     writeBundle(options: { dir?: string }) {
       const outDir = options.dir ?? path.resolve(dirname, 'dist');
-      const from = path.join(outDir, 'src', 'app', 'admin.html');
-      const to = path.join(outDir, 'admin.html');
-      if (!fs.existsSync(from)) return;
-      fs.renameSync(from, to);
+      for (const name of ['admin.html', 'embed.html']) {
+        const from = path.join(outDir, 'src', 'app', name);
+        const to = path.join(outDir, name);
+        if (!fs.existsSync(from)) continue;
+        fs.renameSync(from, to);
+      }
       // Clean up the now-empty src/app/ and src/ directories this leaves
       // behind in dist -- best-effort; rmdirSync throws if non-empty, which
       // just means something else is using that path and it's left alone.
@@ -142,6 +144,16 @@ export default defineConfig({
           // above; /og/*.png needs no entry here since it's never a
           // navigation-mode request).
           /^\/s\//,
+          // embed widgets T4: /embed is its own static picker page
+          // (embed.html), same "real file wins" reasoning as /admin/
+          // /privacy above -- an installed PWA's SW must not serve the
+          // precached app shell here instead. /embed/{badge,card,strip}
+          // are never navigation-mode requests (they're only ever loaded
+          // inside a third-party site's <iframe>), but are denylisted
+          // defensively for the same reason /api/ is above.
+          /^\/embed$/,
+          /^\/embed\.html$/,
+          /^\/embed\//,
         ],
         runtimeCaching: [
           {
@@ -188,6 +200,7 @@ export default defineConfig({
       input: {
         main: path.resolve(dirname, 'index.html'),
         admin: path.resolve(dirname, 'src/app/admin.html'),
+        embed: path.resolve(dirname, 'src/app/embed.html'),
       },
     },
   },

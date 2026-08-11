@@ -21,7 +21,7 @@ describe('Footer', () => {
     vi.unstubAllGlobals();
   });
 
-  it('links to Wyoming 511, Idaho 511, START bus, 511 Notify, and the privacy policy', () => {
+  it('links to Wyoming 511, Idaho 511, START bus, 511 Notify, the privacy policy, and embed', () => {
     render(<Footer />);
     expect(screen.getByRole('link', { name: /wyoming 511/i })).toHaveAttribute(
       'href',
@@ -40,6 +40,10 @@ describe('Footer', () => {
       'https://511notify.wyoroad.info',
     );
     expect(screen.getByRole('link', { name: /privacy/i })).toHaveAttribute('href', '/privacy');
+    expect(screen.getByRole('link', { name: /embed this status/i })).toHaveAttribute(
+      'href',
+      '/embed',
+    );
   });
 
   it('shows the "Not affiliated with WYDOT" disclaimer', () => {
@@ -47,7 +51,7 @@ describe('Footer', () => {
     expect(screen.getByText(/not affiliated with wydot/i)).toBeInTheDocument();
   });
 
-  it('arranges the six footer controls as two column stacks of three, column-major', () => {
+  it('arranges the seven footer controls as two column stacks (three and four), column-major', () => {
     render(<Footer />);
     const nav = screen.getByRole('navigation', { name: 'Footer' });
     expect(nav.className).toMatch(/\bgrid-cols-2\b/);
@@ -58,7 +62,7 @@ describe('Footer', () => {
     const col1Controls = Array.from(col1.querySelectorAll('a, button'));
     const col2Controls = Array.from(col2.querySelectorAll('a, button'));
     expect(col1Controls).toHaveLength(3);
-    expect(col2Controls).toHaveLength(3);
+    expect(col2Controls).toHaveLength(4);
 
     expect(col1Controls.map((el) => el.textContent)).toEqual([
       'Wyoming 511',
@@ -68,6 +72,7 @@ describe('Footer', () => {
     expect(col2Controls.map((el) => el.textContent)).toEqual([
       '511 Notify (get text/email alerts)',
       'Privacy policy',
+      'Embed this status',
       'Feedback',
     ]);
   });
