@@ -1,10 +1,8 @@
 import type { ApiStatus, PassStatus } from '../shared/types';
 import { getStatus } from './api/status';
-import { denverHour } from './tz';
 import type { Env } from './env';
 
 type Variant = 'badge' | 'card' | 'strip';
-type Dir = 'eb' | 'wb';
 
 // Bare `/embed` (the picker page, served from ASSETS as embed.html) must NOT
 // be swallowed here -- only the three widget endpoints under it are ours.
@@ -60,25 +58,17 @@ const STATUS_ICON_SVG: Record<PassStatus, string> = {
     '<text x="12" y="17.5" font-size="14" font-weight="800" fill="#fff" text-anchor="middle" font-family="system-ui,sans-serif">?</text>',
 };
 
-// Only the Idaho-side-to-Jackson route pair appears in any widget (mock t4's
-// badge/card/strip examples all show exactly "Victor" and "Driggs" times) --
-// the other 8 seeded route-directions (Teton Village/Airport destinations)
-// are never surfaced here. Which of the two DIRECTIONS of that pair renders
-// (`?dir=`) is resolved to one of these two row-sets before anything else
-// runs -- see `clampDir` and `handleEmbedRequest`. `full`/`abbrev` are kept
-// as static labels (not read from the `name` column) so the card can still
-// show a labeled "—" row for a route with no travel_times history yet, when
-// there is no row to read a name from.
-const WIDGET_ROUTES: Record<Dir, { slug: string; full: string; abbrev: string }[]> = {
-  eb: [
-    { slug: 'victor-jackson-eb', full: 'Victor → Jackson', abbrev: 'Victor→JAC' },
-    { slug: 'driggs-jackson-eb', full: 'Driggs → Jackson', abbrev: 'Driggs→JAC' },
-  ],
-  wb: [
-    { slug: 'victor-jackson-wb', full: 'Jackson → Victor', abbrev: 'JAC→Victor' },
-    { slug: 'driggs-jackson-wb', full: 'Jackson → Driggs', abbrev: 'JAC→Driggs' },
-  ],
-};
+// Only the two eastbound Idaho-side-to-Jackson routes appear in any widget
+// (mock t4's badge/card/strip examples all show exactly "Victor" and
+// "Driggs" times toward Jackson) -- the other 10 seeded route-directions
+// (Teton Village/Airport destinations, westbound) are never surfaced here.
+// `full`/`abbrev` are kept as static labels (not read from the `name`
+// column) so the card can still show a labeled "—" row for a route with no
+// travel_times history yet, when there is no row to read a name from.
+const WIDGET_ROUTES: { slug: string; full: string; abbrev: string }[] = [
+  { slug: 'victor-jackson-eb', full: 'Victor → Jackson', abbrev: 'Victor→JAC' },
+  { slug: 'driggs-jackson-eb', full: 'Driggs → Jackson', abbrev: 'Driggs→JAC' },
+];
 
 const DENVER_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
@@ -109,11 +99,10 @@ function findRoute(travelTimes: ApiStatus['travelTimes'], slug: string) {
 function buildTimesLine(
   travelTimes: ApiStatus['travelTimes'],
   labelKey: 'full' | 'abbrev',
-  dir: Dir,
 ): string | null {
   const parts: string[] = [];
   let staleAt: string | null = null;
-  for (const route of WIDGET_ROUTES[dir]) {
+  for (const route of WIDGET_ROUTES) {
     const row = findRoute(travelTimes, route.slug);
     if (!row) continue;
     parts.push(`${route[labelKey]} ${Math.round(row.durationSec / 60)} min`);
@@ -124,11 +113,8 @@ function buildTimesLine(
   return staleAt ? `${joined} · as of ${formatDenverTime(staleAt)}` : joined;
 }
 
-// `utm_content` carries the RESOLVED direction (never the literal `auto`)
-// so Drew can tell embed-driven traffic apart by which commute it showed --
-// see `handleEmbedRequest`'s auto resolution.
-function widgetLinkHref(variant: Variant, dir: Dir): string {
-  return `https://tetonpasscam.com/?utm_source=embed&utm_medium=widget&utm_campaign=${variant}&utm_content=${dir}`;
+function widgetLinkHref(variant: Variant): string {
+  return `https://tetonpasscam.com/?utm_source=embed&utm_medium=widget&utm_campaign=${variant}`;
 }
 
 const FONT_FACE_CSS = `
@@ -184,15 +170,15 @@ function badgeHeadline(status: PassStatus): string {
  *  has data), the closed detour notice (hard rule 5 -- "do not attempt",
  *  never an invented reopening estimate), or the unknown disclaimer (hard
  *  rule 1 -- never implies currency by showing stale-looking times). */
-function badgeLine2(apiStatus: ApiStatus, dir: Dir): string | null {
+function badgeLine2(apiStatus: ApiStatus): string | null {
   if (apiStatus.status === 'closed') return 'Do not attempt · detour via Swan Valley';
   if (apiStatus.status === 'unknown') return 'Check Wyoming 511 before traveling';
-  return buildTimesLine(apiStatus.travelTimes, 'abbrev', dir);
+  return buildTimesLine(apiStatus.travelTimes, 'abbrev');
 }
 
-function renderBadge(apiStatus: ApiStatus, dir: Dir): string {
+function renderBadge(apiStatus: ApiStatus): string {
   const color = STATUS_COLOR[apiStatus.status];
-  const line2 = badgeLine2(apiStatus, dir);
+  const line2 = badgeLine2(apiStatus);
   const css = `
 .badge { width: 320px; height: 88px; background: #211d17; border: 1px solid #3a342b; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
 .badge-icon { width: 44px; height: 44px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: ${color}; }
@@ -200,7 +186,7 @@ function renderBadge(apiStatus: ApiStatus, dir: Dir): string {
 .badge-line1 { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 17px; color: #f0ebe1; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .badge-line2 { font-family: 'Atkinson Hyperlegible'; font-weight: 400; font-size: 11.5px; color: #a39880; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .badge-line3 { font-family: 'Atkinson Hyperlegible'; font-weight: 700; font-size: 10.5px; color: oklch(0.75 0.11 60); margin-top: 4px; }`;
-  const body = `<a class="widget-link" href="${esc(widgetLinkHref('badge', dir))}" target="_blank" rel="noopener">
+  const body = `<a class="widget-link" href="${esc(widgetLinkHref('badge'))}" target="_blank" rel="noopener">
   <div class="badge">
     <div class="badge-icon"><svg width="24" height="24" viewBox="0 0 24 24">${STATUS_ICON_SVG[apiStatus.status]}</svg></div>
     <div class="badge-text">
@@ -221,10 +207,10 @@ function cardHeadline(status: PassStatus): string {
  *  has data, else falls back to the response's own `generatedAt` -- same
  *  fallback the brief specifies, so the footer always shows a timestamp even
  *  when there's no travel-time history yet. */
-function cardFooterAsOf(apiStatus: ApiStatus, dir: Dir): string {
-  const rows = WIDGET_ROUTES[dir]
-    .map((r) => findRoute(apiStatus.travelTimes, r.slug))
-    .filter((r): r is NonNullable<typeof r> => r !== null);
+function cardFooterAsOf(apiStatus: ApiStatus): string {
+  const rows = WIDGET_ROUTES.map((r) => findRoute(apiStatus.travelTimes, r.slug)).filter(
+    (r): r is NonNullable<typeof r> => r !== null,
+  );
   const capturedAt =
     rows.length > 0
       ? rows.reduce((latest, r) => (Date.parse(r.capturedAt) > Date.parse(latest) ? r.capturedAt : latest), rows[0].capturedAt)
@@ -237,7 +223,7 @@ function cardFooterAsOf(apiStatus: ApiStatus, dir: Dir): string {
  *  "—" rather than reading real `durationSec` values (hard rule 1 -- never
  *  imply currency for an unresolved status); open/restricted show each
  *  route's minutes or "—" if that route has no data yet. */
-function cardBodyHtml(apiStatus: ApiStatus, dir: Dir): string {
+function cardBodyHtml(apiStatus: ApiStatus): string {
   if (apiStatus.status === 'closed') {
     return `<div class="card-body"><div class="card-closed">
       <div class="card-closed-line1">Closed — do not attempt</div>
@@ -245,7 +231,7 @@ function cardBodyHtml(apiStatus: ApiStatus, dir: Dir): string {
     </div></div>`;
   }
   const showTimes = apiStatus.status === 'open' || apiStatus.status === 'restricted';
-  const rowsHtml = WIDGET_ROUTES[dir].map((route) => {
+  const rowsHtml = WIDGET_ROUTES.map((route) => {
     const row = showTimes ? findRoute(apiStatus.travelTimes, route.slug) : null;
     const value = row ? `${Math.round(row.durationSec / 60)} min` : '—';
     return `<div class="card-row"><div class="card-row-label">${esc(route.full)}</div><div class="card-row-value">${esc(value)}</div></div>`;
@@ -253,7 +239,7 @@ function cardBodyHtml(apiStatus: ApiStatus, dir: Dir): string {
   return `<div class="card-body">${rowsHtml}</div>`;
 }
 
-function renderCard(apiStatus: ApiStatus, dir: Dir): string {
+function renderCard(apiStatus: ApiStatus): string {
   const color = STATUS_COLOR[apiStatus.status];
   const css = `
 .card { width: 300px; height: 250px; background: #211d17; border: 1px solid #3a342b; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
@@ -271,15 +257,15 @@ function renderCard(apiStatus: ApiStatus, dir: Dir): string {
 .card-footer { background: #2b2620; padding: 10px 16px; flex: none; display: flex; align-items: center; justify-content: space-between; }
 .card-footer-left { font-family: 'Atkinson Hyperlegible'; font-weight: 400; font-size: 11px; color: #a39880; }
 .card-footer-right { font-family: 'Atkinson Hyperlegible'; font-weight: 700; font-size: 11.5px; color: oklch(0.75 0.11 60); }`;
-  const body = `<a class="widget-link" href="${esc(widgetLinkHref('card', dir))}" target="_blank" rel="noopener">
+  const body = `<a class="widget-link" href="${esc(widgetLinkHref('card'))}" target="_blank" rel="noopener">
   <div class="card">
     <div class="card-header">
       <div class="card-eyebrow">TETON PASS · HWY 22</div>
       <div class="card-headline">${esc(cardHeadline(apiStatus.status))}</div>
     </div>
-    ${cardBodyHtml(apiStatus, dir)}
+    ${cardBodyHtml(apiStatus)}
     <div class="card-footer">
-      <div class="card-footer-left">as of ${esc(cardFooterAsOf(apiStatus, dir))}</div>
+      <div class="card-footer-left">as of ${esc(cardFooterAsOf(apiStatus))}</div>
       <div class="card-footer-right">tetonpasscam.com →</div>
     </div>
   </div>
@@ -287,71 +273,46 @@ function renderCard(apiStatus: ApiStatus, dir: Dir): string {
   return renderDocument(css, body);
 }
 
-/** Strip's right-aligned times/status text -- same status-dependent copy as
+/** Strip's right-aligned times/status span -- same status-dependent copy as
  *  `badgeLine2` (closed detour notice, unknown disclaimer, or the joined
- *  drive-times line). `labelKey` picks full route labels (desktop-width
- *  rendering) or the badge's abbreviated ones (narrow-width rendering, see
- *  `renderStrip`'s two spans) -- the closed/unknown copy is short enough
- *  already that it's identical at both widths. */
-function stripTimesText(apiStatus: ApiStatus, dir: Dir, labelKey: 'full' | 'abbrev'): string {
+ *  drive-times line), just with full route labels instead of abbreviated
+ *  ones (strip has the horizontal room; badge doesn't). */
+function stripTimesText(apiStatus: ApiStatus): string {
   if (apiStatus.status === 'closed') return 'Do not attempt · detour via Swan Valley';
   if (apiStatus.status === 'unknown') return 'Check Wyoming 511 before traveling';
-  return buildTimesLine(apiStatus.travelTimes, labelKey, dir) ?? '';
+  return buildTimesLine(apiStatus.travelTimes, 'full') ?? '';
 }
 
-function renderStrip(apiStatus: ApiStatus, dir: Dir): string {
+function renderStrip(apiStatus: ApiStatus): string {
   const color = STATUS_COLOR[apiStatus.status];
-  const timesFull = stripTimesText(apiStatus, dir, 'full');
-  const timesCompact = stripTimesText(apiStatus, dir, 'abbrev');
+  const timesText = stripTimesText(apiStatus);
   const css = `
 .strip { width: 100%; height: 64px; background: #211d17; border: 1px solid #3a342b; border-radius: 12px; padding: 12px 18px; display: flex; align-items: center; gap: 14px; }
 .strip-pill { flex: none; background: ${color}; color: #fff; font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 13px; border-radius: 999px; padding: 4px 10px; }
 .strip-title { flex: none; font-family: 'Bricolage Grotesque'; font-weight: 700; font-size: 14px; color: #f0ebe1; }
 .strip-times { flex: 1; min-width: 0; text-align: right; font-family: 'Atkinson Hyperlegible'; font-size: 12px; color: #a39880; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.strip-times-compact { display: none; }
 .strip-cta { flex: none; margin-left: auto; font-family: 'Atkinson Hyperlegible'; font-weight: 700; font-size: 12px; color: oklch(0.75 0.11 60); }
-/* Server HTML is static per cache entry, so both the full and compact
-   labels are always rendered -- only CSS toggles which one shows. Under
-   620px the full line never gets enough room to avoid wrapping (it would
-   grow the strip past its fixed 64px height), so it swaps to the badge's
-   abbreviated route-label form; under 420px there's no longer room for
-   either, so the times text drops out entirely (pill + title + link still
-   fit). */
-@media (max-width: 620px) {
-  .strip-times-full { display: none; }
-  .strip-times-compact { display: inline; }
-}
-@media (max-width: 420px) {
+/* Under ~560px the drive-times span never gets enough room to avoid
+   wrapping onto a second line -- hiding it (rather than shrinking the font
+   further) keeps the strip at its fixed 64px height at every width. */
+@media (max-width: 560px) {
   .strip-times { display: none; }
 }`;
-  const body = `<a class="widget-link" href="${esc(widgetLinkHref('strip', dir))}" target="_blank" rel="noopener">
+  const body = `<a class="widget-link" href="${esc(widgetLinkHref('strip'))}" target="_blank" rel="noopener">
   <div class="strip">
     <div class="strip-pill">● ${esc(STATUS_WORD[apiStatus.status])}</div>
     <div class="strip-title">Teton Pass</div>
-    ${timesFull ? `<div class="strip-times"><span class="strip-times-full">${esc(timesFull)}</span><span class="strip-times-compact">${esc(timesCompact)}</span></div>` : ''}
+    ${timesText ? `<div class="strip-times">${esc(timesText)}</div>` : ''}
     <div class="strip-cta">tetonpasscam.com →</div>
   </div>
 </a>`;
   return renderDocument(css, body);
 }
 
-function renderWidget(variant: Variant, apiStatus: ApiStatus, dir: Dir): string {
-  if (variant === 'badge') return renderBadge(apiStatus, dir);
-  if (variant === 'card') return renderCard(apiStatus, dir);
-  return renderStrip(apiStatus, dir);
-}
-
-/**
- * `?dir=eb|wb|auto` -- clamps any raw query value to `'eb' | 'wb' | 'auto'`.
- * Anything else (missing, unrecognized, `'eb'` itself) defaults to `'eb'`,
- * matching the pre-direction behavior these widgets shipped with. `'auto'`
- * is resolved separately (see `handleEmbedRequest`), since that needs a
- * clock reading this function has no reason to take.
- */
-function clampDir(rawDir: string | null): Dir | 'auto' {
-  if (rawDir === 'wb') return 'wb';
-  if (rawDir === 'auto') return 'auto';
-  return 'eb';
+function renderWidget(variant: Variant, apiStatus: ApiStatus): string {
+  if (variant === 'badge') return renderBadge(apiStatus);
+  if (variant === 'card') return renderCard(apiStatus);
+  return renderStrip(apiStatus);
 }
 
 /**
@@ -367,49 +328,24 @@ function clampDir(rawDir: string | null): Dir | 'auto' {
  * picker page's "Auto-updates every 5 minutes" copy. No X-Frame-Options or
  * frame-ancestors CSP is ever set -- the entire point of this endpoint is to
  * be embedded in a frame on someone else's origin.
- *
- * Cache key is canonicalized to `/embed/{variant}?dir={eb|wb}` -- built fresh
- * for both `cache.match` and `cache.put` rather than keying on `req` as-is --
- * so `?dir=bogus`, unrelated query junk (utm params, cache-busters), and a
- * bare request all collapse onto the same eb entry, and `?dir=auto` shares
- * whichever of the eb/wb entries it resolves to (its rendered content is
- * identical to that direction's explicit request). This also means spam
- * query strings can't fragment the cache into unbounded entries.
  */
 export async function handleEmbedRequest(req: Request, env: Env): Promise<Response | null> {
   const url = new URL(req.url);
   if (!url.pathname.startsWith('/embed/') || req.method !== 'GET') return null;
+
+  const cache = cacheApi();
+  const cached = await cache.match(req);
+  if (cached) return cached;
 
   const match = url.pathname.match(EMBED_PATH_RE);
   if (!match) {
     return new Response('Not found', { status: 404 });
   }
   const variant = match[1] as Variant;
-  const cache = cacheApi();
-  const parsedDir = clampDir(url.searchParams.get('dir'));
 
   try {
-    // `auto` needs "now" to resolve, and the only "now" this module can read
-    // that also honors status.ts's test-only clock override (`setTestNowMs`)
-    // is `getStatus`'s own `generatedAt` -- so an `auto` request pays for a
-    // status fetch up front, before the cache lookup, unlike the eb/wb/bogus
-    // literal path below which can still be served straight from cache
-    // without ever touching D1.
-    let apiStatus: ApiStatus | undefined;
-    let dir: Dir;
-    if (parsedDir === 'auto') {
-      apiStatus = await getStatus(env);
-      dir = denverHour(Date.parse(apiStatus.generatedAt)) < 12 ? 'eb' : 'wb';
-    } else {
-      dir = parsedDir;
-    }
-
-    const canonicalReq = new Request(`${url.origin}/embed/${variant}?dir=${dir}`);
-    const cached = await cache.match(canonicalReq);
-    if (cached) return cached;
-
-    if (!apiStatus) apiStatus = await getStatus(env);
-    const html = renderWidget(variant, apiStatus, dir);
+    const apiStatus = await getStatus(env);
+    const html = renderWidget(variant, apiStatus);
     const response = new Response(html, {
       status: 200,
       headers: {
@@ -417,7 +353,7 @@ export async function handleEmbedRequest(req: Request, env: Env): Promise<Respon
         'Cache-Control': 'public, max-age=300, s-maxage=300',
       },
     });
-    await cache.put(canonicalReq, response.clone());
+    await cache.put(req, response.clone());
     return response;
   } catch (err) {
     console.error('renderWidget failed', err);

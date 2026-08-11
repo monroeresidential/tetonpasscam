@@ -3,18 +3,11 @@
 // card-route.test.ts) so caches.default is exercised the same way
 // production traffic would hit it.
 //
-// Cache-key isolation: embed.ts now canonicalizes the cache key to
-// `/embed/{variant}?dir={eb|wb}` (dropping every other query param, on
-// purpose -- see embed.ts's own comment on why), so the OLD trick this file
-// used (a unique `?cb=` cache-buster per request) no longer gives each test
-// its own entry: everything collapses onto just two keys per variant.
-// `get()` below instead explicitly deletes both of a variant's canonical
-// entries before firing the request, so each call starts from a guaranteed
-// cache miss regardless of what earlier tests in this file (`caches.default`
-// persists per FILE, same as seo-inject.test.ts's own note on that) left
-// behind. The one test that deliberately wants a cache HIT to survive across
-// two calls (cache canonicalization, below) bypasses `get()` for that
-// reason.
+// Cache-key isolation: `caches.default` persists across tests within this
+// file (fresh only per FILE -- see seo-inject.test.ts's own comment on the
+// same thing), so each test uses a distinct query string on `/embed/{variant}`
+// to get its own cache entry; EMBED_PATH_RE in embed.ts matches on pathname
+// only, so the query string never affects which variant/branch renders.
 //
 // The one "bare /embed passes through" case is tested at the unit level
 // instead (calling handleEmbedRequest directly) -- going through the full
@@ -24,29 +17,16 @@
 import { createExecutionContext, env, waitOnExecutionContext } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { setTestNowMs } from '../../src/worker/api/status';
 import { seedRoutes } from '../../src/worker/db/seed-routes';
 import { handleEmbedRequest } from '../../src/worker/embed';
 import worker from '../../src/worker/index';
 
 const MIN_MS = 60_000;
-
-// Same DOM-vs-Workers-types cast embed.ts's own `cacheApi()` needs.
-function cacheApi(): Cache {
-  return (caches as unknown as { default: Cache }).default;
-}
-
-async function purgeEmbedCache(variant: string): Promise<void> {
-  const cache = cacheApi();
-  await cache.delete(new Request(`https://tetonpasscam.com/embed/${variant}?dir=eb`));
-  await cache.delete(new Request(`https://tetonpasscam.com/embed/${variant}?dir=wb`));
-}
+let cacheBust = 0;
 
 async function get(pathAndQuery: string): Promise<Response> {
-  const variantMatch = pathAndQuery.match(/^\/embed\/(badge|card|strip)\b/);
-  if (variantMatch) await purgeEmbedCache(variantMatch[1]);
-
-  const request = new Request(`https://tetonpasscam.com${pathAndQuery}`);
+  const sep = pathAndQuery.includes('?') ? '&' : '?';
+  const request = new Request(`https://tetonpasscam.com${pathAndQuery}${sep}cb=${cacheBust++}`);
   const ctx = createExecutionContext();
   const res = await worker.fetch(request, env as any, ctx);
   await waitOnExecutionContext(ctx);
@@ -203,141 +183,5 @@ describe('GET /embed/{badge,card,strip}', () => {
     expect(html).toContain('RESTRICTED');
     expect(html).toContain('50 min');
     expect(html).toContain('58 min');
-  });
-
-  describe('?dir=', () => {
-    it.each(['badge', 'card', 'strip'] as const)(
-      '%s: ?dir=wb -> Jackson->Victor/Driggs labels, wb durations, utm_content=wb',
-      async (variant) => {
-        const now = new Date().toISOString();
-        await insertSnapshot({ capturedAt: now, status: 'open' });
-        // Distinct from the eb durations used elsewhere in this file, so a
-        // row that accidentally rendered the eb slug's time would show a
-        // different (wrong) number here.
-        await insertTravelTime('victor-jackson-wb', now, 33 * 60);
-        await insertTravelTime('driggs-jackson-wb', now, 41 * 60);
-
-        const res = await get(`/embed/${variant}?dir=wb`);
-        const html = await res.text();
-        expect(html).toContain('33 min');
-        expect(html).toContain('41 min');
-        expect(html).not.toMatch(/Victor → Jackson|Victor→JAC/);
-        expect(html).toMatch(/Jackson → Victor|JAC→Victor/);
-        expect(html).toMatch(/Jackson → Driggs|JAC→Driggs/);
-        expect(html).toContain(`utm_content=wb`);
-      },
-    );
-
-    it.each(['badge', 'card', 'strip'] as const)(
-      '%s: ?dir=bogus and no dir param both render identical eb output',
-      async (variant) => {
-        const now = new Date().toISOString();
-        await insertSnapshot({ capturedAt: now, status: 'open' });
-        await insertTravelTime('victor-jackson-eb', now, 38 * 60);
-        await insertTravelTime('driggs-jackson-eb', now, 46 * 60);
-
-        const bare = await get(`/embed/${variant}`);
-        const bareHtml = await bare.text();
-        const bogus = await get(`/embed/${variant}?dir=bogus`);
-        const bogusHtml = await bogus.text();
-
-        expect(bogusHtml).toBe(bareHtml);
-        expect(bareHtml).toContain('utm_content=eb');
-      },
-    );
-
-    it.each(['badge', 'card', 'strip'] as const)(
-      '%s: ?dir=auto resolves eb before noon and wb from noon on, America/Denver',
-      async (variant) => {
-        // Fixed captured-at, ~1h before either pinned "now" below (not real
-        // Date.now()) -- this test pins the clock used to RESOLVE direction,
-        // but getStatus's own freshness/dead-poller checks (DEAD_HOURS,
-        // TRAVEL_TIME_MAX_AGE_HOURS) run against that SAME pinned clock, so
-        // data captured at the real wall-clock time could land arbitrarily
-        // far from it and get excluded as stale/dead depending on whenever
-        // this suite happens to run.
-        const capturedAt = new Date(Date.parse('2026-08-11T17:00:00Z')).toISOString();
-        await insertSnapshot({ capturedAt, status: 'open' });
-        await insertTravelTime('victor-jackson-eb', capturedAt, 38 * 60);
-        await insertTravelTime('driggs-jackson-eb', capturedAt, 46 * 60);
-        await insertTravelTime('victor-jackson-wb', capturedAt, 33 * 60);
-        await insertTravelTime('driggs-jackson-wb', capturedAt, 41 * 60);
-
-        try {
-          // 2026-08-11T17:59:00Z = 11:59 MDT (pre-noon Denver) -- August is
-          // DST (UTC-6), so this and the post-noon instant below straddle
-          // the Denver noon boundary while staying on the SAME UTC day, a
-          // deliberately narrow gap that would catch an off-by-one-hour or
-          // UTC-instead-of-Denver bug.
-          setTestNowMs(Date.parse('2026-08-11T17:59:00Z'));
-          const preNoon = await get(`/embed/${variant}?dir=auto`);
-          const preNoonHtml = await preNoon.text();
-          expect(preNoonHtml).toMatch(/Victor → Jackson|Victor→JAC/);
-          expect(preNoonHtml).toContain('utm_content=eb');
-
-          setTestNowMs(Date.parse('2026-08-11T18:01:00Z')); // 12:01 MDT
-          const postNoon = await get(`/embed/${variant}?dir=auto`);
-          const postNoonHtml = await postNoon.text();
-          expect(postNoonHtml).toMatch(/Jackson → Victor|JAC→Victor/);
-          expect(postNoonHtml).toContain('utm_content=wb');
-        } finally {
-          setTestNowMs(undefined);
-        }
-      },
-    );
-
-    it('strip: HTML contains both full and compact time spans, and both breakpoints', async () => {
-      const now = new Date().toISOString();
-      await insertSnapshot({ capturedAt: now, status: 'open' });
-      await insertTravelTime('victor-jackson-eb', now, 38 * 60);
-      await insertTravelTime('driggs-jackson-eb', now, 46 * 60);
-
-      const res = await get('/embed/strip');
-      const html = await res.text();
-      expect(html).toContain('strip-times-full');
-      expect(html).toContain('strip-times-compact');
-      expect(html).toContain('Victor → Jackson');
-      expect(html).toContain('Victor→JAC');
-      expect(html).toMatch(/max-width:\s*620px/);
-      expect(html).toMatch(/max-width:\s*420px/);
-    });
-
-    it('cache canonicalization: ?dir=bogus&junk=1 shares the bare request\'s eb cache entry', async () => {
-      await purgeEmbedCache('badge');
-
-      await insertSnapshot({ capturedAt: new Date().toISOString(), status: 'open' });
-      await insertTravelTime('victor-jackson-eb', new Date().toISOString(), 61 * 60);
-      await insertTravelTime('driggs-jackson-eb', new Date().toISOString(), 62 * 60);
-
-      const ctx1 = createExecutionContext();
-      const first = await worker.fetch(
-        new Request('https://tetonpasscam.com/embed/badge'),
-        env as any,
-        ctx1,
-      );
-      await waitOnExecutionContext(ctx1);
-      const firstHtml = await first.text();
-      expect(firstHtml).toContain('61 min');
-
-      // Change the underlying data -- if ?dir=bogus&junk=1 built its own
-      // cache key instead of sharing the canonical eb one, this second
-      // request would recompute and show the NEW duration.
-      await insertTravelTime('victor-jackson-eb', new Date().toISOString(), 99 * 60);
-
-      const ctx2 = createExecutionContext();
-      const second = await worker.fetch(
-        new Request('https://tetonpasscam.com/embed/badge?dir=bogus&junk=1'),
-        env as any,
-        ctx2,
-      );
-      await waitOnExecutionContext(ctx2);
-      const secondHtml = await second.text();
-
-      expect(secondHtml).toBe(firstHtml);
-      expect(secondHtml).toContain('61 min');
-      expect(secondHtml).not.toContain('99 min');
-
-      await purgeEmbedCache('badge');
-    });
   });
 });
