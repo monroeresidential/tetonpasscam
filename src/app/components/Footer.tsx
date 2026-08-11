@@ -1,21 +1,16 @@
 import { useState } from 'react';
 
-// Two-column layout (Drew-requested): column-major, so the DOM order below
-// IS the reading order -- each column is its own flex stack rather than
-// flat items in one grid, since a plain `grid-cols-2` over flat siblings
-// would fill row-major (1&2 side by side, 3&4 next, ...) instead of the
-// wanted column split. Columns don't need to match length (column 2 has one
-// more entry than column 1, plus the Feedback button appended below).
-const COLUMN_1_LINKS = [
+// Single-line nav (Drew-requested, replacing the earlier two-column layout):
+// exactly these labels in this order, dot-separated, with the Feedback
+// button appended as the last item. About.tsx's old trailing link row is
+// gone too -- this is the page's one and only bottom nav (the byte-frozen
+// crawler copy in index.html's #seo-shell keeps its own links).
+const NAV_LINKS = [
+  { href: '/privacy', label: 'Privacy policy' },
   { href: 'https://www.wyoroad.info', label: 'Wyoming 511' },
   { href: 'https://511.idaho.gov', label: 'Idaho 511' },
-  { href: 'https://www.startbus.com', label: 'START bus' },
-];
-
-const COLUMN_2_LINKS = [
-  { href: 'https://511notify.wyoroad.info', label: '511 Notify (get text/email alerts)' },
-  { href: '/privacy', label: 'Privacy policy' },
-  { href: '/embed', label: 'Embed this status' },
+  { href: 'https://511notify.wyoroad.info', label: '511 Notify' },
+  { href: '/embed', label: 'Embed Site' },
 ];
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
@@ -140,28 +135,22 @@ export default function Footer() {
 
   return (
     <footer className="border-card-border text-muted border-t p-4 text-xs">
-      <nav aria-label="Footer" className="grid grid-cols-2 gap-1">
-        <div className="flex flex-col gap-1">
-          {COLUMN_1_LINKS.map((link) => (
-            <a key={link.href} href={link.href} className="underline">
+      <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {NAV_LINKS.map((link) => (
+          <span key={link.href} className="flex items-center gap-x-2">
+            <a href={link.href} className="underline">
               {link.label}
             </a>
-          ))}
-        </div>
-        <div className="flex flex-col gap-1">
-          {COLUMN_2_LINKS.map((link) => (
-            <a key={link.href} href={link.href} className="underline">
-              {link.label}
-            </a>
-          ))}
-          <button
-            type="button"
-            onClick={() => setFeedbackOpen(true)}
-            className="text-left underline"
-          >
-            Feedback
-          </button>
-        </div>
+            <span aria-hidden="true">·</span>
+          </span>
+        ))}
+        <button
+          type="button"
+          onClick={() => setFeedbackOpen(true)}
+          className="text-left underline"
+        >
+          Feedback
+        </button>
       </nav>
       <p className="mt-2">Not affiliated with WYDOT.</p>
 

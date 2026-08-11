@@ -90,6 +90,20 @@
         border: 0;
         max-width: 100%;
       }
+      /* Strip is the one variant whose iframe wants the panel's full width
+         rather than a fixed pixel width -- negating the panel's own
+         horizontal padding here (rather than shrinking that padding
+         globally) lets the strip preview reach edge-to-edge without
+         affecting the badge/card previews' centering. */
+      .preview.full-bleed {
+        margin-left: -24px;
+        margin-right: -24px;
+      }
+      .caption {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #a39880;
+      }
       .snippet-label {
         margin-top: 22px;
         font-size: 12px;
@@ -161,7 +175,14 @@
         <button type="button" class="chip" data-variant="strip" aria-pressed="false">Strip full-width</button>
       </div>
 
-      <div class="preview">
+      <div class="chips" role="group" aria-label="Direction">
+        <button type="button" class="chip" data-dir="eb" aria-pressed="true">Toward Jackson</button>
+        <button type="button" class="chip" data-dir="wb" aria-pressed="false">Toward Teton Valley</button>
+        <button type="button" class="chip" data-dir="auto" aria-pressed="false">Auto (flips at noon)</button>
+      </div>
+      <p class="caption">Auto shows the Jackson-bound commute until noon, then flips.</p>
+
+      <div class="preview" id="preview">
         <iframe
           id="preview-frame"
           src="/embed/badge"
@@ -192,18 +213,29 @@
         strip: { width: '100%', height: '64' },
       };
 
+      var previewEl = document.getElementById('preview');
       var previewFrame = document.getElementById('preview-frame');
       var snippetCode = document.getElementById('snippet-code');
       var copyBtn = document.getElementById('copy-btn');
-      var chips = document.querySelectorAll('.chip');
+      var variantChips = document.querySelectorAll('.chip[data-variant]');
+      var dirChips = document.querySelectorAll('.chip[data-dir]');
       var copyResetTimer = null;
+      var currentVariant = 'badge';
+      var currentDir = 'eb';
 
-      function snippetFor(variant) {
+      // eb is the pre-direction default -- kept out of the query string so
+      // existing snippets/links (and the common case) stay minimal.
+      function dirQuery(dir) {
+        return dir === 'eb' ? '' : '?dir=' + dir;
+      }
+
+      function snippetFor(variant, dir) {
         var dims = VARIANTS[variant];
         var widthAttr = variant === 'strip' ? ' width="100%"' : ' width="' + dims.width + '"';
         return (
           '<iframe src="https://tetonpasscam.com/embed/' +
           variant +
+          dirQuery(dir) +
           '"' +
           widthAttr +
           ' height="' +
@@ -212,16 +244,22 @@
         );
       }
 
-      function selectVariant(variant) {
+      function render() {
+        var variant = currentVariant;
+        var dir = currentDir;
         var dims = VARIANTS[variant];
-        previewFrame.src = '/embed/' + variant;
+        previewFrame.src = '/embed/' + variant + dirQuery(dir);
         previewFrame.width = variant === 'strip' ? '100%' : dims.width;
         previewFrame.height = dims.height;
         previewFrame.style.width = variant === 'strip' ? '100%' : dims.width + 'px';
-        snippetCode.textContent = snippetFor(variant);
+        previewEl.classList.toggle('full-bleed', variant === 'strip');
+        snippetCode.textContent = snippetFor(variant, dir);
 
-        chips.forEach(function (chip) {
+        variantChips.forEach(function (chip) {
           chip.setAttribute('aria-pressed', String(chip.dataset.variant === variant));
+        });
+        dirChips.forEach(function (chip) {
+          chip.setAttribute('aria-pressed', String(chip.dataset.dir === dir));
         });
 
         if (copyResetTimer) {
@@ -231,9 +269,25 @@
         copyBtn.textContent = 'Copy code';
       }
 
-      chips.forEach(function (chip) {
+      function selectVariant(variant) {
+        currentVariant = variant;
+        render();
+      }
+
+      function selectDir(dir) {
+        currentDir = dir;
+        render();
+      }
+
+      variantChips.forEach(function (chip) {
         chip.addEventListener('click', function () {
           selectVariant(chip.dataset.variant);
+        });
+      });
+
+      dirChips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          selectDir(chip.dataset.dir);
         });
       });
 
@@ -247,7 +301,7 @@
         });
       });
 
-      selectVariant('badge');
+      render();
     </script>
   </body>
 </html>

@@ -21,29 +21,26 @@ describe('Footer', () => {
     vi.unstubAllGlobals();
   });
 
-  it('links to Wyoming 511, Idaho 511, START bus, 511 Notify, the privacy policy, and embed', () => {
+  it('links to the privacy policy, Wyoming 511, Idaho 511, 511 Notify, and embed', () => {
     render(<Footer />);
-    expect(screen.getByRole('link', { name: /wyoming 511/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
+      'href',
+      '/privacy',
+    );
+    expect(screen.getByRole('link', { name: 'Wyoming 511' })).toHaveAttribute(
       'href',
       'https://www.wyoroad.info',
     );
-    expect(screen.getByRole('link', { name: /idaho 511/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Idaho 511' })).toHaveAttribute(
       'href',
       'https://511.idaho.gov',
     );
-    expect(screen.getByRole('link', { name: /start/i })).toHaveAttribute(
-      'href',
-      'https://www.startbus.com',
-    );
-    expect(screen.getByRole('link', { name: /511 notify/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '511 Notify' })).toHaveAttribute(
       'href',
       'https://511notify.wyoroad.info',
     );
-    expect(screen.getByRole('link', { name: /privacy/i })).toHaveAttribute('href', '/privacy');
-    expect(screen.getByRole('link', { name: /embed this status/i })).toHaveAttribute(
-      'href',
-      '/embed',
-    );
+    expect(screen.getByRole('link', { name: 'Embed Site' })).toHaveAttribute('href', '/embed');
+    expect(screen.queryByRole('link', { name: /start bus/i })).toBeNull();
   });
 
   it('shows the "Not affiliated with WYDOT" disclaimer', () => {
@@ -51,28 +48,20 @@ describe('Footer', () => {
     expect(screen.getByText(/not affiliated with wydot/i)).toBeInTheDocument();
   });
 
-  it('arranges the seven footer controls as two column stacks (three and four), column-major', () => {
+  it('arranges the six footer controls as a single dot-separated wrapping line, in order', () => {
     render(<Footer />);
     const nav = screen.getByRole('navigation', { name: 'Footer' });
-    expect(nav.className).toMatch(/\bgrid-cols-2\b/);
+    expect(nav.className).toMatch(/\bflex\b/);
+    expect(nav.className).toMatch(/\bflex-wrap\b/);
+    expect(nav.className).not.toMatch(/\bgrid-cols-2\b/);
 
-    const [col1, col2] = Array.from(nav.children) as HTMLElement[];
-    expect(nav.children).toHaveLength(2);
-
-    const col1Controls = Array.from(col1.querySelectorAll('a, button'));
-    const col2Controls = Array.from(col2.querySelectorAll('a, button'));
-    expect(col1Controls).toHaveLength(3);
-    expect(col2Controls).toHaveLength(4);
-
-    expect(col1Controls.map((el) => el.textContent)).toEqual([
+    const controls = Array.from(nav.querySelectorAll('a, button'));
+    expect(controls.map((el) => el.textContent)).toEqual([
+      'Privacy policy',
       'Wyoming 511',
       'Idaho 511',
-      'START bus',
-    ]);
-    expect(col2Controls.map((el) => el.textContent)).toEqual([
-      '511 Notify (get text/email alerts)',
-      'Privacy policy',
-      'Embed this status',
+      '511 Notify',
+      'Embed Site',
       'Feedback',
     ]);
   });

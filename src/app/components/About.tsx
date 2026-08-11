@@ -143,19 +143,9 @@ export default function About() {
         <FaqItem key={item.question} question={item.question} answer={item.answer} />
       ))}
 
-      <p className="text-muted mt-3 text-[13px]">
-        <a href="/privacy" className="underline">
-          Privacy policy
-        </a>{' '}
-        ·{' '}
-        <a href="https://www.wyoroad.info" className="underline">
-          Wyoming 511
-        </a>{' '}
-        ·{' '}
-        <a href="https://511.idaho.gov" className="underline">
-          Idaho 511
-        </a>
-      </p>
+      {/* No trailing link row here (Drew removed the "double bottom nav") --
+          Footer's single-line nav directly below is the page's only bottom
+          nav. index.html's #seo-shell keeps its own links for crawlers. */}
     </section>
   );
 }

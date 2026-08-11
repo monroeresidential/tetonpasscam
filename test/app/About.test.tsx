@@ -123,13 +123,8 @@ describe('About', () => {
     });
   });
 
-  it('renders the same three shell links (privacy, Wyoming 511, Idaho 511) as index.html', () => {
+  it('renders no link row (Footer owns the single bottom nav; the shell keeps its own links)', () => {
     render(<About />);
-    const privacyLink = screen.getByRole('link', { name: 'Privacy policy' });
-    const wyLink = screen.getByRole('link', { name: 'Wyoming 511' });
-    const idLink = screen.getByRole('link', { name: 'Idaho 511' });
-    expect(privacyLink.getAttribute('href')).toBe('/privacy');
-    expect(wyLink.getAttribute('href')).toBe('https://www.wyoroad.info');
-    expect(idLink.getAttribute('href')).toBe('https://511.idaho.gov');
+    expect(screen.queryByRole('link')).toBeNull();
   });
 });
