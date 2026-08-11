@@ -135,7 +135,7 @@ export default function Footer() {
 
   return (
     <footer className="border-card-border text-muted border-t p-4 text-xs">
-      <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
         {NAV_LINKS.map((link) => (
           <span key={link.href} className="flex items-center gap-x-2">
             <a href={link.href} className="underline">
@@ -152,7 +152,7 @@ export default function Footer() {
           Feedback
         </button>
       </nav>
-      <p className="mt-2">Not affiliated with WYDOT.</p>
+      <p className="mt-2 text-center">Not affiliated with WYDOT.</p>
 
       {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </footer>
