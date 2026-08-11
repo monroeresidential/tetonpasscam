@@ -18,6 +18,8 @@
  * sync by hand and guarded by the same byte-parity pattern in
  * test/app/About.test.tsx, one entry per Q&A.
  */
+import { useState } from 'react';
+
 const ABOUT_H1 = 'Teton Pass — live cams & conditions';
 
 const ABOUT_PARAGRAPH =
@@ -81,6 +83,52 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
   },
 ];
 
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true"
+      className={`flex-none transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3">
+      <h3 className="text-[13px] font-bold">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          {question}
+          <Chevron open={open} />
+        </button>
+      </h3>
+      {/* Slide-down: animating height:auto isn't possible, so the answer sits
+          in a 1-cell grid whose row transitions 0fr <-> 1fr; the inner div's
+          overflow-hidden clips the content while the row grows. The answer
+          stays in the DOM either way, which also keeps About.test.tsx's
+          byte-parity guard against index.html's #seo-shell working unchanged. */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <p className="text-muted mt-1 text-[13px] leading-relaxed">{answer}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function About() {
   return (
     <section aria-label="About Teton Pass Cam" className="mt-4">
@@ -92,10 +140,7 @@ export default function About() {
 
       <h2 className="font-display mt-4 text-[15px] font-bold">Frequently asked questions</h2>
       {FAQ_ITEMS.map((item) => (
-        <div key={item.question} className="mt-3">
-          <h3 className="text-[13px] font-bold">{item.question}</h3>
-          <p className="text-muted mt-1 text-[13px] leading-relaxed">{item.answer}</p>
-        </div>
+        <FaqItem key={item.question} question={item.question} answer={item.answer} />
       ))}
 
       <p className="text-muted mt-3 text-[13px]">

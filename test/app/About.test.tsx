@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import About from '../../src/app/components/About';
@@ -76,11 +77,50 @@ describe('About', () => {
     'Why does the pass close?',
   ])('renders an FAQ answer for "%s" that exactly matches the static shell in index.html', (question) => {
     render(<About />);
+    // Accordion structure: the h3 wraps the toggle button; the collapsible
+    // wrapper div (the answer <p> inside it) is the heading's next sibling.
+    // The answer stays in the DOM even while collapsed, so byte-parity is
+    // checkable without expanding.
     const heading = screen.getByRole('heading', { level: 3, name: question });
-    const paragraph = heading.nextElementSibling;
+    const paragraph = heading.nextElementSibling?.querySelector('p');
     expect(paragraph).not.toBeNull();
-    expect(paragraph!.tagName).toBe('P');
     expect(normalize(paragraph!.textContent ?? '')).toBe(shellFaqAnswerText(question));
+  });
+
+  describe('FAQ accordion', () => {
+    it('renders every question collapsed initially', () => {
+      render(<About />);
+      const toggles = screen.getAllByRole('button', { expanded: false });
+      expect(toggles).toHaveLength(4);
+      for (const toggle of toggles) {
+        const wrapper = toggle.closest('h3')!.nextElementSibling!;
+        expect(wrapper.className).toContain('grid-rows-[0fr]');
+      }
+    });
+
+    it('clicking a question expands its answer and collapses it again on the second click', async () => {
+      const user = userEvent.setup();
+      render(<About />);
+      const toggle = screen.getByRole('button', { name: 'Is Teton Pass open right now?' });
+      const wrapper = toggle.closest('h3')!.nextElementSibling!;
+
+      await user.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(wrapper.className).toContain('grid-rows-[1fr]');
+
+      await user.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(wrapper.className).toContain('grid-rows-[0fr]');
+    });
+
+    it('expanding one question leaves the others collapsed', async () => {
+      const user = userEvent.setup();
+      render(<About />);
+      await user.click(screen.getByRole('button', { name: 'Why does the pass close?' }));
+
+      expect(screen.getAllByRole('button', { expanded: true })).toHaveLength(1);
+      expect(screen.getAllByRole('button', { expanded: false })).toHaveLength(3);
+    });
   });
 
   it('renders the same three shell links (privacy, Wyoming 511, Idaho 511) as index.html', () => {
