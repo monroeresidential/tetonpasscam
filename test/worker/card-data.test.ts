@@ -60,9 +60,13 @@ describe('loadCardData', () => {
     expect(result).toBeNull();
   });
 
-  it('loads status + restrictions and resolves asOfIso to wydotReportTime when present', async () => {
+  it('resolves asOfIso to capturedAt even when a (lagging) wydotReportTime is present', async () => {
+    // Drew-reported 2026-08-11: WYDOT's report timestamp only moves when
+    // their report changes, so preferring it stamped hours-old times onto
+    // fresh shares. The card's "as of" is pinned to the snapshot minute the
+    // share code itself encodes.
     const capturedAt = new Date('2026-08-10T12:00:00.000Z').toISOString();
-    const reportTime = new Date('2026-08-10T11:45:00.000Z').toISOString();
+    const reportTime = new Date('2026-08-10T08:45:00.000Z').toISOString();
     const id = await insertSnapshot({
       capturedAt,
       status: 'restricted',
@@ -74,10 +78,10 @@ describe('loadCardData', () => {
     expect(result).not.toBeNull();
     expect(result!.status).toBe('restricted');
     expect(result!.restrictions).toEqual(['chains required']);
-    expect(result!.asOfIso).toBe(reportTime);
+    expect(result!.asOfIso).toBe(capturedAt);
   });
 
-  it('falls back to capturedAt for asOfIso when wydotReportTime is null', async () => {
+  it('resolves asOfIso to capturedAt when wydotReportTime is null', async () => {
     const capturedAt = new Date('2026-08-10T13:00:00.000Z').toISOString();
     const id = await insertSnapshot({ capturedAt, status: 'open', wydotReportTime: null });
 

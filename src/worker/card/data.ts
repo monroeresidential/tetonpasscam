@@ -57,13 +57,16 @@ function safeStringArray(raw: string | null): string[] {
   }
 }
 
-/** Same "prefer WYDOT's own report time, fall back to our capture time"
- *  preference seo-inject.ts's `buildLiveStatusHtml` and api/status.ts's
- *  `getStatus` both already apply -- capturedAt is "when we polled", not
- *  "when WYDOT says this was true". A card's "as of" footer should show the
- *  latter whenever it's trustworthy. */
-function resolveAsOfIso(capturedAt: string, wydotReportTime: string | null): string {
-  if (wydotReportTime && Number.isFinite(Date.parse(wydotReportTime))) return wydotReportTime;
+/** The card's "as of" is the snapshot's OWN capture time -- the minute the
+ *  share code encodes, and when the card's drive times were fetched. It
+ *  deliberately does NOT prefer wydotReportTime the way seo-inject.ts and
+ *  the in-app weather panel do: WYDOT's report timestamp only moves when
+ *  their report changes, so on quiet days it lags hours behind and made
+ *  fresh shares read as stale (Drew-reported, 2026-08-11 -- card said
+ *  "as of 11:54 AM" at 2:42 PM over minutes-old drive times). Status-side
+ *  honesty is unaffected: a genuinely stale status degrades the card via
+ *  the existing staleness handling, not via this footer stamp. */
+function resolveAsOfIso(capturedAt: string): string {
   return capturedAt;
 }
 
@@ -175,7 +178,7 @@ export async function loadCardData(
     status: snapshot.status as PassStatus,
     restrictions: safeStringArray(snapshot.restrictions),
     routes: cardRoutes,
-    asOfIso: resolveAsOfIso(snapshot.capturedAt, snapshot.wydotReportTime),
+    asOfIso: resolveAsOfIso(snapshot.capturedAt),
   };
   return input;
 }
