@@ -105,7 +105,7 @@ export interface ApiStatus {
 /** One (weekday-class, hour, season) typical bucket for a route, as returned
  *  by `GET /api/history` and rendered by the /history page's chart.
  *  `sampleCount`/`distinctDays` are nullable because rows written before
- *  migration 0002 have neither -- the client treats NULL as "no band". */
+ *  migration 0005 have neither -- the client treats NULL as "no band". */
 export interface HistoryTypical {
   weekdayClass: 'weekday' | 'weekend';
   season: 'winter' | 'summer';
@@ -133,10 +133,15 @@ export interface HistoryToday {
   durationSec: number;
 }
 
-/** Response shape for `GET /api/history?route=<slug>`. */
+/** Response shape for `GET /api/history?route=<slug>`. `summary` is only
+ *  computed when the request opts in with `?summary=1` (see
+ *  `src/app/historyApi.ts`'s `getHistory`) -- it drives an expensive
+ *  full-season `travel_times` scan that only the /history page's summary
+ *  tables need, not the homepage's compact chart card. Null means "not
+ *  requested", the same as it would for a route with no data at all. */
 export interface HistoryResult {
   route: { slug: string; name: string };
   typicals: HistoryTypical[];
   today: HistoryToday[];
-  summary: HistorySummary;
+  summary: HistorySummary | null;
 }

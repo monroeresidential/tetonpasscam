@@ -168,6 +168,7 @@ export default defineConfig({
           // precached app shell (index.html) at /history instead of the
           // actual history page.
           /^\/history$/,
+          /^\/history\.html$/,
         ],
         runtimeCaching: [
           {

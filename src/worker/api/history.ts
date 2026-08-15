@@ -118,11 +118,20 @@ async function closureDaysLastWinter(env: Env, nowMs: number): Promise<number | 
  * `today` = every `travel_times` row for this route captured since
  * Denver-local midnight (per `nowMs`, defaulting to real time), ascending by
  * `captured_at`.
+ *
+ * `includeSummary` gates `worstDaysThisSeason` and `closureDaysLastWinter`,
+ * the two expensive queries here: `worstDaysThisSeason` scans every
+ * `travel_times` row since the season start (tens of thousands of rows per
+ * route by late season). The home page's compact chart card only needs
+ * `typicals`/`today` and never sets this; only the /history page's summary
+ * tables opt in. Defaults to `false` so the cheap path is the default for
+ * any caller that doesn't say otherwise.
  */
 export async function getHistory(
   env: Env,
   slug: string,
   nowMs: number = Date.now(),
+  includeSummary: boolean = false,
 ): Promise<HistoryResult | null> {
   const database = db(env);
 
@@ -157,14 +166,16 @@ export async function getHistory(
       .all()
   ).results as unknown as TodayRow[];
 
-  const summary: HistorySummary = {
-    worstDays: await worstDaysThisSeason(env, route.id, nowMs),
-    seasonMedians: {
-      summer: seasonMedian(typicals, 'summer'),
-      winter: seasonMedian(typicals, 'winter'),
-    },
-    closureDays: { winter: await closureDaysLastWinter(env, nowMs) },
-  };
+  const summary: HistorySummary | null = includeSummary
+    ? {
+        worstDays: await worstDaysThisSeason(env, route.id, nowMs),
+        seasonMedians: {
+          summer: seasonMedian(typicals, 'summer'),
+          winter: seasonMedian(typicals, 'winter'),
+        },
+        closureDays: { winter: await closureDaysLastWinter(env, nowMs) },
+      }
+    : null;
 
   return { route: { slug: route.slug, name: route.name }, typicals, today: todayRows, summary };
 }

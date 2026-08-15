@@ -100,10 +100,10 @@ function App() {
             />
           </div>
           {(() => {
-            const historySlug = data.travelTimes.find((t) => t.slug.endsWith(`-${direction}`))?.slug;
-            return historySlug ? (
+            const historyRoute = data.travelTimes.find((t) => t.slug.endsWith(`-${direction}`));
+            return historyRoute ? (
               <div>
-                <HomeHistoryCard slug={historySlug} />
+                <HomeHistoryCard slug={historyRoute.slug} routeName={historyRoute.name} />
               </div>
             ) : null;
           })()}

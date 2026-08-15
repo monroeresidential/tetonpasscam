@@ -17,7 +17,7 @@ export interface BandPoint {
   hour: number;
   p25Sec: number | null;
   p75Sec: number | null;
-  /** NULL for rows written before migration 0002 -- treated as NOT qualifying. */
+  /** NULL for rows written before migration 0005 -- treated as NOT qualifying. */
   distinctDays: number | null;
 }
 

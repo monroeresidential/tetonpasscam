@@ -56,7 +56,11 @@ api.post('/feedback', async (c) => {
 api.get('/history', async (c) => {
   const slug = c.req.query('route');
   if (!slug) return c.json({ error: 'missing route' }, 400);
-  const result = await getHistory(c.env, slug);
+  // Opt-in only -- see getHistory's includeSummary doc: the summary block
+  // drives an expensive full-season travel_times scan the home page's
+  // compact chart card never needs, so it stays off unless asked for.
+  const includeSummary = c.req.query('summary') === '1';
+  const result = await getHistory(c.env, slug, Date.now(), includeSummary);
   if (!result) return c.json({ error: 'not found' }, 404);
   c.header('Cache-Control', 'public, max-age=300');
   return c.json(result);

@@ -1,43 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import SeasonCompare from './components/SeasonCompare';
-import TypicalChart, { type ChartPoint } from './components/TypicalChart';
+import TypicalChart from './components/TypicalChart';
 import WorstDays from './components/WorstDays';
+import { denverNow, todayToChartPoints, typicalsToChartPoints } from './historyChart';
 import { getHistory } from './historyApi';
 import type { ApiStatus, HistoryResult } from '../shared/types';
-
-/** Denver-local weekday-class + season for the client's current time. Same
- *  Nov-Apr/May-Oct split as the worker's tz.ts denverParts. */
-function denverNow(): { weekdayClass: 'weekday' | 'weekend'; season: 'winter' | 'summer'; weekday: string } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Denver',
-    weekday: 'long',
-    month: 'numeric',
-  }).formatToParts(new Date());
-  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Monday';
-  const month = Number(parts.find((p) => p.type === 'month')?.value ?? '1');
-  return {
-    weekday,
-    weekdayClass: weekday === 'Saturday' || weekday === 'Sunday' ? 'weekend' : 'weekday',
-    season: month >= 11 || month <= 4 ? 'winter' : 'summer',
-  };
-}
-
-function denverHourOf(iso: string): number {
-  return Number(
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Denver',
-      hour: 'numeric',
-      hourCycle: 'h23',
-    }).format(new Date(iso)),
-  );
-}
 
 export default function HistoryPage() {
   const [routes, setRoutes] = useState<ApiStatus['travelTimes']>([]);
   const [direction, setDirection] = useState<'eb' | 'wb'>('eb');
   const [slug, setSlug] = useState<string | null>(null);
   const [data, setData] = useState<HistoryResult | null>(null);
+  const mountedSlug = useRef<string | null>(null);
 
   // Route list comes from /api/status so the tabs mirror DriveTimes exactly
   // -- History and Home never disagree about which routes matter.
@@ -54,7 +29,15 @@ export default function HistoryPage() {
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
-    getHistory(active)
+    // A route-tab switch must never leave the previous route's chart/tables
+    // on screen under the new tab -- clear up front, same fix as
+    // HomeHistoryCard's mountedSlug guard. Skipped on first mount (state is
+    // already empty) to avoid an extra render for no visual change.
+    if (mountedSlug.current !== null && mountedSlug.current !== active) {
+      setData(null);
+    }
+    mountedSlug.current = active;
+    getHistory(active, { summary: true })
       .then((h) => !cancelled && setData(h))
       .catch(() => !cancelled && setData(null));
     return () => {
@@ -64,25 +47,8 @@ export default function HistoryPage() {
 
   const { weekday, weekdayClass, season } = denverNow();
 
-  const points: ChartPoint[] = (data?.typicals ?? [])
-    .filter((t) => t.weekdayClass === weekdayClass && t.season === season)
-    .sort((a, b) => a.hour - b.hour)
-    .map((t) => ({
-      hour: t.hour,
-      medianSec: t.medianSec,
-      p25Sec: t.p25Sec,
-      p75Sec: t.p75Sec,
-      distinctDays: t.distinctDays,
-    }));
-
-  const today = (data?.today ?? []).map((r) => ({
-    hour: denverHourOf(r.capturedAt),
-    durationSec: r.durationSec,
-  }));
-
-  const recordingSince = data?.summary.worstDays?.length
-    ? [...data.summary.worstDays].sort((a, b) => a.date.localeCompare(b.date))[0].date
-    : null;
+  const points = typicalsToChartPoints(data?.typicals ?? [], weekdayClass, season);
+  const today = todayToChartPoints(data?.today ?? []);
 
   return (
     <main className="bg-page min-h-screen pb-10">
@@ -139,10 +105,10 @@ export default function HistoryPage() {
         </section>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <WorstDays worstDays={data?.summary.worstDays ?? null} recordingSince={recordingSince} />
+          <WorstDays worstDays={data?.summary?.worstDays ?? null} />
           <SeasonCompare
-            seasonMedians={data?.summary.seasonMedians ?? null}
-            closureDays={data?.summary.closureDays ?? null}
+            seasonMedians={data?.summary?.seasonMedians ?? null}
+            closureDays={data?.summary?.closureDays ?? null}
           />
         </div>
       </div>

@@ -197,13 +197,15 @@ describe('App', () => {
       render(<App />);
       await screen.findByText('The pass is OPEN');
 
-      expect(screen.getByText('Victor to Jackson (EB)')).toBeInTheDocument();
+      // Two matches, not one: the DriveTimes row AND HomeHistoryCard's route
+      // name subtitle (I4) both render the active direction's route name.
+      expect(screen.getAllByText('Victor to Jackson (EB)')).toHaveLength(2);
       expect(screen.queryByText('Jackson to Victor (WB)')).not.toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: /flip direction/i }));
 
       expect(screen.queryByText('Victor to Jackson (EB)')).not.toBeInTheDocument();
-      expect(screen.getByText('Jackson to Victor (WB)')).toBeInTheDocument();
+      expect(screen.getAllByText('Jackson to Victor (WB)')).toHaveLength(2);
     });
   });
 

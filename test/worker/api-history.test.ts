@@ -204,8 +204,8 @@ describe('GET /api/history — summary', () => {
     await insertTravelTime(id, '2026-08-13T03:00:00.000Z', 3000);
     await insertTravelTime(id, '2026-08-14T18:00:00.000Z', 2000);
 
-    const result = await getHistory(env, slug, NOW);
-    expect(result!.summary.worstDays).toEqual([
+    const result = await getHistory(env, slug, NOW, true);
+    expect(result!.summary?.worstDays).toEqual([
       { date: '2026-08-11', peakSec: 3600 },
       { date: '2026-08-12', peakSec: 3000 },
       { date: '2026-08-14', peakSec: 2000 },
@@ -220,13 +220,13 @@ describe('GET /api/history — summary', () => {
     await insertTravelTime(id, '2026-02-10T19:00:00.000Z', 9999);
     await insertTravelTime(id, '2026-08-11T18:00:00.000Z', 1800);
 
-    const result = await getHistory(env, slug, NOW);
-    expect(result!.summary.worstDays).toEqual([{ date: '2026-08-11', peakSec: 1800 }]);
+    const result = await getHistory(env, slug, NOW, true);
+    expect(result!.summary?.worstDays).toEqual([{ date: '2026-08-11', peakSec: 1800 }]);
   });
 
   it('worstDays: null when the season has no readings at all', async () => {
-    const result = await getHistory(env, 'driggs-jackson-wb', NOW);
-    expect(result!.summary.worstDays).toBeNull();
+    const result = await getHistory(env, 'driggs-jackson-wb', NOW, true);
+    expect(result!.summary?.worstDays).toBeNull();
   });
 
   it('seasonMedians: winter null under summer-only data', async () => {
@@ -246,9 +246,9 @@ describe('GET /api/history — summary', () => {
         .run();
     }
 
-    const result = await getHistory(env, slug, NOW);
-    expect(result!.summary.seasonMedians?.summer).toBe(2400);
-    expect(result!.summary.seasonMedians?.winter).toBeNull();
+    const result = await getHistory(env, slug, NOW, true);
+    expect(result!.summary?.seasonMedians?.summer).toBe(2400);
+    expect(result!.summary?.seasonMedians?.winter).toBeNull();
   });
 
   it('closureDays: null when we have no snapshot coverage of a completed winter', async () => {
@@ -256,7 +256,46 @@ describe('GET /api/history — summary', () => {
     // winter (Nov 2025 - Apr 2026) predates every snapshot we hold, so the
     // honest answer is "unknown" -- NOT 0, which would claim we watched
     // that winter and saw no closures.
-    const result = await getHistory(env, 'driggs-airport-wb', NOW);
-    expect(result!.summary.closureDays?.winter).toBeNull();
+    const result = await getHistory(env, 'driggs-airport-wb', NOW, true);
+    expect(result!.summary?.closureDays?.winter).toBeNull();
+  });
+});
+
+describe('GET /api/history — summary is opt-in (I3)', () => {
+  const NOW = Date.parse('2026-08-15T18:00:00.000Z'); // 12:00 MDT, summer
+
+  it('getHistory omits summary (null) by default, without requiring the caller to ask', async () => {
+    const slug = 'driggs-tetonvillage-wb';
+    const id = await routeId(slug);
+    await insertTravelTime(id, '2026-08-11T18:00:00.000Z', 3600);
+
+    const result = await getHistory(env, slug, NOW);
+    expect(result!.summary).toBeNull();
+  });
+
+  it('GET /history without ?summary=1 returns summary: null even when the route has season data', async () => {
+    const slug = 'driggs-jackson-eb';
+    const id = await routeId(slug);
+    await insertTravelTime(id, '2026-08-11T18:00:00.000Z', 3600);
+
+    const res = await api.request(`/history?route=${slug}`, {}, env as any);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { summary: unknown; typicals: unknown; today: unknown };
+    // The cheap fields the home card actually needs are still present --
+    // opting out of summary must not degrade the rest of the response.
+    expect(body.typicals).toBeDefined();
+    expect(body.today).toBeDefined();
+    expect(body.summary).toBeNull();
+  });
+
+  it('GET /history?summary=1 populates the summary block', async () => {
+    const slug = 'victor-jackson-eb';
+    const id = await routeId(slug);
+    await insertTravelTime(id, '2026-08-11T18:00:00.000Z', 3600);
+
+    const res = await api.request(`/history?route=${slug}&summary=1`, {}, env as any);
+    const body = (await res.json()) as { summary: { worstDays: unknown } };
+    expect(body.summary).not.toBeNull();
+    expect(body.summary.worstDays).toEqual([{ date: '2026-08-11', peakSec: 3600 }]);
   });
 });

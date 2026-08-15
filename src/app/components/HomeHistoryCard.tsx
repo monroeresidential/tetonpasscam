@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 import TypicalChart, { type ChartPoint } from './TypicalChart';
+import { denverNow, todayToChartPoints, typicalsToChartPoints } from '../historyChart';
 import { getHistory } from '../historyApi';
 
-export default function HomeHistoryCard({ slug }: { slug: string }) {
+export default function HomeHistoryCard({ slug, routeName }: { slug: string; routeName: string }) {
   const [points, setPoints] = useState<ChartPoint[]>([]);
   const [today, setToday] = useState<{ hour: number; durationSec: number }[]>([]);
   const mountedSlug = useRef<string | null>(null);
@@ -21,29 +22,15 @@ export default function HomeHistoryCard({ slug }: { slug: string }) {
       setToday([]);
     }
     mountedSlug.current = slug;
+    // No `{ summary: true }` here -- the home card only ever plots
+    // typicals/today, so it deliberately skips the expensive summary-only
+    // queries `/api/history` would otherwise run on every homepage load.
     getHistory(slug)
       .then((h) => {
         if (cancelled) return;
-        const hourOf = (iso: string) =>
-          Number(
-            new Intl.DateTimeFormat('en-US', {
-              timeZone: 'America/Denver',
-              hour: 'numeric',
-              hourCycle: 'h23',
-            }).format(new Date(iso)),
-          );
-        setPoints(
-          [...h.typicals]
-            .sort((a, b) => a.hour - b.hour)
-            .map((t) => ({
-              hour: t.hour,
-              medianSec: t.medianSec,
-              p25Sec: t.p25Sec,
-              p75Sec: t.p75Sec,
-              distinctDays: t.distinctDays,
-            })),
-        );
-        setToday(h.today.map((r) => ({ hour: hourOf(r.capturedAt), durationSec: r.durationSec })));
+        const { weekdayClass, season } = denverNow();
+        setPoints(typicalsToChartPoints(h.typicals, weekdayClass, season));
+        setToday(todayToChartPoints(h.today));
       })
       .catch(() => undefined);
     return () => {
@@ -57,6 +44,7 @@ export default function HomeHistoryCard({ slug }: { slug: string }) {
         <h2 className="font-display text-[15px] font-bold">When should you leave?</h2>
         <span className="text-muted text-[13px]">See full history →</span>
       </div>
+      <p className="text-muted text-[12px]">{routeName}</p>
       <div className="mt-2">
         <TypicalChart points={points} today={today} compact />
       </div>

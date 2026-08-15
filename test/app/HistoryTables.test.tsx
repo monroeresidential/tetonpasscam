@@ -12,21 +12,19 @@ describe('WorstDays', () => {
           { date: '2026-08-11', peakSec: 3600 },
           { date: '2026-08-12', peakSec: 3000 },
         ]}
-        recordingSince="2026-08-08"
       />,
     );
     expect(screen.getByText('60 min peak')).toBeTruthy(); // 3600s
     expect(screen.getByText('50 min peak')).toBeTruthy(); // 3000s
   });
 
-  it('shows an empty state, mentioning when recording started, when null', () => {
-    render(<WorstDays worstDays={null} recordingSince="2026-08-08" />);
+  it('shows an empty state when null', () => {
+    render(<WorstDays worstDays={null} />);
     expect(screen.getByText(/not enough history yet/i)).toBeTruthy();
-    expect(screen.getByText(/Aug 8/)).toBeTruthy();
   });
 
   it('renders a short list as-is rather than padding to three', () => {
-    render(<WorstDays worstDays={[{ date: '2026-08-11', peakSec: 3600 }]} recordingSince="2026-08-08" />);
+    render(<WorstDays worstDays={[{ date: '2026-08-11', peakSec: 3600 }]} />);
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 });

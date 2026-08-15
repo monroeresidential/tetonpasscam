@@ -16,21 +16,12 @@ function dayLabel(isoDate: string): string {
   });
 }
 
-export default function WorstDays({
-  worstDays,
-  recordingSince,
-}: {
-  worstDays: HistorySummary['worstDays'];
-  recordingSince: string | null;
-}) {
+export default function WorstDays({ worstDays }: { worstDays: HistorySummary['worstDays'] }) {
   return (
     <div className="bg-card border-card-border rounded-2xl border p-5">
       <h2 className="font-display text-[15px] font-bold">Worst days this season</h2>
       {worstDays === null || worstDays.length === 0 ? (
-        <p className="text-muted mt-2.5 text-[13px]">
-          Not enough history yet
-          {recordingSince ? ` — recording since ${dayLabel(recordingSince)}` : ''}.
-        </p>
+        <p className="text-muted mt-2.5 text-[13px]">Not enough history yet.</p>
       ) : (
         <ul className="mt-2.5 text-[13px]">
           {worstDays.map((d) => (

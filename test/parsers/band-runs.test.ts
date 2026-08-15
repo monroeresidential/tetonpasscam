@@ -34,7 +34,7 @@ describe('bandRuns', () => {
   });
 
   it('treats NULL distinctDays as not qualifying', () => {
-    // Rows written before migration 0002. NULL must never mean "allowed".
+    // Rows written before migration 0005. NULL must never mean "allowed".
     expect(bandRuns([pt(6, null), pt(7, null)])).toEqual([]);
   });
 
