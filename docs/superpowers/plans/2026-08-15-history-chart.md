@@ -246,9 +246,13 @@ async function confidenceFor(
     .first()) as { sampleCount: number; distinctDays: number } | undefined;
 }
 
+// Slug choice matters: runNightly rebuilds EVERY route from EVERY
+// travel_times row in the shared test DB, so a slug another test in this
+// file already seeded would inflate these counts. driggs-airport-{eb,wb}
+// are the only pair untouched by the existing tests here.
 describe('runNightly — confidence columns', () => {
   it('counts samples and DISTINCT Denver days separately', async () => {
-    const id = await routeId('driggs-jackson-eb');
+    const id = await routeId('driggs-airport-eb');
     // Six readings in the 08:00 MDT hour, but spread over only TWO Denver
     // days: 2026-08-11 (Tue) and 2026-08-12 (Wed). This is exactly the
     // shape the gate exists to catch -- a healthy-looking sample count
@@ -267,7 +271,7 @@ describe('runNightly — confidence columns', () => {
   });
 
   it('counts a Denver day, not a UTC day', async () => {
-    const id = await routeId('victor-airport-eb');
+    const id = await routeId('driggs-airport-wb');
     // Both readings are 22:00 MDT on 2026-08-11 -- but the second one is
     // 2026-08-12 in UTC. Grouping by UTC would report 2 distinct days.
     await insertTravelTime(id, '2026-08-12T03:50:00.000Z', 2000);
@@ -592,7 +596,11 @@ Then the tests — each uses a distinct route slug so they cannot contaminate ea
 ```ts
 describe('GET /api/history — confidence fields', () => {
   it('passes sampleCount and distinctDays through per typical', async () => {
-    const slug = 'driggs-tetonvillage-eb';
+    // driggs-tetonvillage-eb, victor-airport-wb, and victor-tetonvillage-eb
+    // are already seeded by the existing tests in this file -- storage
+    // persists across tests within a file, so reusing them would mix their
+    // route_typicals rows into these assertions.
+    const slug = 'driggs-jackson-eb';
     const id = await routeId(slug);
     await env.DB.prepare(
       `INSERT INTO route_typicals
@@ -667,7 +675,7 @@ describe('GET /api/history — summary', () => {
   });
 
   it('seasonMedians: winter null under summer-only data', async () => {
-    const slug = 'victor-airport-wb';
+    const slug = 'victor-airport-eb';
     const id = await routeId(slug);
     for (const [hour, median] of [
       [7, 1800],
@@ -823,8 +831,11 @@ async function closureDaysLastWinter(env: Env, nowMs: number): Promise<number | 
 
   const rows = (
     await env.DB.prepare(
+      // Lowercase 'closed' -- schema.ts:66 declares the enum as
+      // ['open','restricted','closed','unknown']. The four-state names are
+      // uppercase in the API/UI layer but lowercase in the DB column.
       `SELECT captured_at AS capturedAt FROM status_snapshots
-        WHERE status = 'CLOSED' AND captured_at >= ? AND captured_at < ?`,
+        WHERE status = 'closed' AND captured_at >= ? AND captured_at < ?`,
     )
       .bind(new Date(winterStart).toISOString(), new Date(winterEnd).toISOString())
       .all()
@@ -1150,8 +1161,8 @@ describe('WorstDays', () => {
         recordingSince="2026-08-08"
       />,
     );
-    expect(screen.getByText(/1 h 0 peak|60 min peak/)).toBeTruthy();
-    expect(screen.getByText(/50 min peak/)).toBeTruthy();
+    expect(screen.getByText('60 min peak')).toBeTruthy(); // 3600s
+    expect(screen.getByText('50 min peak')).toBeTruthy(); // 3000s
   });
 
   it('shows an empty state, mentioning when recording started, when null', () => {
@@ -1633,7 +1644,9 @@ afterEach(() => {
 
 describe('HistoryPage subtitle', () => {
   it('says "summer Saturday" in August', async () => {
-    vi.useFakeTimers();
+    // shouldAdvanceTime is required, not optional: waitFor polls on timers,
+    // so plain useFakeTimers() freezes it and the test hangs to timeout.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date('2026-08-15T18:00:00.000Z')); // Sat, 12:00 MDT
     stubApi();
     render(<HistoryPage />);
@@ -1641,7 +1654,9 @@ describe('HistoryPage subtitle', () => {
   });
 
   it('says "winter Wednesday" in January', async () => {
-    vi.useFakeTimers();
+    // shouldAdvanceTime is required, not optional: waitFor polls on timers,
+    // so plain useFakeTimers() freezes it and the test hangs to timeout.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date('2026-01-14T19:00:00.000Z')); // Wed, 12:00 MST
     stubApi();
     render(<HistoryPage />);
@@ -1766,14 +1781,17 @@ export default function HomeHistoryCard({ slug }: { slug: string }) {
 }
 ```
 
-Then wire it into `src/app/App.tsx`, inside the existing `flex flex-col gap-2` stack after the `DriveTimes` block. Pass the first route matching the current direction so the card follows the flip toggle:
+Then wire it into `src/app/App.tsx`, inside the existing `flex flex-col gap-2` stack after the `DriveTimes` block. Pass the first route matching the current direction so the card follows the flip toggle. Render nothing when there is no such route — `travelTimes` omits routes with no readings, and an empty slug would fetch `/api/history?route=` and take a 400:
 
 ```tsx
-          <div>
-            <HomeHistoryCard
-              slug={data.travelTimes.find((t) => t.slug.endsWith(`-${direction}`))?.slug ?? ''}
-            />
-          </div>
+          {(() => {
+            const historySlug = data.travelTimes.find((t) => t.slug.endsWith(`-${direction}`))?.slug;
+            return historySlug ? (
+              <div>
+                <HomeHistoryCard slug={historySlug} />
+              </div>
+            ) : null;
+          })()}
 ```
 
 - [ ] **Step 4: Run and verify it passes**
