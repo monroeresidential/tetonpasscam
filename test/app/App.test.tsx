@@ -207,6 +207,73 @@ describe('App', () => {
     });
   });
 
+  describe('home history card (Task 9)', () => {
+    function historyResponseFor(slug: string) {
+      return {
+        route: { slug, name: 'Victor to Jackson' },
+        typicals: [],
+        today: [],
+        summary: { worstDays: null, seasonMedians: null, closureDays: null },
+      };
+    }
+
+    it('renders the card wired to the route matching the current direction, when one exists', async () => {
+      const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : (input as Request).url;
+        if (url === '/api/status') {
+          return new Response(
+            JSON.stringify(
+              makeStatus({
+                travelTimes: [
+                  {
+                    slug: 'victor-jackson-eb',
+                    name: 'Victor to Jackson (EB)',
+                    durationSec: 1500,
+                    typicalSec: 1200,
+                    capturedAt: '2026-08-09T23:48:00.000Z',
+                  },
+                ],
+              }),
+            ),
+            { status: 200 },
+          );
+        }
+        if (url === '/api/history?route=victor-jackson-eb') {
+          return new Response(JSON.stringify(historyResponseFor('victor-jackson-eb')), {
+            status: 200,
+          });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }) as unknown as ReturnType<typeof vi.fn>;
+
+      render(<App />);
+      await screen.findByText('The pass is OPEN');
+
+      const link = await screen.findByRole('link', { name: /when should you leave/i });
+      expect(link).toHaveAttribute('href', '/history');
+
+      // Confirms the card is wired to the direction-matching slug, not just
+      // present -- it fetched history for exactly that route.
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(([input]) => input === '/api/history?route=victor-jackson-eb'),
+        ).toBe(true),
+      );
+    });
+
+    it('renders nothing when travelTimes has no route for the current direction', async () => {
+      // Default makeStatus() travelTimes is [] -- travelTimes omits routes
+      // with no readings at all, so this is the real-world "no data yet"
+      // case, not a contrived one.
+      mockStatusOnlyFetch();
+      render(<App />);
+      await screen.findByText('The pass is OPEN');
+
+      expect(screen.queryByText('When should you leave?')).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /when should you leave/i })).not.toBeInTheDocument();
+    });
+  });
+
   describe('explainer relocation (scope addition)', () => {
     // main.tsx's #seo-shell hide/show logic lives outside App (it never
     // renders index.html's static markup -- App is only ever mounted into a
