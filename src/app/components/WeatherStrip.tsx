@@ -1,4 +1,5 @@
 import type { WeatherReading } from '../../worker/poller/wydot-weather';
+import { formatTemp, type TempUnit } from '../units';
 
 interface Tile {
   label: string;
@@ -58,6 +59,7 @@ export default function WeatherStrip({
   surfaceCondition = null,
   weatherStale = false,
   now = new Date(),
+  unit = 'F',
 }: {
   weather: WeatherReading | null;
   /** WYDOT's road-surface description from the RoutesResults "Conditions"
@@ -68,6 +70,7 @@ export default function WeatherStrip({
   surfaceCondition?: string | null;
   weatherStale?: boolean;
   now?: Date;
+  unit?: TempUnit;
 }) {
   if (!weather) {
     return (
@@ -77,10 +80,10 @@ export default function WeatherStrip({
     );
   }
 
-  const airTile: Tile = { label: 'Air', value: weather.airF !== null ? `${weather.airF}°F` : '—' };
+  const airTile: Tile = { label: 'Air', value: weather.airF !== null ? formatTemp(weather.airF, unit) : '—' };
   const roadTile: Tile = {
     label: 'Road',
-    value: weather.surfaceF !== null ? `${weather.surfaceF}°F` : '—',
+    value: weather.surfaceF !== null ? formatTemp(weather.surfaceF, unit) : '—',
   };
   const gustTile: Tile = { label: 'Gust', value: gustValue(weather) };
   const visibilityTile: Tile = { label: 'Visibility', value: visibilityValue(weather.visibilityFt) };

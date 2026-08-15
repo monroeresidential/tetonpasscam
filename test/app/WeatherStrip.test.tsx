@@ -158,3 +158,17 @@ describe('WeatherStrip — surface condition tile', () => {
     expect(screen.queryByText('Surface')).not.toBeInTheDocument();
   });
 });
+
+describe('WeatherStrip — temperature unit', () => {
+  it('renders temperatures in Celsius when the unit is C', () => {
+    render(<WeatherStrip weather={reading} unit="C" now={new Date('2026-01-15T12:00:00.000Z')} />);
+    // reading.airF is 28 -> -2°C, surfaceF is 22 -> -6°C
+    expect(screen.getByText('-2°C')).toBeInTheDocument();
+    expect(screen.getByText('-6°C')).toBeInTheDocument();
+  });
+
+  it('defaults to Fahrenheit when no unit is supplied', () => {
+    render(<WeatherStrip weather={reading} now={new Date('2026-01-15T12:00:00.000Z')} />);
+    expect(screen.getByText('28°F')).toBeInTheDocument();
+  });
+});
