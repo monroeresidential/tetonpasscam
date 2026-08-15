@@ -16,10 +16,18 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
  *  build-html plugin rather than tracked in the Rollup `bundle` object
  *  (confirmed empirically -- `generateBundle` only sees the JS/CSS assets),
  *  so the fix has to run after files hit disk: `writeBundle` moves the file
- *  once the real build finishes. Safe because `admin.html`/`embed.html` have
- *  no relative asset references of their own (inline `<style>`/`<script>`
- *  only, no bundled JS/CSS) -- nothing else in the output points at their
- *  old path, so moving them doesn't break any reference. */
+ *  once the real build finishes. Safe for all three entries here, though for
+ *  two different reasons: `admin.html`/`embed.html` have no asset references
+ *  of their own at all (inline `<style>`/`<script>` only, no bundled
+ *  JS/CSS), while `history.html` (Task 8) is a real React entry whose built
+ *  output does carry a `<script src>`, a modulepreload, and a stylesheet
+ *  link -- but Vite's default `base: '/'` makes every one of those
+ *  root-absolute (`/assets/...`), not relative to the HTML file's own
+ *  location. Either way, nothing in the output holds a path relative to the
+ *  pre-flatten `src/app/` location, so moving the file doesn't break any
+ *  reference. A future addition to this list should keep that invariant in
+ *  mind rather than assume it's free -- an entry with a *relative* asset
+ *  reference would need a different fix. */
 function flattenAdminHtml() {
   return {
     name: 'flatten-admin-html',
