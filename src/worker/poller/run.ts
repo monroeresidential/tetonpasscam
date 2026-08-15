@@ -17,6 +17,7 @@ import {
   parseRoadClosures,
   parseRoutesResults,
   parseStatewide,
+  type ResolvedStatus,
   type StatusResult,
 } from './wydot-status';
 import { parseSensorPage } from './wydot-weather';
@@ -213,7 +214,7 @@ async function consultStatewide(fetcher: typeof fetch): Promise<'closed' | 'rest
  *      the historical label for this specific both-failed path so existing
  *      snapshots/tests that depend on it are undisturbed).
  */
-export async function resolveStatus(fetcher: typeof fetch): Promise<StatusResult> {
+export async function resolveStatus(fetcher: typeof fetch): Promise<ResolvedStatus> {
   let primary: StatusResult;
   try {
     const html = await wydotFetch(ROAD_CLOSURES_URL, fetcher);
@@ -230,26 +231,45 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<StatusResult
     fallback = unknownStatusResult('fallback');
   }
 
+  // The road-surface description ("Dry", "Snow packed", ...) comes from the
+  // FALLBACK page's Conditions cell -- the primary page's own condition text
+  // is open/closed wording ("Road Open"), a different thing entirely.
+  //
+  // Attached here, at every exit, rather than inside `mergeAgreeing`: that
+  // function only handles the both-definite-and-agreeing path, and the
+  // description matters just as much on the paths where it doesn't run. In
+  // particular, when the two pages DISAGREE the status resolves via
+  // Statewide (or to unresolved) and `mergeAgreeing` is never called -- yet
+  // that is precisely when a driver most wants to read that the road is
+  // snow-packed. Wiring this into the merge alone would drop it exactly
+  // there. `fallback.conditionText` is already null whenever the fallback
+  // page failed to fetch or its segment row wasn't found, so no extra
+  // guard is needed for those cases.
+  const withSurface = (result: StatusResult): ResolvedStatus => ({
+    ...result,
+    surfaceConditionText: fallback.conditionText,
+  });
+
   const primaryAxis = passAxis(primary.status);
   const fallbackAxis = passAxis(fallback.status);
 
-  if (primaryAxis !== null && fallbackAxis === null) return primary;
-  if (primaryAxis === null && fallbackAxis !== null) return fallback;
+  if (primaryAxis !== null && fallbackAxis === null) return withSurface(primary);
+  if (primaryAxis === null && fallbackAxis !== null) return withSurface(fallback);
 
   if (primaryAxis !== null && fallbackAxis !== null) {
-    if (primaryAxis === fallbackAxis) return mergeAgreeing(primary, fallback);
+    if (primaryAxis === fallbackAxis) return withSurface(mergeAgreeing(primary, fallback));
 
     // Disagreement: one authoritative page says closed, the other says
     // open/restricted. Never resolve this as 'open' -- consult Statewide.
     const crosscheck = await consultStatewide(fetcher);
-    if (crosscheck) return { ...unknownStatusResult('crosscheck'), status: crosscheck };
-    return unknownStatusResult('unresolved');
+    if (crosscheck) return withSurface({ ...unknownStatusResult('crosscheck'), status: crosscheck });
+    return withSurface(unknownStatusResult('unresolved'));
   }
 
   // Both unknown.
   const crosscheck = await consultStatewide(fetcher);
-  if (crosscheck) return { ...unknownStatusResult('crosscheck'), status: crosscheck };
-  return unknownStatusResult('primary');
+  if (crosscheck) return withSurface({ ...unknownStatusResult('crosscheck'), status: crosscheck });
+  return withSurface(unknownStatusResult('primary'));
 }
 
 function stripDetourHtml(html: string): string {
@@ -373,12 +393,15 @@ export async function runPollCycle(
   // Step 1: status (must always end in a StatusResult, even if resolveStatus
   // itself somehow throws -- the outer try/catch below still guarantees a
   // status_snapshots row gets written).
-  let status: StatusResult;
+  let status: ResolvedStatus;
   try {
     status = await resolveStatus(fetcher);
   } catch (err) {
     console.error('[poller] resolveStatus threw', err);
-    status = unknownStatusResult('primary');
+    // surfaceConditionText null on this path for the same reason the whole
+    // result is 'unknown': resolveStatus blew up, so there is no fallback
+    // parse to describe the road surface from.
+    status = { ...unknownStatusResult('primary'), surfaceConditionText: null };
   }
 
   // Step 2: advisory diff vs the previous RELIABLE snapshot (log only for
@@ -427,6 +450,7 @@ export async function runPollCycle(
       capturedAt,
       status: status.status,
       conditionText: status.conditionText,
+      surfaceConditionText: status.surfaceConditionText,
       advisories: JSON.stringify(status.advisories),
       restrictions: JSON.stringify(status.restrictions),
       wydotReportTime: status.wydotReportTime,

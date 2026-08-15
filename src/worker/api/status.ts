@@ -182,6 +182,7 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
   let pollerDead = true;
   let isStale = false;
   let conditionText: string | null = null;
+  let surfaceCondition: string | null = null;
   let advisories: string[] = [];
   let restrictions: string[] = [];
   let wydotReportTime: string | null = null;
@@ -191,6 +192,12 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     pollerDead = !Number.isFinite(snapshotAgeMs) || snapshotAgeMs > DEAD_HOURS * 3_600_000;
     status = pollerDead ? 'unknown' : (newest.status as PassStatus);
     conditionText = newest.conditionText;
+    // Withheld once the poller is dead, for the same reason `status` degrades
+    // to unknown there: a road-surface description is an observation with a
+    // shelf life. Rendering a three-day-old "Dry" next to an UNKNOWN banner
+    // would read as a current report of a dry road -- the precise kind of
+    // stale-data-presented-as-fresh this app's rules forbid.
+    surfaceCondition = pollerDead ? null : newest.surfaceConditionText;
     advisories = safeStringArray(newest.advisories);
     restrictions = safeStringArray(newest.restrictions);
     wydotReportTime = newest.wydotReportTime;
@@ -377,6 +384,7 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     shareCode: newest && !pollerDead ? formatShareCode(newest.capturedAt) : null,
     lastConfirmed,
     conditionText,
+    surfaceCondition,
     advisories,
     restrictions,
     wydotReportTime,

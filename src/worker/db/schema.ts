@@ -75,7 +75,17 @@ export const statusSnapshots = sqliteTable(
     capturedAt: text('captured_at').notNull(),
     segment: text('segment').notNull().default('wilson-stateline'),
     status: text('status', { enum: ['open', 'restricted', 'closed', 'unknown'] }).notNull(),
+    // The PRIMARY page's (RoadClosures.html) "Closure Reason" cell -- open/
+    // closed wording like "Road Open", NOT a description of the road surface.
     conditionText: text('condition_text'),
+    // The FALLBACK page's (WRR.RoutesResults) "Conditions" cell -- the actual
+    // road-surface description: "Dry", "Wet", "Slick in spots", "Snow packed".
+    // A separate column rather than a replacement because `condition_text` is
+    // already consumed by /api/status and the SEO shell (seo-inject.ts), and
+    // the two strings genuinely mean different things. Display only -- never
+    // used to classify open/closed. Nullable: the fallback page can fail to
+    // fetch or its segment row can go missing independently of the primary.
+    surfaceConditionText: text('surface_condition_text'),
     advisories: text('advisories'), // JSON array string
     restrictions: text('restrictions'), // JSON array string
     wydotReportTime: text('wydot_report_time'),

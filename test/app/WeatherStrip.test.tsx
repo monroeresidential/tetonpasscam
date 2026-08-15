@@ -106,3 +106,53 @@ describe('WeatherStrip', () => {
     });
   });
 });
+
+// The road-surface condition ("Dry", "Snow packed") is a WYDOT observation
+// distinct from the OPEN/CLOSED status -- see ApiStatus.surfaceCondition.
+describe('WeatherStrip — surface condition tile', () => {
+  it('renders the condition as its own tile when present', () => {
+    render(
+      <WeatherStrip
+        weather={reading}
+        surfaceCondition="Dry"
+        now={new Date('2026-01-15T12:00:00.000Z')}
+      />,
+    );
+    expect(screen.getByText('Surface')).toBeInTheDocument();
+    expect(screen.getByText('Dry')).toBeInTheDocument();
+  });
+
+  it('omits the tile entirely when the condition is null', () => {
+    // Deliberately absent rather than an em-dash placeholder: the other
+    // tiles are always-present numeric readings from one sensor page, while
+    // this comes from a different page that can fail on its own. An empty
+    // "Surface —" tile would imply we looked and the road had no condition.
+    render(
+      <WeatherStrip
+        weather={reading}
+        surfaceCondition={null}
+        now={new Date('2026-01-15T12:00:00.000Z')}
+      />,
+    );
+    expect(screen.queryByText('Surface')).not.toBeInTheDocument();
+  });
+
+  it('renders a long WYDOT condition string in full, without truncating it', () => {
+    // WYDOT emits multi-word strings; the tile has to hold them.
+    render(
+      <WeatherStrip
+        weather={reading}
+        surfaceCondition="Snow packed, slick in spots"
+        now={new Date('2026-01-15T12:00:00.000Z')}
+      />,
+    );
+    expect(screen.getByText('Snow packed, slick in spots')).toBeInTheDocument();
+  });
+
+  it('still renders the four sensor tiles when no condition is supplied at all', () => {
+    render(<WeatherStrip weather={reading} now={new Date('2026-01-15T12:00:00.000Z')} />);
+    expect(screen.getByText('Air')).toBeInTheDocument();
+    expect(screen.getByText('Visibility')).toBeInTheDocument();
+    expect(screen.queryByText('Surface')).not.toBeInTheDocument();
+  });
+});

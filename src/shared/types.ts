@@ -67,7 +67,17 @@ export interface ApiStatus {
   // from the CURRENT response.
   shareCode: string | null;
   lastConfirmed: { status: Exclude<PassStatus, 'unknown'>; at: string } | null; // newest non-unknown snapshot
+  // The PRIMARY WYDOT page's (RoadClosures.html) "Closure Reason" cell --
+  // open/closed wording such as "Road Open".
   conditionText: string | null;
+  // The FALLBACK page's (WRR.RoutesResults) "Conditions" cell -- what the
+  // road SURFACE is actually like: "Dry", "Wet", "Slick in spots", "Snow
+  // packed". A different WYDOT field from `conditionText` above, not a
+  // rewording of it. Display only; it never affects the OPEN/CLOSED banner.
+  // Null when the fallback page failed, when its segment row was missing,
+  // or whenever `pollerDead` -- a stale surface reading must not be shown
+  // as a current observation.
+  surfaceCondition: string | null;
   advisories: string[];
   restrictions: string[];
   wydotReportTime: string | null;

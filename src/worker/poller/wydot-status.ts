@@ -45,6 +45,33 @@ export interface StatusResult {
   source: 'primary' | 'fallback' | 'crosscheck' | 'unresolved';
 }
 
+/**
+ * What `resolveStatus` (run.ts) returns: one merged `StatusResult` plus the
+ * road-surface description, which is a RESOLUTION-level concept rather than
+ * a per-source one and so deliberately does not live on `StatusResult`.
+ *
+ * WYDOT publishes two different condition strings on two different pages,
+ * and they do not say the same thing:
+ *
+ *   RoadClosures.html (primary)  "Closure Reason"  ->  "Road Open"
+ *   WRR.RoutesResults (fallback) "Conditions"      ->  "Dry"
+ *
+ * `StatusResult.conditionText` has always carried the primary page's value
+ * (mergeAgreeing documents "primary's conditionText wins"), which is the
+ * open/closed wording, not a description of the road surface. This field
+ * carries the fallback page's value -- the one that actually says Dry / Wet
+ * / Slick in spots / Snow packed.
+ *
+ * DISPLAY ONLY. It never participates in open/closed classification; that
+ * stays driven by the `*cond` cell's CLASS, per this file's own rule that
+ * condition prose is "kept only as descriptive conditionText, not used to
+ * classify". Null whenever the fallback page could not be fetched or its
+ * segment row could not be found.
+ */
+export interface ResolvedStatus extends StatusResult {
+  surfaceConditionText: string | null;
+}
+
 export const SEGMENT_TEXT = 'Between Wilson and the Idaho State Line';
 
 const CLOSURE_RX = /closed|closure/i;

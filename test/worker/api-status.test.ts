@@ -15,6 +15,7 @@ async function insertStatusSnapshot(overrides: {
   capturedAt: string;
   status: 'open' | 'restricted' | 'closed' | 'unknown';
   conditionText?: string | null;
+  surfaceConditionText?: string | null;
   advisories?: string[];
   restrictions?: string[];
   wydotReportTime?: string | null;
@@ -22,13 +23,14 @@ async function insertStatusSnapshot(overrides: {
 }): Promise<void> {
   await env.DB.prepare(
     `INSERT INTO status_snapshots
-       (captured_at, segment, status, condition_text, advisories, restrictions, wydot_report_time, source)
-     VALUES (?, 'wilson-stateline', ?, ?, ?, ?, ?, ?)`,
+       (captured_at, segment, status, condition_text, surface_condition_text, advisories, restrictions, wydot_report_time, source)
+     VALUES (?, 'wilson-stateline', ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       overrides.capturedAt,
       overrides.status,
       overrides.conditionText ?? null,
+      overrides.surfaceConditionText ?? null,
       JSON.stringify(overrides.advisories ?? []),
       JSON.stringify(overrides.restrictions ?? []),
       overrides.wydotReportTime ?? null,
@@ -664,5 +666,58 @@ describe('GET /api/status', () => {
       expect(body.weather?.airF).toBe(33); // last-known still returned
       expect(body.weatherStale).toBe(true);
     });
+  });
+});
+
+// WYDOT publishes two different condition strings on two different pages:
+// RoadClosures.html's "Closure Reason" ("Road Open") is open/closed wording,
+// while WRR.RoutesResults' "Conditions" ("Dry") describes the road surface.
+// `conditionText` has always carried the first; `surfaceCondition` carries
+// the second. They must never be conflated.
+describe('GET /api/status — surfaceCondition', () => {
+  it('surfaces the WRR road-surface description alongside the primary condition text', async () => {
+    await env.DB.prepare('DELETE FROM status_snapshots').run();
+    await insertStatusSnapshot({
+      capturedAt: new Date().toISOString(),
+      status: 'open',
+      conditionText: 'Road Open',
+      surfaceConditionText: 'Dry',
+    });
+
+    const { body } = await getStatus();
+    expect(body.conditionText).toBe('Road Open');
+    expect(body.surfaceCondition).toBe('Dry');
+  });
+
+  it('reports null when the fallback page gave us nothing', async () => {
+    await env.DB.prepare('DELETE FROM status_snapshots').run();
+    await insertStatusSnapshot({
+      capturedAt: new Date().toISOString(),
+      status: 'open',
+      conditionText: 'Road Open',
+      surfaceConditionText: null,
+    });
+
+    const { body } = await getStatus();
+    expect(body.surfaceCondition).toBeNull();
+  });
+
+  it('withholds the surface condition when the poller is dead', async () => {
+    // A days-old surface reading must not be presented as current. The
+    // status itself already degrades to unknown on this path, and the road
+    // description has to degrade with it rather than outliving it -- "Dry"
+    // shown next to an unknown status would read as a current observation.
+    await env.DB.prepare('DELETE FROM status_snapshots').run();
+    await insertStatusSnapshot({
+      capturedAt: new Date(Date.now() - 72 * HOUR_MS).toISOString(),
+      status: 'open',
+      conditionText: 'Road Open',
+      surfaceConditionText: 'Dry',
+    });
+
+    const { body } = await getStatus();
+    expect(body.status).toBe('unknown');
+    expect(body.pollerDead).toBe(true);
+    expect(body.surfaceCondition).toBeNull();
   });
 });

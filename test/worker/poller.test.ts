@@ -675,3 +675,126 @@ describe('Idaho 511 event upsert semantics', () => {
     expect((after as any).cleared_at).not.toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Road surface condition (WRR "Conditions" cell)
+// ---------------------------------------------------------------------------
+//
+// WYDOT publishes TWO different condition strings on two different pages,
+// and they say different things:
+//
+//   RoadClosures.html (primary) -> "Closure Reason" cell -> "Road Open"
+//   WRR.RoutesResults (fallback) -> "Conditions" cell     -> "Dry"
+//
+// `conditionText` has always carried the PRIMARY page's value (mergeAgreeing
+// documents "primary's conditionText wins"), so the WRR page's actual road
+// surface description was parsed every cycle and discarded. `surfaceConditionText`
+// carries the fallback page's value alongside it.
+//
+// It is captured on EVERY resolution path that had a successful fallback
+// parse -- not just the agreeing one. A driver most needs to know the road is
+// snow-packed precisely when the two pages disagree, which is the path that
+// resolves the STATUS to unknown; losing the description there would be
+// backwards.
+describe('resolveStatus — surfaceConditionText', () => {
+  it(
+    'both agree ⇒ carries the WRR Conditions cell, not the primary page\'s "Road Open"',
+    async () => {
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresOpen,
+          'SelectedRoute=WY22': routesresultsWy22Open,
+        }),
+      );
+      expect(result.surfaceConditionText).toBe('Dry');
+      // The primary page's own wording is untouched on its existing field.
+      expect(result.conditionText).not.toBe('Dry');
+    },
+    20_000,
+  );
+
+  it(
+    'primary definite + fallback unknown ⇒ null (no fallback parse to take it from)',
+    async () => {
+      const result = await resolveStatus(
+        fakeFetch({ 'RoadClosures.html': roadclosuresOpen, 'SelectedRoute=WY22': 500 }),
+      );
+      expect(result.status).toBe('open');
+      expect(result.surfaceConditionText).toBeNull();
+    },
+    20_000,
+  );
+
+  it(
+    'primary unknown + fallback definite ⇒ still carries the WRR condition',
+    async () => {
+      const result = await resolveStatus(
+        fakeFetch({ 'RoadClosures.html': 500, 'SelectedRoute=WY22': routesresultsWy22Open }),
+      );
+      expect(result.source).toBe('fallback');
+      expect(result.surfaceConditionText).toBe('Dry');
+    },
+    20_000,
+  );
+
+  it(
+    'sources DISAGREE ⇒ status resolves away from the fallback, but the description survives',
+    async () => {
+      // This is the path that would silently drop the description if
+      // surfaceConditionText were only wired into mergeAgreeing.
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresOpen,
+          'SelectedRoute=WY22': routesresultsWy22Closed,
+          'MEDIA.Statewide': statewideClosed,
+        }),
+      );
+      expect(result.status).toBe('closed');
+      expect(result.source).toBe('crosscheck');
+      // Asserted as a non-empty string, not merely `not.toBeNull()` --
+      // `undefined` passes that, so the weaker form would go green against
+      // an implementation that never set the field at all.
+      expect(typeof result.surfaceConditionText).toBe('string');
+      expect(result.surfaceConditionText).not.toBe('');
+    },
+    20_000,
+  );
+
+  it(
+    'every source fails ⇒ null, never a fabricated condition',
+    async () => {
+      const result = await resolveStatus(fakeFetch({}));
+      expect(result.status).toBe('unknown');
+      expect(result.surfaceConditionText).toBeNull();
+    },
+    20_000,
+  );
+});
+
+describe('runPollCycle — persists the road surface condition', () => {
+  it('writes the WRR Conditions cell into status_snapshots.surface_condition_text', async () => {
+    // The gap this closes: resolveStatus returning the value and the API
+    // reading the column are both covered, but nothing otherwise proves the
+    // poller actually writes it to the row in between.
+    await env.DB.prepare('DELETE FROM status_snapshots').run();
+    await runPollCycle(
+      env as any,
+      fakeFetch({
+        'RoadClosures.html': roadclosuresOpen,
+        'SelectedRoute=WY22': routesresultsWy22Open,
+        'Sensors.StationResults': sensorsTetonpass,
+      }),
+      IN_WINDOW_NOW_MS,
+    );
+
+    const row = (await env.DB.prepare(
+      `SELECT condition_text AS conditionText, surface_condition_text AS surfaceConditionText
+         FROM status_snapshots ORDER BY captured_at DESC LIMIT 1`,
+    ).first()) as { conditionText: string | null; surfaceConditionText: string | null };
+
+    expect(row.surfaceConditionText).toBe('Dry');
+    // Both columns populated from their own page, neither overwriting the other.
+    expect(row.conditionText).not.toBeNull();
+    expect(row.conditionText).not.toBe('Dry');
+  });
+});

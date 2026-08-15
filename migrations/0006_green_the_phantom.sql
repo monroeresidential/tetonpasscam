@@ -1,0 +1,1 @@
+ALTER TABLE `status_snapshots` ADD `surface_condition_text` text;

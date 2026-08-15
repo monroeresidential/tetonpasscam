@@ -3,6 +3,10 @@ import type { WeatherReading } from '../../worker/poller/wydot-weather';
 interface Tile {
   label: string;
   value: string;
+  /** Widen this tile to two grid cells. Used only by the road-surface
+   *  condition, whose value is prose ("Snow packed, slick in spots") rather
+   *  than a short reading, and would otherwise wrap badly in a narrow cell. */
+  wide?: boolean;
 }
 
 const REPORTED_AT_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -51,10 +55,17 @@ function visibilityValue(visibilityFt: number | null): string {
 
 export default function WeatherStrip({
   weather,
+  surfaceCondition = null,
   weatherStale = false,
   now = new Date(),
 }: {
   weather: WeatherReading | null;
+  /** WYDOT's road-surface description from the RoutesResults "Conditions"
+   *  cell ("Dry", "Snow packed"). Comes from a DIFFERENT page than the
+   *  sensor readings above and can be absent on its own, so the tile is
+   *  omitted entirely rather than rendered with an em-dash: an empty
+   *  "Surface —" would imply we checked and the road had no condition. */
+  surfaceCondition?: string | null;
   weatherStale?: boolean;
   now?: Date;
 }) {
@@ -78,6 +89,14 @@ export default function WeatherStrip({
   // the rest of the year.
   const tempTiles = isWinterMonth(now) ? [roadTile, airTile] : [airTile, roadTile];
   const tiles: Tile[] = [...tempTiles, gustTile, visibilityTile];
+  if (surfaceCondition) {
+    tiles.push({ label: 'Surface', value: surfaceCondition, wide: true });
+  }
+
+  // The grid is sized so every row comes out exactly full rather than
+  // leaving an orphan: 4 sensor tiles fill a 4-column row, and adding the
+  // double-width surface tile makes 6 cells, which fill two 3-column rows.
+  const gridCols = surfaceCondition ? 'grid-cols-3' : 'grid-cols-4';
 
   // A missing/unparseable reportedAt still lets the tiles render (the
   // numeric readings are independent of it) -- the "as of" suffix simply
@@ -92,9 +111,14 @@ export default function WeatherStrip({
           Weather may be outdated{reportedAtLabel ? ` — (as of ${reportedAtLabel})` : ''}
         </p>
       )}
-      <div className="grid grid-cols-4 gap-2">
+      <div className={`grid ${gridCols} gap-2`}>
         {tiles.map((tile) => (
-          <div key={tile.label} className="bg-card border-card-border rounded-card border p-3 text-center">
+          <div
+            key={tile.label}
+            className={`bg-card border-card-border rounded-card border p-3 text-center${
+              tile.wide ? ' col-span-2' : ''
+            }`}
+          >
             <p className="font-display text-lg font-extrabold">{tile.value}</p>
             <p className="text-muted text-[10.5px] uppercase">{tile.label}</p>
           </div>
