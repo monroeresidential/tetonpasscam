@@ -6,6 +6,7 @@ import { readJsonCapped } from './body';
 import { postFeedback } from './feedback';
 import { getHistory } from './history';
 import { getStatus } from './status';
+import { getWeatherHistory } from './weather-history';
 
 // Per-endpoint body size caps for `readJsonCapped` (see body.ts) -- sized to
 // comfortably fit each endpoint's legitimate payload (alerts: short enum +
@@ -62,6 +63,12 @@ api.get('/history', async (c) => {
   const includeSummary = c.req.query('summary') === '1';
   const result = await getHistory(c.env, slug, Date.now(), includeSummary);
   if (!result) return c.json({ error: 'not found' }, 404);
+  c.header('Cache-Control', 'public, max-age=300');
+  return c.json(result);
+});
+
+api.get('/weather-history', async (c) => {
+  const result = await getWeatherHistory(c.env);
   c.header('Cache-Control', 'public, max-age=300');
   return c.json(result);
 });

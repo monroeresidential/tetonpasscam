@@ -143,6 +143,33 @@ export interface HistoryToday {
   durationSec: number;
 }
 
+/** The `weather_typicals.metric` enum -- see `src/worker/db/schema.ts`. */
+export type WeatherMetric = 'air_f' | 'surface_f' | 'dew_point_f' | 'humidity_pct';
+
+/** One (metric, weekday-class, hour, season) typical bucket, as returned by
+ *  `GET /api/weather-history`. Same nullable-confidence-fields shape as
+ *  `HistoryTypical` and for the same reason: rows written before the
+ *  confidence columns existed carry NULL there, not 0. */
+export interface WeatherTypical {
+  metric: WeatherMetric;
+  weekdayClass: 'weekday' | 'weekend';
+  season: 'winter' | 'summer';
+  hour: number;
+  median: number | null;
+  p25: number | null;
+  p75: number | null;
+  sampleCount: number | null;
+  distinctDays: number | null;
+}
+
+/** Response shape for `GET /api/weather-history`. Station-wide -- unlike
+ *  `HistoryResult` this takes no route parameter, since the Teton Pass RWIS
+ *  sensor reports one set of readings for the whole pass. */
+export interface WeatherHistoryResult {
+  typicals: WeatherTypical[];
+  today: { capturedAt: string; airF: number | null; surfaceF: number | null }[];
+}
+
 /** Response shape for `GET /api/history?route=<slug>`. `summary` is only
  *  computed when the request opts in with `?summary=1` (see
  *  `src/app/historyApi.ts`'s `getHistory`) -- it drives an expensive
