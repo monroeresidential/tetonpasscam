@@ -49,6 +49,17 @@ export const routeTypicals = sqliteTable(
     medianSec: integer('median_sec'),
     p25Sec: integer('p25_sec'),
     p75Sec: integer('p75_sec'),
+    // Confidence inputs for the /history band gate. Nullable because rows
+    // written before migration 0002 have neither -- the client treats NULL
+    // as "no band", so the pre-rebuild window degrades to median-only
+    // rather than drawing a band it cannot justify. rebuildTypicals does a
+    // full DELETE + rebuild nightly, so NULLs disappear after one run.
+    sampleCount: integer('sample_count'),
+    // Distinct America/Denver calendar days contributing to this bucket.
+    // This -- not sampleCount -- is what the band gate keys on: 30 samples
+    // at 8 AM is really 5 days x 6 polls, and within-hour spread is not the
+    // day-to-day spread a "typical band" claims to show.
+    distinctDays: integer('distinct_days'),
   },
   (table) => [
     primaryKey({
