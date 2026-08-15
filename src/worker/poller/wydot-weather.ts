@@ -18,9 +18,9 @@ import { denverToUtcIso } from './wydot-status';
 // irrelevant since cells are found by tag, not by attribute/position.
 //
 // Confirmed real labels (verbatim, sentence case, no colon): "Air
-// temperature", "Relative humidity" (unused), "Dew point" (unused),
-// "Visibility", "Surface temperature", "Wind gust", "Wind average", "Wind
-// direction". There is exactly one row per label -- no duplicate/multiple
+// temperature", "Relative humidity", "Dew point", "Visibility", "Surface
+// temperature", "Wind gust", "Wind average", "Wind direction". There is
+// exactly one row per label -- no duplicate/multiple
 // sensor groups on this station's page (unlike the brief's defensive
 // warning about e.g. two surface sensors) -- but LABEL_RX below is only
 // ever matched against the FIRST row whose label matches, in case that
@@ -63,6 +63,8 @@ export interface WeatherReading {
   windGustMph: number | null;
   windDir: string | null;
   visibilityFt: number | null;
+  humidityPct: number | null;
+  dewPointF: number | null;
   reportedAt: string | null; // ISO UTC
 }
 
@@ -111,7 +113,14 @@ function extractVisibilityFt(text: string): number | null {
   return value;
 }
 
-type NumericField = 'airF' | 'surfaceF' | 'windAvgMph' | 'windGustMph' | 'visibilityFt';
+type NumericField =
+  | 'airF'
+  | 'surfaceF'
+  | 'windAvgMph'
+  | 'windGustMph'
+  | 'visibilityFt'
+  | 'humidityPct'
+  | 'dewPointF';
 
 /** Match a stripped label cell's text to the WeatherReading field it reports, or null if unrecognized. */
 function matchNumericLabel(label: string): NumericField | null {
@@ -120,6 +129,12 @@ function matchNumericLabel(label: string): NumericField | null {
   if (/^wind average$/i.test(label)) return 'windAvgMph';
   if (/^wind gust$/i.test(label)) return 'windGustMph';
   if (/^visibility$/i.test(label)) return 'visibilityFt';
+  // Both were previously parsed and thrown away (the old `if (!field)
+  // continue` path). Humidity's cell is a bare percentage ("34%") and dew
+  // point's carries the usual US-then-metric pair ("41°F (5°C)"), so both
+  // fall out of the existing first-number extraction unchanged.
+  if (/^relative humidity$/i.test(label)) return 'humidityPct';
+  if (/^dew point$/i.test(label)) return 'dewPointF';
   return null;
 }
 
@@ -142,6 +157,8 @@ export function parseSensorPage(html: string): WeatherReading | null {
       windGustMph: null,
       windDir: null,
       visibilityFt: null,
+      humidityPct: null,
+      dewPointF: null,
       reportedAt: null,
     };
 
@@ -168,7 +185,7 @@ export function parseSensorPage(html: string): WeatherReading | null {
       }
 
       const field = matchNumericLabel(label);
-      if (!field) continue; // e.g. "Relative humidity" / "Dew point" -- not in WeatherReading
+      if (!field) continue; // unrecognized label -- e.g. a future page reshape adding a new sensor
       if (resolved.has(field)) continue;
       resolved.add(field);
       reading[field] = field === 'visibilityFt' ? extractVisibilityFt(valueText) : extractNumber(valueText);

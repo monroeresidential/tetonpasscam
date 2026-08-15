@@ -103,6 +103,12 @@ export const weatherSnapshots = sqliteTable('weather_snapshots', {
   windGust: real('wind_gust'),
   windDir: text('wind_dir'),
   visibilityFt: real('visibility_ft'),
+  // Both are on the RWIS sensor page and were parsed-then-discarded until
+  // now. Nullable like every other reading: an individual sensor can blank
+  // out without failing the whole parse. Percent for humidity, Fahrenheit
+  // for dew point -- same US-unit-only storage rule as air/surface temp.
+  humidityPct: real('humidity_pct'),
+  dewPointF: real('dew_point_f'),
   // WYDOT's own "Last Report Time" from the Sensors.StationResults page
   // (WeatherReading.reportedAt), NOT re-derived from capturedAt (the
   // poller's own fetch time) -- see LH T2 finding 4's survey: the API used

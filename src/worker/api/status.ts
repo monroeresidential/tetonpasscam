@@ -229,6 +229,8 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
         windGustMph: weatherRow.windGust,
         windDir: weatherRow.windDir,
         visibilityFt: weatherRow.visibilityFt,
+        humidityPct: weatherRow.humidityPct,
+        dewPointF: weatherRow.dewPointF,
         // WYDOT's own report timestamp (weather_snapshots.reported_at),
         // NOT weatherRow.capturedAt (our fetch time) -- see LH T2 finding
         // 4's survey: pre-fix, this column didn't exist and capturedAt got

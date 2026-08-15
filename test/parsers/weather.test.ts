@@ -88,3 +88,23 @@ describe('parseSensorPage', () => {
     expect(parseSensorPage(html)?.airF).toBe(70);
   });
 });
+
+describe('parseSensorPage — humidity and dew point', () => {
+  it('extracts relative humidity as a percentage', () => {
+    const r = parseSensorPage(load('sensors-tetonpass.html'));
+    expect(r?.humidityPct).toBe(34);
+  });
+
+  it('extracts dew point in Fahrenheit, taking the US unit not the parenthesized metric', () => {
+    // Cell reads "41°F (5°C)" -- the first number is the one we want.
+    const r = parseSensorPage(load('sensors-tetonpass.html'));
+    expect(r?.dewPointF).toBe(41);
+  });
+
+  it('ignores the stale commented-out value that precedes each real cell', () => {
+    // The real dew point cell is preceded by <!--<td>32°F</td>-->. A parser
+    // that stopped stripping comments would return 32 here.
+    const r = parseSensorPage(load('sensors-tetonpass.html'));
+    expect(r?.dewPointF).not.toBe(32);
+  });
+});

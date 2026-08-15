@@ -11,6 +11,8 @@ const reading: WeatherReading = {
   windGustMph: 15,
   windDir: 'W',
   visibilityFt: 6562,
+  humidityPct: 34,
+  dewPointF: 12,
   reportedAt: '2026-01-09T18:00:00.000Z',
 };
 

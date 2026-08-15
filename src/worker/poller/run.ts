@@ -473,6 +473,8 @@ export async function runPollCycle(
         windGust: reading.windGustMph,
         windDir: reading.windDir,
         visibilityFt: reading.visibilityFt,
+        humidityPct: reading.humidityPct,
+        dewPointF: reading.dewPointF,
         // The parser's own WYDOT-report timestamp, distinct from
         // `capturedAt` (this poller cycle's fetch time) -- see LH T2
         // finding 4's survey: previously there was no column for this, so
