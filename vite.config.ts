@@ -26,7 +26,7 @@ function flattenAdminHtml() {
     apply: 'build' as const,
     writeBundle(options: { dir?: string }) {
       const outDir = options.dir ?? path.resolve(dirname, 'dist');
-      for (const name of ['admin.html', 'embed.html']) {
+      for (const name of ['admin.html', 'embed.html', 'history.html']) {
         const from = path.join(outDir, 'src', 'app', name);
         const to = path.join(outDir, name);
         if (!fs.existsSync(from)) continue;
@@ -154,6 +154,12 @@ export default defineConfig({
           /^\/embed$/,
           /^\/embed\.html$/,
           /^\/embed\//,
+          // /history T8: a fourth real page (React entry, like index.html) --
+          // same "real file wins" reasoning as /admin/ /privacy/ /embed
+          // above. Without this, an installed PWA's SW serves the
+          // precached app shell (index.html) at /history instead of the
+          // actual history page.
+          /^\/history$/,
         ],
         runtimeCaching: [
           {
@@ -201,6 +207,7 @@ export default defineConfig({
         main: path.resolve(dirname, 'index.html'),
         admin: path.resolve(dirname, 'src/app/admin.html'),
         embed: path.resolve(dirname, 'src/app/embed.html'),
+        history: path.resolve(dirname, 'src/app/history.html'),
       },
     },
   },
