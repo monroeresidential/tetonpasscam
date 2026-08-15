@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { denverHour, denverMidnightMs, denverParts } from '../../src/worker/tz';
+import {
+  denverDateKey,
+  denverHour,
+  denverMidnightMs,
+  denverParts,
+  denverSeasonStartMs,
+} from '../../src/worker/tz';
 
 describe('denverParts', () => {
   it('derives hour/weekday-class/season from America/Denver, DST-aware', () => {
@@ -46,5 +52,39 @@ describe('denverMidnightMs', () => {
     expect(denverMidnightMs(Date.parse('2026-01-15T17:00:00.000Z'))).toBe(
       Date.parse('2026-01-15T07:00:00.000Z'),
     );
+  });
+});
+
+describe('denverDateKey', () => {
+  it('zero-pads month and day', () => {
+    // 2026-08-15T18:00:00Z == 12:00 MDT the same day
+    expect(denverDateKey(Date.parse('2026-08-15T18:00:00.000Z'))).toBe('2026-08-15');
+    expect(denverDateKey(Date.parse('2026-01-05T19:00:00.000Z'))).toBe('2026-01-05');
+  });
+
+  it('uses the Denver day, not the UTC day', () => {
+    // 2026-08-16T04:00:00Z is 22:00 MDT on Aug 15 -- UTC has already
+    // rolled over, Denver has not. Grouping by UTC here would split one
+    // evening's readings across two "days".
+    expect(denverDateKey(Date.parse('2026-08-16T04:00:00.000Z'))).toBe('2026-08-15');
+  });
+});
+
+describe('denverSeasonStartMs', () => {
+  it('summer instant => May 1 of the same year, Denver midnight', () => {
+    const start = denverSeasonStartMs(Date.parse('2026-08-15T18:00:00.000Z'));
+    expect(denverDateKey(start)).toBe('2026-05-01');
+  });
+
+  it('Nov-Dec winter instant => Nov 1 of the same year', () => {
+    const start = denverSeasonStartMs(Date.parse('2026-12-20T19:00:00.000Z'));
+    expect(denverDateKey(start)).toBe('2026-11-01');
+  });
+
+  it('Jan-Apr winter instant => Nov 1 of the PREVIOUS year', () => {
+    // The winter season spans the year boundary; a February instant
+    // belongs to the season that began the previous November.
+    const start = denverSeasonStartMs(Date.parse('2026-02-10T19:00:00.000Z'));
+    expect(denverDateKey(start)).toBe('2025-11-01');
   });
 });

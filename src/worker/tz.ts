@@ -94,3 +94,37 @@ export function denverMidnightMs(ms: number): number {
   }
   return actualUtcMs;
 }
+
+/**
+ * 'YYYY-MM-DD' for the America/Denver calendar day containing `ms`. Used to
+ * group readings by local day (aggregate.ts's distinct-day count, and
+ * history.ts's per-day peaks). Deliberately NOT `toISOString().slice(0,10)`
+ * -- that is the UTC day, which splits a Denver evening across two keys.
+ */
+export function denverDateKey(ms: number): string {
+  const parts = DENVER_PARTS_FORMAT.formatToParts(new Date(ms));
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  const y = get('year');
+  const m = get('month').padStart(2, '0');
+  const d = get('day').padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Denver-local midnight on the first day of the season containing `ms`,
+ * matching `denverParts`'s Nov-Apr = winter / May-Oct = summer split.
+ * Winter spans the year boundary, so a Jan-Apr instant belongs to the
+ * season that began the PREVIOUS November.
+ */
+export function denverSeasonStartMs(ms: number): number {
+  const parts = DENVER_PARTS_FORMAT.formatToParts(new Date(ms));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+  const year = get('year');
+  const month = get('month'); // 1-12
+
+  const startYear = month >= 1 && month <= 4 ? year - 1 : year;
+  const startMonth = month >= 5 && month <= 10 ? 5 : 11;
+  // Noon avoids any DST edge at the boundary date; denverMidnightMs then
+  // walks back to that Denver day's true local midnight.
+  return denverMidnightMs(Date.UTC(startYear, startMonth - 1, 1, 12, 0, 0));
+}
