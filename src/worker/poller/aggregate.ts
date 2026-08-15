@@ -104,9 +104,10 @@ async function rebuildTypicals(env: Env, nowMs: number): Promise<void> {
   const statements: D1PreparedStatement[] = [env.DB.prepare('DELETE FROM route_typicals')];
 
   for (const { routeId } of routeIdRows) {
-    // Scoped to this iteration: `rows`, `groups`, and `groupMeta` are all
-    // per-route and go out of scope (GC-eligible) before the next route's
-    // query runs, instead of one array holding every route's year at once.
+    // Scoped to this iteration: `rows`, `groups`, `groupMeta`, and
+    // `groupDays` are all per-route and go out of scope (GC-eligible)
+    // before the next route's query runs, instead of one array holding
+    // every route's year at once.
     const rows = (
       await env.DB.prepare(
         `SELECT captured_at AS capturedAt, duration_sec AS durationSec

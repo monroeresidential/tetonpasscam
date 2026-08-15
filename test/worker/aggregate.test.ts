@@ -185,7 +185,7 @@ describe('runNightly — confidence columns', () => {
     expect(conf?.distinctDays).toBe(2);
   });
 
-  it('counts a Denver day, not a UTC day', async () => {
+  it('resolves the hour bucket by Denver wall-clock, deduping same-day readings to one distinct day', async () => {
     const id = await routeId('driggs-airport-wb');
     // Both readings are 22:00-22:59 MDT on 2026-08-11 -- i.e. hour 22,
     // Denver-local -- but both raw capturedAt instants fall on 2026-08-12
