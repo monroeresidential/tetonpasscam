@@ -6,6 +6,7 @@ import WeatherStrip from './components/WeatherStrip';
 import AlertsStrip from './components/AlertsStrip';
 import Cameras from './components/Cameras';
 import Header from './components/Header';
+import HomeHistoryCard from './components/HomeHistoryCard';
 import ReportModal from './components/ReportModal';
 import Sponsor from './components/Sponsor';
 import About from './components/About';
@@ -98,6 +99,14 @@ function App() {
               onFlip={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
             />
           </div>
+          {(() => {
+            const historySlug = data.travelTimes.find((t) => t.slug.endsWith(`-${direction}`))?.slug;
+            return historySlug ? (
+              <div>
+                <HomeHistoryCard slug={historySlug} />
+              </div>
+            ) : null;
+          })()}
           <div>
             <AlertsStrip alerts={data.alerts} id33Advisory={data.id33Advisory} />
           </div>
