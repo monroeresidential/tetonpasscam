@@ -17,7 +17,10 @@ export interface TypicalChartProps {
    *  alongside the primary for comparison (surface vs. air temperature). */
   secondary?: ChartPoint[];
   /** A dashed horizontal line (e.g. freezing) drawn only when the plotted
-   *  data already comes near it -- see REFERENCE_PROXIMITY below. */
+   *  data actually CROSSES it -- i.e. the value falls inside the data's own
+   *  range. A reference the data never reaches is withheld rather than
+   *  stretching the chart down to meet it; see the containment check in the
+   *  body for why this is a containment test and not a proximity window. */
   referenceValue?: { value: number; label: string };
   /** Accessible name for the chart's SVG. Defaults to the original
    *  travel-time wording so existing (drive-time) callers are unaffected --
@@ -39,9 +42,6 @@ const PAD = { left: 40, right: 10, top: 20, bottom: 40 };
 const DEFAULT_FORMAT = (v: number) => `${Math.round(v / 60)}m`;
 const DEFAULT_ARIA_LABEL = 'Travel time by hour of day, today against the typical range';
 const DEFAULT_EMPTY_MESSAGE = 'No history for this route yet.';
-/** How close the data must come to the reference before it is worth drawing.
- *  Beyond this the line would only stretch the domain into empty space. */
-const REFERENCE_PROXIMITY = 8;
 
 /** Font size for axis tick text, in viewBox units. Mock 2c used 10; this is
  *  deliberately larger. The viewBox is a fixed 940 units wide and scales to
@@ -106,14 +106,31 @@ export default function TypicalChart({
   // without this guard every y() below would compute NaN.
   if (dataValues.length === 0) return noHistory;
 
-  // The reference only joins the domain when the data already comes near it
-  // -- otherwise a 45-79°F summer chart would be stretched down to 32°F.
+  // The reference is drawn only when the plotted data actually crosses it.
+  //
+  // This was originally an absolute proximity window ("within 8 of the
+  // domain"), which stopped meaning anything once this component became
+  // unit-agnostic: 8 against a drive-time domain measured in SECONDS
+  // (~900 units wide) is 0.9% and never fires, while 8 against a
+  // temperature domain in DEGREES (~61 units wide) is 13% and fires almost
+  // always. A percentage would fix that inconsistency but still leaves an
+  // arbitrary number to tune -- so the window is gone entirely.
+  //
+  // Containment is unit-neutral by construction, and it makes the
+  // domain-stretching problem disappear: a reference inside the range is
+  // already within the domain, so nothing is stretched and no empty band
+  // opens up below the data. The rule states plainly -- the freezing line
+  // appears when it is freezing. In August, when nothing plotted is under
+  // 44°F, it stays hidden and the axis's own minimum tick conveys the
+  // distance from freezing perfectly well.
   const dataMin = Math.min(...dataValues);
   const dataMax = Math.max(...dataValues);
   const showReference =
     referenceValue !== undefined &&
-    referenceValue.value >= dataMin - REFERENCE_PROXIMITY &&
-    referenceValue.value <= dataMax + REFERENCE_PROXIMITY;
+    referenceValue.value >= dataMin &&
+    referenceValue.value <= dataMax;
+  // Kept for symmetry with the pre-containment behavior; a contained
+  // reference cannot widen the domain, so this is a no-op by construction.
   const values = showReference ? [...dataValues, referenceValue.value] : dataValues;
 
   const vMin = Math.min(...values);

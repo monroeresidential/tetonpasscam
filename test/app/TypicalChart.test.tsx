@@ -199,3 +199,67 @@ describe('TypicalChart — axes', () => {
     expect(screen.queryByText('4 AM')).toBeNull();
   });
 });
+
+// The reference line draws only when the data actually crosses it. The
+// original condition used an absolute proximity constant, which was
+// meaningless once this component became unit-agnostic: 8 against a
+// drive-time domain measured in seconds (~900 units wide) is 0.9% and
+// effectively never fires, while 8 against a temperature domain in degrees
+// (~61 units wide) is 13% and fires almost always.
+describe('TypicalChart — reference line is drawn only when the data crosses it', () => {
+  function tempPt(hour: number, median: number): ChartPoint {
+    return { hour, median, p25: median - 5, p75: median + 5, distinctDays: 9 };
+  }
+
+  it('draws when the reference sits inside the plotted range', () => {
+    // Range [25, 39] via p25/p75; 32 is inside it.
+    render(
+      <TypicalChart
+        points={[tempPt(6, 30), tempPt(7, 34)]}
+        today={[]}
+        referenceValue={{ value: 32, label: 'Freezing' }}
+      />,
+    );
+    expect(screen.getByTestId('reference-line')).toBeTruthy();
+  });
+
+  it('omits it when every plotted value is above it', () => {
+    // A summer chart: range [39, 104]. Drawing a 32 line here would stretch
+    // the domain down into empty space and label the bottom tick with a
+    // value no series ever reaches.
+    render(
+      <TypicalChart
+        points={[tempPt(6, 44), tempPt(7, 99)]}
+        today={[]}
+        referenceValue={{ value: 32, label: 'Freezing' }}
+      />,
+    );
+    expect(screen.queryByTestId('reference-line')).toBeNull();
+  });
+
+  it('does not stretch the y-domain when the reference is omitted', () => {
+    // The lowest y-tick must describe the DATA, not the withheld reference.
+    render(
+      <TypicalChart
+        points={[tempPt(6, 44), tempPt(7, 99)]}
+        today={[]}
+        formatValue={(v) => `${Math.round(v)}F`}
+        referenceValue={{ value: 32, label: 'Freezing' }}
+      />,
+    );
+    expect(screen.getByText('39F')).toBeTruthy(); // p25 of the coldest bucket
+    expect(screen.queryByText('32F')).toBeNull();
+  });
+
+  it('draws when the reference lands exactly on the domain edge', () => {
+    // Boundary: p25 of the coldest bucket IS the reference value.
+    render(
+      <TypicalChart
+        points={[tempPt(6, 37), tempPt(7, 50)]}
+        today={[]}
+        referenceValue={{ value: 32, label: 'Freezing' }}
+      />,
+    );
+    expect(screen.getByTestId('reference-line')).toBeTruthy();
+  });
+});
