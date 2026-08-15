@@ -1,17 +1,51 @@
 import { useEffect, useRef, useState } from 'react';
 
 import SeasonCompare from './components/SeasonCompare';
-import TypicalChart from './components/TypicalChart';
+import TempUnitToggle from './components/TempUnitToggle';
+import TypicalChart, { type ChartPoint } from './components/TypicalChart';
 import WorstDays from './components/WorstDays';
-import { denverNow, todayToChartPoints, typicalsToChartPoints } from './historyChart';
+import { denverFractionalHourOf, denverNow, todayToChartPoints, typicalsToChartPoints } from './historyChart';
 import { getHistory } from './historyApi';
-import type { ApiStatus, HistoryResult } from '../shared/types';
+import { formatTemp, useTempUnit } from './units';
+import { getWeatherHistory } from './weatherHistoryApi';
+import type {
+  ApiStatus,
+  HistoryResult,
+  WeatherHistoryResult,
+  WeatherMetric,
+  WeatherTypical,
+} from '../shared/types';
+
+/** Filters `/api/weather-history`'s `typicals` -- every (metric,
+ *  weekday-class, hour, season) bucket, station-wide -- down to the ONE
+ *  metric AND population matching `weekdayClass`/`season`, same reasoning as
+ *  `typicalsToChartPoints`: skipping either half of the filter plots unrelated
+ *  populations at the same x-coordinate. */
+function tempPoints(
+  typicals: WeatherTypical[],
+  metric: WeatherMetric,
+  weekdayClass: 'weekday' | 'weekend',
+  season: 'winter' | 'summer',
+): ChartPoint[] {
+  return typicals
+    .filter((t) => t.metric === metric && t.weekdayClass === weekdayClass && t.season === season)
+    .sort((a, b) => a.hour - b.hour)
+    .map((t) => ({
+      hour: t.hour,
+      median: t.median,
+      p25: t.p25,
+      p75: t.p75,
+      distinctDays: t.distinctDays,
+    }));
+}
 
 export default function HistoryPage() {
   const [routes, setRoutes] = useState<ApiStatus['travelTimes']>([]);
   const [direction, setDirection] = useState<'eb' | 'wb'>('eb');
   const [slug, setSlug] = useState<string | null>(null);
   const [data, setData] = useState<HistoryResult | null>(null);
+  const [weather, setWeather] = useState<WeatherHistoryResult | null>(null);
+  const { unit, setUnit } = useTempUnit();
   const mountedSlug = useRef<string | null>(null);
 
   // Route list comes from /api/status so the tabs mirror DriveTimes exactly
@@ -21,6 +55,15 @@ export default function HistoryPage() {
       .then((r) => r.json() as Promise<ApiStatus>)
       .then((s) => setRoutes(s.travelTimes))
       .catch(() => setRoutes([]));
+  }, []);
+
+  // Station-wide, unlike the per-route history above -- takes no route
+  // parameter, so it belongs in its own mount-once effect rather than the
+  // per-slug one.
+  useEffect(() => {
+    getWeatherHistory()
+      .then(setWeather)
+      .catch(() => setWeather(null));
   }, []);
 
   const visible = routes.filter((r) => r.slug.endsWith(`-${direction}`));
@@ -49,6 +92,12 @@ export default function HistoryPage() {
 
   const points = typicalsToChartPoints(data?.typicals ?? [], weekdayClass, season);
   const today = todayToChartPoints(data?.today ?? []);
+
+  const airPoints = tempPoints(weather?.typicals ?? [], 'air_f', weekdayClass, season);
+  const surfacePoints = tempPoints(weather?.typicals ?? [], 'surface_f', weekdayClass, season);
+  const tempToday = (weather?.today ?? [])
+    .filter((r) => r.airF !== null)
+    .map((r) => ({ hour: denverFractionalHourOf(r.capturedAt), value: r.airF as number }));
 
   return (
     <main className="bg-page min-h-screen pb-10">
@@ -99,6 +148,27 @@ export default function HistoryPage() {
             <span>— Typical median</span>
           </div>
           <TypicalChart points={points} today={today} />
+          <p className="text-muted mt-2 text-[11.5px]">
+            The band is shown only for hours with enough separate days of history behind them.
+          </p>
+        </section>
+
+        <section data-testid="temp-card" className="bg-card border-card-border mt-4 rounded-2xl border p-5">
+          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-muted flex flex-wrap gap-4 text-[11.5px]">
+              <span>— Air (median)</span>
+              <span>┄ Surface (median)</span>
+            </div>
+            <TempUnitToggle unit={unit} onChange={setUnit} />
+          </div>
+          <TypicalChart
+            points={airPoints}
+            today={tempToday}
+            secondary={surfacePoints}
+            formatValue={(v) => formatTemp(v, unit)}
+            referenceValue={{ value: 32, label: 'Freezing' }}
+            ariaLabel="Summit temperature by hour of day, today's air reading against the typical range"
+          />
           <p className="text-muted mt-2 text-[11.5px]">
             The band is shown only for hours with enough separate days of history behind them.
           </p>

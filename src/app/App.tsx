@@ -11,7 +11,9 @@ import ReportModal from './components/ReportModal';
 import Sponsor from './components/Sponsor';
 import About from './components/About';
 import Footer from './components/Footer';
+import TempUnitToggle from './components/TempUnitToggle';
 import { useStatus } from './useStatus';
+import { useTempUnit } from './units';
 
 const OFFLINE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/Denver',
@@ -59,6 +61,7 @@ function App() {
   const isDesktop = useIsDesktop();
   const [reportOpen, setReportOpen] = useState(false);
   const [direction, setDirection] = useState<'eb' | 'wb'>('eb');
+  const { unit, setUnit } = useTempUnit();
 
   if (!data) {
     return (
@@ -114,10 +117,14 @@ function App() {
             <Cameras refreshedAt={refreshedAt} />
           </div>
           <div>
+            <div className="mb-1 flex justify-end">
+              <TempUnitToggle unit={unit} onChange={setUnit} />
+            </div>
             <WeatherStrip
               weather={data.weather}
               surfaceCondition={data.surfaceCondition}
               weatherStale={data.weatherStale}
+              unit={unit}
             />
           </div>
           <div>
