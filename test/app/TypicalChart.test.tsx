@@ -106,4 +106,23 @@ describe('TypicalChart', () => {
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.getByText(/No history for this route yet/)).toBeTruthy();
   });
+
+  it('defaults to the route-history empty message when no emptyMessage is given', () => {
+    render(<TypicalChart points={[]} today={[]} />);
+    expect(screen.getByText('No history for this route yet.')).toBeTruthy();
+  });
+
+  it('uses a supplied emptyMessage instead of the route-history default', () => {
+    render(
+      <TypicalChart
+        points={[]}
+        today={[]}
+        emptyMessage="Temperature history is still being collected for this station."
+      />,
+    );
+    expect(screen.queryByText(/No history for this route yet/)).toBeNull();
+    expect(
+      screen.getByText('Temperature history is still being collected for this station.'),
+    ).toBeTruthy();
+  });
 });

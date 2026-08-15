@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import HistoryPage from '../../src/app/HistoryPage';
+import { MIN_DISTINCT_DAYS_FOR_BAND } from '../../src/shared/history';
 import type { WeatherHistoryResult } from '../../src/shared/types';
 
 function stubApi() {
@@ -66,7 +67,10 @@ describe('HistoryPage subtitle', () => {
     vi.setSystemTime(new Date('2026-08-15T18:00:00.000Z')); // Sat, 12:00 MDT
     stubApi();
     render(<HistoryPage />);
-    await waitFor(() => expect(screen.getByText(/summer Saturday/)).toBeTruthy());
+    // Matched against the drive-time subtitle specifically ("Travel time...")
+    // -- the temp card's subtitle (added for I1) names the same season/weekday
+    // population and would otherwise make this match ambiguous.
+    await waitFor(() => expect(screen.getByText(/Travel time.*summer Saturday/)).toBeTruthy());
   });
 
   it('says "winter Wednesday" in January', async () => {
@@ -76,7 +80,9 @@ describe('HistoryPage subtitle', () => {
     vi.setSystemTime(new Date('2026-01-14T19:00:00.000Z')); // Wed, 12:00 MST
     stubApi();
     render(<HistoryPage />);
-    await waitFor(() => expect(screen.getByText(/winter Wednesday/)).toBeTruthy());
+    // Matched against the drive-time subtitle specifically -- see the comment
+    // in the "summer Saturday" test above.
+    await waitFor(() => expect(screen.getByText(/Travel time.*winter Wednesday/)).toBeTruthy());
   });
 });
 
@@ -194,5 +200,30 @@ describe('HistoryPage temp chart', () => {
     expect(await screen.findByText(/now · 50°F/)).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: '°C' }));
     expect(await screen.findByText(/now · 10°C/)).toBeTruthy();
+  });
+
+  it('withholds the band but still draws the median when the temp chart has sub-threshold distinctDays', async () => {
+    // I3 regression: if tempPoints ever mapped sampleCount into distinctDays
+    // instead of the real distinctDays column, every fixture in this suite
+    // (5 or 9) would clear the threshold and this gate would never be
+    // exercised. distinctDays here is deliberately BELOW
+    // MIN_DISTINCT_DAYS_FOR_BAND, derived from the constant rather than
+    // hardcoded, so the test tracks it if it changes.
+    const thin = MIN_DISTINCT_DAYS_FOR_BAND - 1;
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-08-15T18:00:00.000Z')); // Sat, summer
+    stubApiWithWeather({
+      typicals: [
+        { metric: 'air_f', weekdayClass: 'weekend', season: 'summer', hour: 8, median: 50, p25: 45, p75: 55, sampleCount: 30, distinctDays: thin },
+        { metric: 'air_f', weekdayClass: 'weekend', season: 'summer', hour: 9, median: 55, p25: 50, p75: 60, sampleCount: 30, distinctDays: thin },
+      ],
+      today: [],
+    });
+
+    render(<HistoryPage />);
+    const tempCard = await screen.findByTestId('temp-card');
+    await waitFor(() => expect(within(tempCard).getByTestId('median')).toBeTruthy());
+    expect(within(tempCard).queryByTestId('band')).toBeNull();
+    expect(within(tempCard).getByTestId('median')).toBeTruthy();
   });
 });

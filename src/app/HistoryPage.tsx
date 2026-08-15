@@ -154,7 +154,12 @@ export default function HistoryPage() {
         </section>
 
         <section data-testid="temp-card" className="bg-card border-card-border mt-4 rounded-2xl border p-5">
-          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-[30px] font-extrabold tracking-tight">Summit temperature</h2>
+          <p className="text-muted mt-1 text-sm">
+            {`Summit temperature by hour of day — today's air reading against the typical range for a ${season} ${weekday}.`}
+          </p>
+
+          <div className="mt-4 mb-2.5 flex flex-wrap items-center justify-between gap-2">
             <div className="text-muted flex flex-wrap gap-4 text-[11.5px]">
               <span>— Air (median)</span>
               <span>┄ Surface (median)</span>
@@ -168,6 +173,7 @@ export default function HistoryPage() {
             formatValue={(v) => formatTemp(v, unit)}
             referenceValue={{ value: 32, label: 'Freezing' }}
             ariaLabel="Summit temperature by hour of day, today's air reading against the typical range"
+            emptyMessage="Temperature history is still being collected for this station."
           />
           <p className="text-muted mt-2 text-[11.5px]">
             The band is shown only for hours with enough separate days of history behind them.

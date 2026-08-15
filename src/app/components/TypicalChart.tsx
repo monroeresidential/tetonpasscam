@@ -24,6 +24,12 @@ export interface TypicalChartProps {
    *  any non-travel-time chart (e.g. temperature) MUST override this, or a
    *  screen-reader user is told they're hearing drive times when they're not. */
   ariaLabel?: string;
+  /** Message shown in place of the chart when there is nothing to plot.
+   *  Defaults to the original travel-time wording so existing (drive-time)
+   *  callers are unaffected -- any non-route chart (e.g. a station-wide
+   *  temperature chart) MUST override this, or a "for this route" message
+   *  is shown for data that has no route at all. */
+  emptyMessage?: string;
 }
 
 const VB_W = 940;
@@ -32,11 +38,10 @@ const PAD = { left: 40, right: 10, top: 20, bottom: 40 };
 
 const DEFAULT_FORMAT = (v: number) => `${Math.round(v / 60)}m`;
 const DEFAULT_ARIA_LABEL = 'Travel time by hour of day, today against the typical range';
+const DEFAULT_EMPTY_MESSAGE = 'No history for this route yet.';
 /** How close the data must come to the reference before it is worth drawing.
  *  Beyond this the line would only stretch the domain into empty space. */
 const REFERENCE_PROXIMITY = 8;
-
-const NO_HISTORY = <p className="text-muted text-sm">No history for this route yet.</p>;
 
 export default function TypicalChart({
   points,
@@ -46,8 +51,11 @@ export default function TypicalChart({
   secondary = [],
   referenceValue,
   ariaLabel = DEFAULT_ARIA_LABEL,
+  emptyMessage = DEFAULT_EMPTY_MESSAGE,
 }: TypicalChartProps) {
-  if (points.length === 0) return NO_HISTORY;
+  const noHistory = <p className="text-muted text-sm">{emptyMessage}</p>;
+
+  if (points.length === 0) return noHistory;
 
   // X domain spans every hour we actually draw -- points, secondary, AND
   // today's readings -- so a today reading outside the points' hour range
@@ -76,7 +84,7 @@ export default function TypicalChart({
   // degenerate domain. Math.min/max of an empty array is +/-Infinity, and
   // `(-Infinity) || 1` does NOT fall back to 1 (-Infinity is truthy), so
   // without this guard every y() below would compute NaN.
-  if (dataValues.length === 0) return NO_HISTORY;
+  if (dataValues.length === 0) return noHistory;
 
   // The reference only joins the domain when the data already comes near it
   // -- otherwise a 45-79°F summer chart would be stretched down to 32°F.
