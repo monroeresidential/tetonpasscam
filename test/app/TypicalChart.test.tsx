@@ -263,3 +263,36 @@ describe('TypicalChart — reference line is drawn only when the data crosses it
     expect(screen.getByTestId('reference-line')).toBeTruthy();
   });
 });
+
+// The now-label is centered on its dot, so a reading at either edge of the
+// plot ran past the viewBox and got clipped -- the drive-time chart read
+// "now · 3" instead of "now · 37m". The anchor flips so the text always
+// grows inward.
+describe('TypicalChart — now-label stays inside the viewBox', () => {
+  function pt(hour: number): ChartPoint {
+    return { hour, median: 1800, p25: 1700, p75: 1900, distinctDays: 9 };
+  }
+  const label = () => screen.getByText(/now ·/);
+
+  it('anchors to the end when the latest reading is at the right edge', () => {
+    render(<TypicalChart points={[pt(4), pt(10)]} today={[{ hour: 10, value: 2280 }]} />);
+    expect(label().getAttribute('text-anchor')).toBe('end');
+  });
+
+  it('anchors to the start when the only reading is at the left edge', () => {
+    render(<TypicalChart points={[pt(4), pt(10)]} today={[{ hour: 4, value: 2280 }]} />);
+    expect(label().getAttribute('text-anchor')).toBe('start');
+  });
+
+  it('stays centered when the reading is mid-chart', () => {
+    render(<TypicalChart points={[pt(4), pt(10)]} today={[{ hour: 7, value: 2280 }]} />);
+    expect(label().getAttribute('text-anchor')).toBe('middle');
+  });
+
+  it('renders the label text in full regardless of anchor', () => {
+    // The clipping was visual, not textual -- guard that the string itself
+    // is never shortened as a workaround.
+    render(<TypicalChart points={[pt(4), pt(10)]} today={[{ hour: 10, value: 2280 }]} />);
+    expect(screen.getByText('now · 38m')).toBeTruthy();
+  });
+});

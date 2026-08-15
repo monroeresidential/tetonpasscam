@@ -160,8 +160,15 @@ export default function HistoryPage() {
           </p>
 
           <div className="mt-4 mb-2.5 flex flex-wrap items-center justify-between gap-2">
+            {/* Names every series on the chart, matching the drive-time
+                card's legend. "Today (air)" rather than plain "Today"
+                because only air has a today trace here -- surface is
+                plotted as a typical median alone, and a bare "Today" would
+                leave a reader guessing which of the two it tracks. */}
             <div className="text-muted flex flex-wrap gap-4 text-[11.5px]">
+              <span>— Today (air)</span>
               <span>— Air (median)</span>
+              <span>▬ Typical band (p25–p75)</span>
               <span>┄ Surface (median)</span>
             </div>
             <TempUnitToggle unit={unit} onChange={setUnit} />

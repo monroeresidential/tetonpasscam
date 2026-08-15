@@ -55,6 +55,28 @@ const AXIS_FONT_SIZE = 13;
 /** Hours between x-axis labels, matching mock 2c's cadence (4 AM, 7 AM, ...). */
 const X_LABEL_STEP_HOURS = 3;
 
+/** Roughly half the width of the widest now-label ("now · 100°F"), in
+ *  viewBox units. Estimated rather than measured: SVG text has no width
+ *  until it is in a DOM, the label's content is bounded and short, and
+ *  over-reserving here costs nothing -- the anchor simply flips a little
+ *  earlier than strictly necessary. */
+const NOW_LABEL_HALF_WIDTH = 45;
+
+/**
+ * Which end of the now-label to anchor to, given its x position.
+ *
+ * The label is centred on its dot, so a reading at either edge of the plot
+ * ran past the viewBox and was clipped -- the drive-time chart rendered
+ * "now · 3" instead of "now · 37m" whenever the latest reading was the
+ * rightmost point, which is the normal case for a chart of today so far.
+ * Anchoring to the near end makes the text grow inward instead.
+ */
+function nowLabelAnchor(px: number): 'start' | 'middle' | 'end' {
+  if (px + NOW_LABEL_HALF_WIDTH > VB_W - PAD.right) return 'end';
+  if (px - NOW_LABEL_HALF_WIDTH < PAD.left) return 'start';
+  return 'middle';
+}
+
 /** 24-hour clock value -> the mock's 12-hour label ("13" -> "1 PM"). */
 function hourLabel(hour: number): string {
   const h = Math.round(hour) % 24;
@@ -322,7 +344,7 @@ export default function TypicalChart({
             <text
               x={x(last.hour)}
               y={y(last.value) - 14}
-              textAnchor="middle"
+              textAnchor={nowLabelAnchor(x(last.hour))}
               fontSize="11"
               fontWeight="700"
               fill="var(--color-accent)"
