@@ -47,11 +47,30 @@ describe('TypicalChart', () => {
     expect(screen.queryByTestId('now-dot')).toBeNull();
   });
 
-  it('uses design tokens, never hardcoded mock hex', () => {
+  it('uses design tokens, never hardcoded hex colors', () => {
     // The mock is light-mode only (#faf7f0 / #eae4d8); the app ships a dark
     // token set, so any literal hex here would be invisible or wrong in
-    // dark mode.
+    // dark mode. Grep for any hex literal, not just the mock's specific
+    // palette, so a hardcoded color introduced later is caught too.
     const { container } = render(<TypicalChart points={[pt(6, OK), pt(7, OK)]} today={[]} />);
-    expect(container.innerHTML).not.toMatch(/#faf7f0|#eae4d8|#2b2620/i);
+    expect(container.innerHTML).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+  });
+
+  it('renders the empty-history message instead of NaN coordinates when every value is null', () => {
+    // Regression: Math.min()/Math.max() of an empty array are +/-Infinity,
+    // and `(-Infinity) || 1` does not fall back to 1 (-Infinity is truthy),
+    // so an unguarded component would compute NaN for every y() and render
+    // a blank (but not empty) SVG with no error.
+    render(
+      <TypicalChart
+        points={[
+          { hour: 6, medianSec: null, p25Sec: null, p75Sec: null, distinctDays: null },
+          { hour: 7, medianSec: null, p25Sec: null, p75Sec: null, distinctDays: null },
+        ]}
+        today={[]}
+      />,
+    );
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.getByText(/No history for this route yet/)).toBeTruthy();
   });
 });

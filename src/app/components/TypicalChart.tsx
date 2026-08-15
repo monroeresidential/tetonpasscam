@@ -22,10 +22,15 @@ function minutes(sec: number): number {
   return Math.round(sec / 60);
 }
 
-export default function TypicalChart({ points, today, compact = false }: TypicalChartProps) {
-  if (points.length === 0) return <p className="text-muted text-sm">No history for this route yet.</p>;
+const NO_HISTORY = <p className="text-muted text-sm">No history for this route yet.</p>;
 
-  const hours = points.map((p) => p.hour);
+export default function TypicalChart({ points, today, compact = false }: TypicalChartProps) {
+  if (points.length === 0) return NO_HISTORY;
+
+  // X domain spans every hour we actually draw -- points AND today's
+  // readings -- so a today reading outside the points' hour range never
+  // gets silently clipped by the SVG viewport.
+  const hours = [...points.map((p) => p.hour), ...today.map((t) => t.hour)];
   const hMin = Math.min(...hours);
   const hMax = Math.max(...hours);
 
@@ -35,12 +40,23 @@ export default function TypicalChart({ points, today, compact = false }: Typical
     ...points.flatMap((p) => [p.medianSec, p.p25Sec, p.p75Sec]),
     ...today.map((t) => t.durationSec),
   ].filter((v): v is number => v !== null);
+
+  // Nothing plottable (every value null and no today readings) -- bail out
+  // the same honest way as the empty-points case rather than risk a
+  // degenerate domain. Math.min/max of an empty array is +/-Infinity, and
+  // `(-Infinity) || 1` does NOT fall back to 1 (-Infinity is truthy), so
+  // without this guard every y() below would compute NaN.
+  if (values.length === 0) return NO_HISTORY;
+
   const vMin = Math.min(...values);
   const vMax = Math.max(...values);
-  const span = vMax - vMin || 1;
+  // Explicit flat-series guard (vMax === vMin) rather than relying on the
+  // `|| 1` idiom, which only works because 0 is falsy -- easy to break by
+  // accident and worth spelling out given the NaN risk above.
+  const span = vMax > vMin ? vMax - vMin : 1;
+  const hSpan = hMax > hMin ? hMax - hMin : 1;
 
-  const x = (hour: number) =>
-    PAD.left + ((hour - hMin) / (hMax - hMin || 1)) * (VB_W - PAD.left - PAD.right);
+  const x = (hour: number) => PAD.left + ((hour - hMin) / hSpan) * (VB_W - PAD.left - PAD.right);
   const y = (sec: number) =>
     PAD.top + (1 - (sec - vMin) / span) * (VB_H - PAD.top - PAD.bottom);
 
