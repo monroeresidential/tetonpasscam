@@ -52,8 +52,41 @@ describe('TypicalChart', () => {
     // token set, so any literal hex here would be invisible or wrong in
     // dark mode. Grep for any hex literal, not just the mock's specific
     // palette, so a hardcoded color introduced later is caught too.
-    const { container } = render(<TypicalChart points={[pt(6, OK), pt(7, OK)]} today={[]} />);
+    // secondary and referenceValue are included so the grep also covers
+    // the elements they render, not just the primary series.
+    const { container } = render(
+      <TypicalChart
+        points={[pt(6, OK), pt(7, OK)]}
+        secondary={[pt(6, OK), pt(7, OK)]}
+        today={[]}
+        referenceValue={{ value: 1800, label: 'Typical' }}
+      />,
+    );
     expect(container.innerHTML).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+  });
+
+  it('defaults to the travel-time accessible name when no ariaLabel is given', () => {
+    render(<TypicalChart points={[pt(6, OK), pt(7, OK)]} today={[]} />);
+    expect(
+      screen.getByRole('img', {
+        name: 'Travel time by hour of day, today against the typical range',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('uses a supplied ariaLabel instead of the travel-time default', () => {
+    render(
+      <TypicalChart
+        points={[pt(6, OK), pt(7, OK)]}
+        today={[]}
+        ariaLabel="Temperature by hour of day, today against the typical range"
+      />,
+    );
+    expect(
+      screen.getByRole('img', {
+        name: 'Temperature by hour of day, today against the typical range',
+      }),
+    ).toBeTruthy();
   });
 
   it('renders the empty-history message instead of NaN coordinates when every value is null', () => {

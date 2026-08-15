@@ -19,6 +19,11 @@ export interface TypicalChartProps {
   /** A dashed horizontal line (e.g. freezing) drawn only when the plotted
    *  data already comes near it -- see REFERENCE_PROXIMITY below. */
   referenceValue?: { value: number; label: string };
+  /** Accessible name for the chart's SVG. Defaults to the original
+   *  travel-time wording so existing (drive-time) callers are unaffected --
+   *  any non-travel-time chart (e.g. temperature) MUST override this, or a
+   *  screen-reader user is told they're hearing drive times when they're not. */
+  ariaLabel?: string;
 }
 
 const VB_W = 940;
@@ -26,6 +31,7 @@ const VB_H = 260;
 const PAD = { left: 40, right: 10, top: 20, bottom: 40 };
 
 const DEFAULT_FORMAT = (v: number) => `${Math.round(v / 60)}m`;
+const DEFAULT_ARIA_LABEL = 'Travel time by hour of day, today against the typical range';
 /** How close the data must come to the reference before it is worth drawing.
  *  Beyond this the line would only stretch the domain into empty space. */
 const REFERENCE_PROXIMITY = 8;
@@ -39,6 +45,7 @@ export default function TypicalChart({
   formatValue = DEFAULT_FORMAT,
   secondary = [],
   referenceValue,
+  ariaLabel = DEFAULT_ARIA_LABEL,
 }: TypicalChartProps) {
   if (points.length === 0) return NO_HISTORY;
 
@@ -110,7 +117,7 @@ export default function TypicalChart({
       viewBox={`0 0 ${VB_W} ${VB_H}`}
       className="block h-auto w-full"
       role="img"
-      aria-label="Travel time by hour of day, today against the typical range"
+      aria-label={ariaLabel}
     >
       {showReference && referenceValue && (
         <>
