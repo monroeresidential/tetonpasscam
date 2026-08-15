@@ -101,3 +101,42 @@ export interface ApiStatus {
   detours: { route: string; conditionText: string }[] | null; // only when closed
   alerts: PublicAlert[]; // active, unexpired community reports, newest first
 }
+
+/** One (weekday-class, hour, season) typical bucket for a route, as returned
+ *  by `GET /api/history` and rendered by the /history page's chart.
+ *  `sampleCount`/`distinctDays` are nullable because rows written before
+ *  migration 0002 have neither -- the client treats NULL as "no band". */
+export interface HistoryTypical {
+  weekdayClass: 'weekday' | 'weekend';
+  season: 'winter' | 'summer';
+  hour: number;
+  medianSec: number | null;
+  p25Sec: number | null;
+  p75Sec: number | null;
+  sampleCount: number | null;
+  distinctDays: number | null;
+}
+
+/** `GET /api/history`'s summary block, feeding the /history page's two
+ *  summary tables. Every field is nullable, and absence is represented as
+ *  `null` (never `0` or `[]`) -- see history.ts's helpers for why each one
+ *  can legitimately be unknown rather than zero/empty. */
+export interface HistorySummary {
+  worstDays: { date: string; peakSec: number }[] | null;
+  seasonMedians: { summer: number | null; winter: number | null } | null;
+  closureDays: { winter: number | null } | null;
+}
+
+/** One `travel_times` row captured since Denver-local midnight "today". */
+export interface HistoryToday {
+  capturedAt: string;
+  durationSec: number;
+}
+
+/** Response shape for `GET /api/history?route=<slug>`. */
+export interface HistoryResult {
+  route: { slug: string; name: string };
+  typicals: HistoryTypical[];
+  today: HistoryToday[];
+  summary: HistorySummary;
+}
