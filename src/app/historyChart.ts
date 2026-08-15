@@ -73,9 +73,9 @@ export function typicalsToChartPoints(
     .sort((a, b) => a.hour - b.hour)
     .map((t) => ({
       hour: t.hour,
-      medianSec: t.medianSec,
-      p25Sec: t.p25Sec,
-      p75Sec: t.p75Sec,
+      median: t.medianSec,
+      p25: t.p25Sec,
+      p75: t.p75Sec,
       distinctDays: t.distinctDays,
     }));
 }
@@ -85,6 +85,6 @@ export function typicalsToChartPoints(
  * fractional Denver-local hour (see `denverFractionalHourOf`) rather than
  * snapped to the whole-hour bucket the typicals band uses.
  */
-export function todayToChartPoints(today: HistoryToday[]): { hour: number; durationSec: number }[] {
-  return today.map((r) => ({ hour: denverFractionalHourOf(r.capturedAt), durationSec: r.durationSec }));
+export function todayToChartPoints(today: HistoryToday[]): { hour: number; value: number }[] {
+  return today.map((r) => ({ hour: denverFractionalHourOf(r.capturedAt), value: r.durationSec }));
 }

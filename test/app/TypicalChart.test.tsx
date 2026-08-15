@@ -5,7 +5,7 @@ import TypicalChart, { type ChartPoint } from '../../src/app/components/TypicalC
 import { MIN_DISTINCT_DAYS_FOR_BAND } from '../../src/shared/history';
 
 function pt(hour: number, distinctDays: number | null): ChartPoint {
-  return { hour, medianSec: 1800, p25Sec: 1700, p75Sec: 1900, distinctDays };
+  return { hour, median: 1800, p25: 1700, p75: 1900, distinctDays };
 }
 
 const OK = MIN_DISTINCT_DAYS_FOR_BAND;
@@ -32,8 +32,8 @@ describe('TypicalChart', () => {
       <TypicalChart
         points={[pt(6, OK), pt(7, OK), pt(8, OK)]}
         today={[
-          { hour: 6, durationSec: 1800 },
-          { hour: 7, durationSec: 2280 },
+          { hour: 6, value: 1800 },
+          { hour: 7, value: 2280 },
         ]}
       />,
     );
@@ -64,8 +64,8 @@ describe('TypicalChart', () => {
     render(
       <TypicalChart
         points={[
-          { hour: 6, medianSec: null, p25Sec: null, p75Sec: null, distinctDays: null },
-          { hour: 7, medianSec: null, p25Sec: null, p75Sec: null, distinctDays: null },
+          { hour: 6, median: null, p25: null, p75: null, distinctDays: null },
+          { hour: 7, median: null, p25: null, p75: null, distinctDays: null },
         ]}
         today={[]}
       />,

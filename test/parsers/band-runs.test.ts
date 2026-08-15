@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { MIN_DISTINCT_DAYS_FOR_BAND, bandRuns, type BandPoint } from '../../src/shared/history';
 
 function pt(hour: number, distinctDays: number | null): BandPoint {
-  return { hour, p25Sec: 1700, p75Sec: 1900, distinctDays };
+  return { hour, p25: 1700, p75: 1900, distinctDays };
 }
 
 describe('bandRuns', () => {
@@ -44,9 +44,9 @@ describe('bandRuns', () => {
 
   it('requires non-null p25 and p75, not just enough days', () => {
     const runs = bandRuns([
-      { hour: 6, p25Sec: null, p75Sec: 1900, distinctDays: 9 },
-      { hour: 7, p25Sec: 1700, p75Sec: 1900, distinctDays: 9 },
-      { hour: 8, p25Sec: 1700, p75Sec: 1900, distinctDays: 9 },
+      { hour: 6, p25: null, p75: 1900, distinctDays: 9 },
+      { hour: 7, p25: 1700, p75: 1900, distinctDays: 9 },
+      { hour: 8, p25: 1700, p75: 1900, distinctDays: 9 },
     ]);
     expect(runs.map((r) => r.map((p) => p.hour))).toEqual([[7, 8]]);
   });

@@ -15,16 +15,16 @@ export const MIN_DISTINCT_DAYS_FOR_BAND = 4;
 
 export interface BandPoint {
   hour: number;
-  p25Sec: number | null;
-  p75Sec: number | null;
+  p25: number | null;
+  p75: number | null;
   /** NULL for rows written before migration 0005 -- treated as NOT qualifying. */
   distinctDays: number | null;
 }
 
 function qualifies(p: BandPoint): boolean {
   return (
-    p.p25Sec !== null &&
-    p.p75Sec !== null &&
+    p.p25 !== null &&
+    p.p75 !== null &&
     p.distinctDays !== null &&
     p.distinctDays >= MIN_DISTINCT_DAYS_FOR_BAND
   );

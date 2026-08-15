@@ -6,7 +6,7 @@ import { getHistory } from '../historyApi';
 
 export default function HomeHistoryCard({ slug, routeName }: { slug: string; routeName: string }) {
   const [points, setPoints] = useState<ChartPoint[]>([]);
-  const [today, setToday] = useState<{ hour: number; durationSec: number }[]>([]);
+  const [today, setToday] = useState<{ hour: number; value: number }[]>([]);
   const mountedSlug = useRef<string | null>(null);
 
   useEffect(() => {

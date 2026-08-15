@@ -25,8 +25,8 @@ describe('typicalsToChartPoints (C1)', () => {
     ];
 
     expect(typicalsToChartPoints(typicals, 'weekday', 'summer')).toEqual([
-      { hour: 7, medianSec: 600, p25Sec: 500, p75Sec: 700, distinctDays: 5 },
-      { hour: 8, medianSec: 650, p25Sec: 550, p75Sec: 750, distinctDays: 5 },
+      { hour: 7, median: 600, p25: 500, p75: 700, distinctDays: 5 },
+      { hour: 8, median: 650, p25: 550, p75: 750, distinctDays: 5 },
     ]);
   });
 
