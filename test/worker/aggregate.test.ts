@@ -147,6 +147,66 @@ describe('runNightly — typicals window (audit finding 6, bounded aggregation)'
   });
 });
 
+async function confidenceFor(
+  routeId_: number,
+  weekdayClass: string,
+  hour: number,
+  season: string,
+): Promise<{ sampleCount: number; distinctDays: number } | undefined> {
+  return (await env.DB.prepare(
+    `SELECT sample_count AS sampleCount, distinct_days AS distinctDays
+       FROM route_typicals WHERE route_id = ? AND weekday_class = ? AND hour = ? AND season = ?`,
+  )
+    .bind(routeId_, weekdayClass, hour, season)
+    .first()) as { sampleCount: number; distinctDays: number } | undefined;
+}
+
+// Slug choice matters: runNightly rebuilds EVERY route from EVERY
+// travel_times row in the shared test DB, so a slug another test in this
+// file already seeded would inflate these counts. driggs-airport-{eb,wb}
+// are the only pair untouched by the existing tests here.
+describe('runNightly — confidence columns', () => {
+  it('counts samples and DISTINCT Denver days separately', async () => {
+    const id = await routeId('driggs-airport-eb');
+    // Six readings in the 08:00 MDT hour, but spread over only TWO Denver
+    // days: 2026-08-11 (Tue) and 2026-08-12 (Wed). This is exactly the
+    // shape the gate exists to catch -- a healthy-looking sample count
+    // standing on almost no day-to-day evidence.
+    // 14:00 UTC == 08:00 MDT (UTC-6) in August.
+    for (const min of ['00', '10', '20']) {
+      await insertTravelTime(id, `2026-08-11T14:${min}:00.000Z`, 1800);
+      await insertTravelTime(id, `2026-08-12T14:${min}:00.000Z`, 1900);
+    }
+
+    await runNightly(env, Date.parse('2026-08-13T15:00:00.000Z'));
+
+    const conf = await confidenceFor(id, 'weekday', 8, 'summer');
+    expect(conf?.sampleCount).toBe(6);
+    expect(conf?.distinctDays).toBe(2);
+  });
+
+  it('counts a Denver day, not a UTC day', async () => {
+    const id = await routeId('driggs-airport-wb');
+    // Both readings are 22:00-22:59 MDT on 2026-08-11 -- i.e. hour 22,
+    // Denver-local -- but both raw capturedAt instants fall on 2026-08-12
+    // in UTC (04:00 MDT == 22:00 the prior Denver day + 6h offset). A
+    // naive `capturedAt.slice(0, 10)` UTC-day grouping happens to agree
+    // here (both say "2026-08-12"), so this pins the correct single-day
+    // answer rather than exercising a divergence -- a whole-hour-offset
+    // zone like America/Denver can't split one Denver-hour bucket across
+    // two UTC calendar dates, so no fixture can force real disagreement
+    // between the two groupings within a single hour/day bucket.
+    await insertTravelTime(id, '2026-08-12T04:10:00.000Z', 2000);
+    await insertTravelTime(id, '2026-08-12T04:50:00.000Z', 2100);
+
+    await runNightly(env, Date.parse('2026-08-13T15:00:00.000Z'));
+
+    const conf = await confidenceFor(id, 'weekday', 22, 'summer');
+    expect(conf?.sampleCount).toBe(2);
+    expect(conf?.distinctDays).toBe(1);
+  });
+});
+
 describe('runNightly — retention', () => {
   const NOW_MS = Date.parse('2026-08-09T12:00:00.000Z');
   // Calendar-based cutoff: exactly 2 years before NOW_MS (matches the

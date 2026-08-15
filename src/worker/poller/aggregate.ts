@@ -1,5 +1,5 @@
 import type { Env } from '../env';
-import { denverParts } from '../tz';
+import { denverDateKey, denverParts } from '../tz';
 
 /**
  * Nearest-rank percentile of a value ALREADY sorted ascending. For a
@@ -97,8 +97,8 @@ async function rebuildTypicals(env: Env, nowMs: number): Promise<void> {
   ).results as unknown as { routeId: number }[];
 
   const insert = env.DB.prepare(
-    `INSERT INTO route_typicals (route_id, weekday_class, hour, season, median_sec, p25_sec, p75_sec)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO route_typicals (route_id, weekday_class, hour, season, median_sec, p25_sec, p75_sec, sample_count, distinct_days)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   const statements: D1PreparedStatement[] = [env.DB.prepare('DELETE FROM route_typicals')];
@@ -118,6 +118,9 @@ async function rebuildTypicals(env: Env, nowMs: number): Promise<void> {
 
     const groups = new Map<string, number[]>();
     const groupMeta = new Map<string, TypicalGroupMeta>();
+    // Distinct Denver days per group. Kept as a parallel Map (rather than
+    // widening `groups`) so the existing percentile path is untouched.
+    const groupDays = new Map<string, Set<string>>();
 
     for (const row of rows) {
       const capturedMs = Date.parse(row.capturedAt);
@@ -127,8 +130,10 @@ async function rebuildTypicals(env: Env, nowMs: number): Promise<void> {
       if (!groups.has(key)) {
         groups.set(key, []);
         groupMeta.set(key, { weekdayClass, hour, season });
+        groupDays.set(key, new Set());
       }
       groups.get(key)!.push(row.durationSec);
+      groupDays.get(key)!.add(denverDateKey(capturedMs));
     }
 
     for (const [key, durations] of groups) {
@@ -143,6 +148,8 @@ async function rebuildTypicals(env: Env, nowMs: number): Promise<void> {
           nearestRank(sorted, 50),
           nearestRank(sorted, 25),
           nearestRank(sorted, 75),
+          durations.length,
+          groupDays.get(key)!.size,
         ),
       );
     }
