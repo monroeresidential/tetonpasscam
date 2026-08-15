@@ -43,6 +43,26 @@ const DEFAULT_EMPTY_MESSAGE = 'No history for this route yet.';
  *  Beyond this the line would only stretch the domain into empty space. */
 const REFERENCE_PROXIMITY = 8;
 
+/** Font size for axis tick text, in viewBox units. Mock 2c used 10; this is
+ *  deliberately larger. The viewBox is a fixed 940 units wide and scales to
+ *  its container, so every `<text>` inside shrinks with it -- at a 390px
+ *  phone, 10 units renders around 4px and is unreadable. 13 is a partial
+ *  mitigation, not a fix; making axis text genuinely legible at phone width
+ *  needs responsive font sizing or a different scaling strategy than one
+ *  fixed viewBox, which is a larger change than adding the axes. */
+const AXIS_FONT_SIZE = 13;
+
+/** Hours between x-axis labels, matching mock 2c's cadence (4 AM, 7 AM, ...). */
+const X_LABEL_STEP_HOURS = 3;
+
+/** 24-hour clock value -> the mock's 12-hour label ("13" -> "1 PM"). */
+function hourLabel(hour: number): string {
+  const h = Math.round(hour) % 24;
+  const suffix = h < 12 ? 'AM' : 'PM';
+  const display = h % 12 === 0 ? 12 : h % 12;
+  return `${display} ${suffix}`;
+}
+
 export default function TypicalChart({
   points,
   today,
@@ -120,6 +140,21 @@ export default function TypicalChart({
   const todayPts = today.map((t) => `${x(t.hour)},${y(t.value)}`).join(' ');
   const last = today[today.length - 1];
 
+  // Three y-ticks at the domain's min, midpoint and max, each rendered
+  // through `formatValue` so the temperature chart's unit toggle relabels
+  // them for free. Deliberately NOT a "nice round numbers" algorithm: mock
+  // 2c's tidy 30m/45m/60m came from hand-drawn sample data, and min/mid/max
+  // states the real domain without extra machinery to get wrong.
+  const yTicks = compact ? [] : [vMin, vMin + span / 2, vMax];
+
+  // X labels every three hours across the plotted range. Starts at the first
+  // whole hour at or after hMin so a fractional domain edge can't produce a
+  // label sitting outside the plot area.
+  const xTicks: number[] = [];
+  if (!compact) {
+    for (let h = Math.ceil(hMin); h <= hMax; h += X_LABEL_STEP_HOURS) xTicks.push(h);
+  }
+
   return (
     <svg
       viewBox={`0 0 ${VB_W} ${VB_H}`}
@@ -127,6 +162,64 @@ export default function TypicalChart({
       role="img"
       aria-label={ariaLabel}
     >
+      {/* Axis furniture first, so every series paints over it. Suppressed
+          entirely in compact mode -- the home card is a teaser linking
+          through to the full page, where axis text would be noise and, at
+          that size, illegible. */}
+      {!compact && (
+        <>
+          <line
+            data-testid="axis-y"
+            x1={PAD.left}
+            y1={PAD.top}
+            x2={PAD.left}
+            y2={VB_H - PAD.bottom}
+            stroke="var(--color-card-border)"
+          />
+          <line
+            data-testid="axis-x"
+            x1={PAD.left}
+            y1={VB_H - PAD.bottom}
+            x2={VB_W - PAD.right}
+            y2={VB_H - PAD.bottom}
+            stroke="var(--color-card-border)"
+          />
+          {yTicks.map((tick) => (
+            <g key={`y-${tick}`}>
+              <line
+                x1={PAD.left}
+                y1={y(tick)}
+                x2={VB_W - PAD.right}
+                y2={y(tick)}
+                stroke="var(--color-card-border)"
+                strokeOpacity="0.5"
+              />
+              <text
+                x={PAD.left - 6}
+                y={y(tick) + 4}
+                textAnchor="end"
+                fontSize={AXIS_FONT_SIZE}
+                fill="var(--color-faint)"
+              >
+                {formatValue(tick)}
+              </text>
+            </g>
+          ))}
+          {xTicks.map((hour) => (
+            <text
+              key={`x-${hour}`}
+              x={x(hour)}
+              y={VB_H - PAD.bottom + AXIS_FONT_SIZE + 6}
+              textAnchor="middle"
+              fontSize={AXIS_FONT_SIZE}
+              fill="var(--color-faint)"
+            >
+              {hourLabel(hour)}
+            </text>
+          ))}
+        </>
+      )}
+
       {showReference && referenceValue && (
         <>
           <line

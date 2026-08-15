@@ -126,3 +126,76 @@ describe('TypicalChart', () => {
     ).toBeTruthy();
   });
 });
+
+// Axis furniture. Mock 2c specified two axis lines, three y-ticks
+// (30m/45m/60m) and x-labels every three hours; the implementation shipped
+// without any of them, leaving both charts readable as shapes but not as
+// data -- you could see the shape of the day without being able to read a
+// single value off it except "now".
+describe('TypicalChart — axes', () => {
+  function pts(): ChartPoint[] {
+    return [
+      { hour: 4, median: 1800, p25: 1700, p75: 1900, distinctDays: 9 },
+      { hour: 7, median: 2400, p25: 2300, p75: 2500, distinctDays: 9 },
+      { hour: 10, median: 3000, p25: 2900, p75: 3100, distinctDays: 9 },
+    ];
+  }
+
+  it('labels the y-axis at the domain min, midpoint and max, via formatValue', () => {
+    render(<TypicalChart points={pts()} today={[]} />);
+    // Domain spans p25 of the first bucket (1700s = 28m) to p75 of the last
+    // (3100s = 52m); midpoint 2400s = 40m. Default formatter renders minutes.
+    expect(screen.getByText('28m')).toBeTruthy();
+    expect(screen.getByText('40m')).toBeTruthy();
+    expect(screen.getByText('52m')).toBeTruthy();
+  });
+
+  it('routes y-tick labels through formatValue, so a unit switch relabels them', () => {
+    render(
+      <TypicalChart points={pts()} today={[]} formatValue={(v) => `${Math.round(v)}u`} />,
+    );
+    expect(screen.getByText('1700u')).toBeTruthy();
+    expect(screen.getByText('3100u')).toBeTruthy();
+    // The minute-formatted labels must be gone entirely, not merely joined.
+    expect(screen.queryByText('28m')).toBeNull();
+  });
+
+  it('labels the x-axis every three hours across the plotted range', () => {
+    render(<TypicalChart points={pts()} today={[]} />);
+    expect(screen.getByText('4 AM')).toBeTruthy();
+    expect(screen.getByText('7 AM')).toBeTruthy();
+    expect(screen.getByText('10 AM')).toBeTruthy();
+  });
+
+  it('renders hours past noon in 12-hour form, not 13/14', () => {
+    render(
+      <TypicalChart
+        points={[
+          { hour: 10, median: 1800, p25: 1700, p75: 1900, distinctDays: 9 },
+          { hour: 13, median: 2400, p25: 2300, p75: 2500, distinctDays: 9 },
+          { hour: 16, median: 3000, p25: 2900, p75: 3100, distinctDays: 9 },
+        ]}
+        today={[]}
+      />,
+    );
+    expect(screen.getByText('1 PM')).toBeTruthy();
+    expect(screen.getByText('4 PM')).toBeTruthy();
+    expect(screen.queryByText('13 AM')).toBeNull();
+  });
+
+  it('draws the two axis lines', () => {
+    render(<TypicalChart points={pts()} today={[]} />);
+    expect(screen.getByTestId('axis-y')).toBeTruthy();
+    expect(screen.getByTestId('axis-x')).toBeTruthy();
+  });
+
+  it('renders no axis furniture at all in compact mode', () => {
+    // The home card is a small teaser linking through to the full page;
+    // axis text there would be noise and, at that size, illegible.
+    render(<TypicalChart points={pts()} today={[]} compact />);
+    expect(screen.queryByTestId('axis-y')).toBeNull();
+    expect(screen.queryByTestId('axis-x')).toBeNull();
+    expect(screen.queryByText('28m')).toBeNull();
+    expect(screen.queryByText('4 AM')).toBeNull();
+  });
+});
