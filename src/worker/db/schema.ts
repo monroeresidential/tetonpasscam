@@ -68,6 +68,34 @@ export const routeTypicals = sqliteTable(
   ],
 );
 
+/**
+ * Typical weather by (metric, weekday-class, hour, season), rebuilt nightly
+ * from `weather_snapshots` exactly the way `route_typicals` is rebuilt from
+ * `travel_times`, and gated by the same MIN_DISTINCT_DAYS_FOR_BAND rule.
+ *
+ * Deliberately ROWS per metric rather than COLUMNS per metric: weather is a
+ * single station rather than twelve routes, so this tops out at ~96 rows per
+ * metric, and adding a metric later becomes data instead of another
+ * migration.
+ */
+export const weatherTypicals = sqliteTable(
+  'weather_typicals',
+  {
+    metric: text('metric').notNull(),
+    weekdayClass: text('weekday_class', { enum: ['weekday', 'weekend'] }).notNull(),
+    hour: integer('hour').notNull(),
+    season: text('season', { enum: ['winter', 'summer'] }).notNull(),
+    median: real('median'),
+    p25: real('p25'),
+    p75: real('p75'),
+    sampleCount: integer('sample_count'),
+    distinctDays: integer('distinct_days'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.metric, table.weekdayClass, table.hour, table.season] }),
+  ],
+);
+
 export const statusSnapshots = sqliteTable(
   'status_snapshots',
   {
@@ -227,6 +255,7 @@ export const schema = {
   routes,
   travelTimes,
   routeTypicals,
+  weatherTypicals,
   statusSnapshots,
   weatherSnapshots,
   id33Events,

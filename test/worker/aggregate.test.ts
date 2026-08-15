@@ -207,6 +207,86 @@ describe('runNightly — confidence columns', () => {
   });
 });
 
+async function weatherTypicalFor(
+  metric: string,
+  weekdayClass: string,
+  hour: number,
+  season: string,
+): Promise<{ median: number; p25: number; p75: number; sampleCount: number; distinctDays: number } | undefined> {
+  return (await env.DB.prepare(
+    `SELECT median, p25, p75, sample_count AS sampleCount, distinct_days AS distinctDays
+       FROM weather_typicals WHERE metric = ? AND weekday_class = ? AND hour = ? AND season = ?`,
+  )
+    .bind(metric, weekdayClass, hour, season)
+    .first()) as any;
+}
+
+async function insertWeather(capturedAt: string, airF: number, surfaceF: number): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO weather_snapshots (captured_at, air_f, surface_f) VALUES (?, ?, ?)`,
+  )
+    .bind(capturedAt, airF, surfaceF)
+    .run();
+}
+
+describe('runNightly — weather typicals', () => {
+  it('aggregates each metric into its own rows, with per-bucket confidence', async () => {
+    await env.DB.prepare('DELETE FROM weather_snapshots').run();
+    // Five readings in the 08:00 MDT hour spread over TWO Denver days --
+    // high sample count standing on very little day-to-day evidence, the
+    // exact shape the distinct-days gate exists to catch.
+    // 14:00 UTC == 08:00 MDT (UTC-6) in August.
+    for (const min of ['00', '10', '20']) {
+      await insertWeather(`2026-08-11T14:${min}:00.000Z`, 50, 70);
+    }
+    for (const min of ['00', '10']) {
+      await insertWeather(`2026-08-12T14:${min}:00.000Z`, 60, 80);
+    }
+
+    await runNightly(env, Date.parse('2026-08-13T15:00:00.000Z'));
+
+    const air = await weatherTypicalFor('air_f', 'weekday', 8, 'summer');
+    expect(air?.sampleCount).toBe(5);
+    expect(air?.distinctDays).toBe(2);
+    // nearest-rank p50 of [50,50,50,60,60] -> index ceil(2.5)-1 = 2 -> 50
+    expect(air?.median).toBe(50);
+
+    // Surface is a SEPARATE row, not a column on the air row.
+    const surface = await weatherTypicalFor('surface_f', 'weekday', 8, 'summer');
+    expect(surface?.median).toBe(70);
+    expect(surface?.sampleCount).toBe(5);
+  });
+
+  it('skips null readings rather than counting them as samples', async () => {
+    await env.DB.prepare('DELETE FROM weather_snapshots').run();
+    await env.DB.prepare(
+      `INSERT INTO weather_snapshots (captured_at, air_f, surface_f) VALUES (?, ?, NULL)`,
+    )
+      .bind('2026-08-11T15:00:00.000Z', 55)
+      .run();
+
+    await runNightly(env, Date.parse('2026-08-13T15:00:00.000Z'));
+
+    expect((await weatherTypicalFor('air_f', 'weekday', 9, 'summer'))?.sampleCount).toBe(1);
+    // A null surface reading must not produce a surface row at all -- a row
+    // with sampleCount 0 would claim we measured something.
+    expect(await weatherTypicalFor('surface_f', 'weekday', 9, 'summer')).toBeFalsy();
+  });
+
+  it('rebuilds from scratch, leaving no stale rows behind', async () => {
+    await env.DB.prepare('DELETE FROM weather_snapshots').run();
+    await insertWeather('2026-08-11T16:00:00.000Z', 45, 65);
+    await runNightly(env, Date.parse('2026-08-13T15:00:00.000Z'));
+    expect(await weatherTypicalFor('air_f', 'weekday', 10, 'summer')).toBeTruthy();
+
+    await env.DB.prepare('DELETE FROM weather_snapshots').run();
+    await insertWeather('2026-08-11T17:00:00.000Z', 45, 65);
+    await runNightly(env, Date.parse('2026-08-13T15:00:00.000Z'));
+    expect(await weatherTypicalFor('air_f', 'weekday', 10, 'summer')).toBeFalsy();
+    expect(await weatherTypicalFor('air_f', 'weekday', 11, 'summer')).toBeTruthy();
+  });
+});
+
 describe('runNightly — retention', () => {
   const NOW_MS = Date.parse('2026-08-09T12:00:00.000Z');
   // Calendar-based cutoff: exactly 2 years before NOW_MS (matches the

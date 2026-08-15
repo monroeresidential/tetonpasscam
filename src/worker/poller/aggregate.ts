@@ -57,10 +57,104 @@ interface TypicalGroupMeta {
   season: 'winter' | 'summer';
 }
 
+/** Metric column name -> the `metric` value stored in weather_typicals.
+ *  Keyed on the DB column so adding a metric is one entry here plus the
+ *  column already existing, with no schema change. */
+const WEATHER_METRICS = ['air_f', 'surface_f', 'dew_point_f', 'humidity_pct'] as const;
+
+interface WeatherRow {
+  capturedAt: string;
+  air_f: number | null;
+  surface_f: number | null;
+  dew_point_f: number | null;
+  humidity_pct: number | null;
+}
+
 /**
- * Rebuilds `route_typicals` from `travel_times` history within the last
- * `TYPICALS_WINDOW_DAYS`: DELETE every row, then recompute one row per
- * (route, weekday-class, hour, season) group present in that window.
+ * Rebuilds `weather_typicals` from the trailing TYPICALS_WINDOW_DAYS of
+ * `weather_snapshots`, mirroring `rebuildTypicals`: DELETE everything, then
+ * recompute one row per (metric, weekday-class, hour, season) group, with
+ * `sample_count` and `distinct_days` alongside the percentiles so the chart
+ * can gate its band per bucket.
+ *
+ * A null reading contributes nothing -- not a zero, and not a row. A bucket
+ * with no non-null readings for a metric simply does not exist, which is
+ * how the API reports "we have no data for this" rather than claiming a
+ * measurement of zero.
+ *
+ * Collected into the SAME statements array as the route rebuild so both
+ * tables land in one `env.DB.batch(...)` transaction -- a concurrent reader
+ * must never see one rebuilt and the other half-deleted.
+ */
+async function weatherTypicalStatements(env: Env, nowMs: number): Promise<D1PreparedStatement[]> {
+  const cutoffIso = typicalsCutoffIso(nowMs);
+  const rows = (
+    await env.DB.prepare(
+      `SELECT captured_at AS capturedAt, air_f, surface_f, dew_point_f, humidity_pct
+         FROM weather_snapshots WHERE captured_at >= ?`,
+    )
+      .bind(cutoffIso)
+      .all()
+  ).results as unknown as WeatherRow[];
+
+  const insert = env.DB.prepare(
+    `INSERT INTO weather_typicals (metric, weekday_class, hour, season, median, p25, p75, sample_count, distinct_days)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+
+  const values = new Map<string, number[]>();
+  const days = new Map<string, Set<string>>();
+  const meta = new Map<string, { metric: string; weekdayClass: string; hour: number; season: string }>();
+
+  for (const row of rows) {
+    const capturedMs = Date.parse(row.capturedAt);
+    if (!Number.isFinite(capturedMs)) continue; // same defensive skip as the route rebuild
+    const { weekdayClass, hour, season } = denverParts(capturedMs);
+    const dayKey = denverDateKey(capturedMs);
+
+    for (const metric of WEATHER_METRICS) {
+      const reading = row[metric];
+      if (reading === null || reading === undefined) continue;
+      const key = `${metric}|${weekdayClass}|${hour}|${season}`;
+      if (!values.has(key)) {
+        values.set(key, []);
+        days.set(key, new Set());
+        meta.set(key, { metric, weekdayClass, hour, season });
+      }
+      values.get(key)!.push(reading);
+      days.get(key)!.add(dayKey);
+    }
+  }
+
+  const statements = [env.DB.prepare('DELETE FROM weather_typicals')];
+  for (const [key, readings] of values) {
+    const m = meta.get(key)!;
+    const sorted = [...readings].sort((a, b) => a - b);
+    statements.push(
+      insert.bind(
+        m.metric,
+        m.weekdayClass,
+        m.hour,
+        m.season,
+        nearestRank(sorted, 50),
+        nearestRank(sorted, 25),
+        nearestRank(sorted, 75),
+        readings.length,
+        days.get(key)!.size,
+      ),
+    );
+  }
+  return statements;
+}
+
+/**
+ * Rebuilds `route_typicals` AND `weather_typicals` from their respective
+ * source tables within the last `TYPICALS_WINDOW_DAYS`: DELETE every row of
+ * both, then recompute one row per (route|metric, weekday-class, hour,
+ * season) group present in that window. Both tables share this single
+ * function -- and the single batch below -- because a concurrent reader
+ * (GET /api/status, GET /api/weather-history, or this job's next run) must
+ * never observe one table freshly rebuilt while the other is mid-delete.
  *
  * Bounding + memory shape (audit finding 6): the SELECT carries a
  * `captured_at >= cutoff` predicate, so D1 never scans more than a
@@ -74,18 +168,20 @@ interface TypicalGroupMeta {
  * group in memory) rather than in SQL, per the original brief -- SQLite/D1
  * has no native percentile aggregate, so the grouping has to happen
  * somewhere, and per-route TS grouping is simpler than a SQL GROUP BY here.
+ * `weatherTypicalStatements` groups the same way, just over the single
+ * (unpartitioned) weather station instead of per-route.
  *
- * Transaction choice (unchanged from before this fix): the DELETE and every
- * rebuilt INSERT are still collected into ONE array passed to a single
- * `env.DB.batch(...)` call -- D1 runs the whole array as one implicit
- * transaction, so a failure partway through can never leave
- * `route_typicals` half-deleted/half-rebuilt for a concurrent reader
- * (GET /api/status's typicals lookup, or this job's next run). Only the
- * *source scan* feeding these statements changed; statement count is still
- * bounded by the group count (a dozen routes x 2 weekday-classes x 24
- * hours x 2 seasons = at most ~1152 rows), comfortably within D1's
- * per-batch limits, so single-transaction atomicity across the whole
- * rebuild is preserved rather than chunked.
+ * Transaction choice (unchanged from before this fix): the DELETEs and every
+ * rebuilt INSERT for both tables are collected into ONE array passed to a
+ * single `env.DB.batch(...)` call -- D1 runs the whole array as one implicit
+ * transaction, so a failure partway through can never leave either table
+ * half-deleted/half-rebuilt for a concurrent reader. Only the *source scan*
+ * feeding these statements changed; statement count is still bounded by the
+ * group count (a dozen routes x 2 weekday-classes x 24 hours x 2 seasons =
+ * at most ~1152 route rows, plus at most 4 metrics x 2 x 24 x 2 = ~384
+ * weather rows), comfortably within D1's per-batch limits, so
+ * single-transaction atomicity across the whole rebuild is preserved rather
+ * than chunked.
  */
 async function rebuildTypicals(env: Env, nowMs: number): Promise<void> {
   const cutoffIso = typicalsCutoffIso(nowMs);
@@ -156,6 +252,7 @@ async function rebuildTypicals(env: Env, nowMs: number): Promise<void> {
     }
   }
 
+  statements.push(...(await weatherTypicalStatements(env, nowMs)));
   await env.DB.batch(statements);
 }
 
@@ -189,10 +286,11 @@ async function applyRetention(env: Env, nowMs: number): Promise<void> {
 }
 
 /**
- * The nightly aggregation job: rebuild `route_typicals` from the trailing
- * `TYPICALS_WINDOW_DAYS` of `travel_times`, then apply retention (2y
- * snapshot pruning + alert expiry). Wired to the `10 9 * * *` cron entry in
- * index.ts's `scheduled` dispatcher.
+ * The nightly aggregation job: rebuild `route_typicals` AND
+ * `weather_typicals` from the trailing `TYPICALS_WINDOW_DAYS` of
+ * `travel_times` and `weather_snapshots` respectively, then apply retention
+ * (2y snapshot pruning + alert expiry). Wired to the `10 9 * * *` cron entry
+ * in index.ts's `scheduled` dispatcher.
  */
 export async function runNightly(env: Env, nowMs: number = Date.now()): Promise<void> {
   await rebuildTypicals(env, nowMs);

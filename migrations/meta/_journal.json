@@ -57,6 +57,13 @@
       "when": 1786818352880,
       "tag": "0007_premium_wonder_man",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786818691968,
+      "tag": "0008_long_odin",
+      "breakpoints": true
     }
   ]
 }
