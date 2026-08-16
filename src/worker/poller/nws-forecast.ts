@@ -191,6 +191,56 @@ export function rollupDaily(periods: HourlyPeriod[]): DailyForecast[] {
 }
 
 /**
+ * How many upstream periods are persisted. Twelve are rendered; 48 gives
+ * roughly two days, so the row survives a poller outage of ~36 hours before
+ * it starts thinning, while keeping the replace-all batch at 49 statements
+ * rather than 157.
+ */
+export const STORED_HOURS = 48;
+
+export interface HourlyReading {
+  startMs: number;
+  startTime: string;
+  tempF: number | null;
+  category: ForecastCategory;
+  isDaytime: boolean;
+  iconUrl: string | null;
+  shortForecast: string | null;
+  precipPct: number | null;
+}
+
+/**
+ * Normalize the first `limit` upstream periods for storage, in upstream
+ * order. Deliberately NOT a rollup -- these are stored as sent, and all the
+ * windowing happens at read time, so a single stored set serves whatever
+ * window the UI asks for later.
+ *
+ * A period whose `startTime` will not parse is dropped rather than stored
+ * with a NaN key: `start_ms` is the primary key and the sort column, so a
+ * NaN there would poison ordering for the whole table.
+ */
+export function takeHours(periods: HourlyPeriod[], limit: number = STORED_HOURS): HourlyReading[] {
+  const out: HourlyReading[] = [];
+  for (const p of periods) {
+    if (out.length >= limit) break;
+    const startMs = Date.parse(p.startTime);
+    if (!Number.isFinite(startMs)) continue;
+    const tempF = toF(p.temperature, p.temperatureUnit);
+    out.push({
+      startMs,
+      startTime: p.startTime,
+      tempF: Number.isFinite(tempF) ? Math.round(tempF) : null,
+      category: categorize(p.shortForecast),
+      isDaytime: p.isDaytime,
+      iconUrl: p.icon,
+      shortForecast: p.shortForecast,
+      precipPct: p.probabilityOfPrecipitation?.value ?? null,
+    });
+  }
+  return out;
+}
+
+/**
  * NWS grid for the Teton Pass summit (43.4986,-110.9564), resolved once from
  * `/points/{lat},{lon}` on 2026-08-16 rather than re-resolved every cycle.
  *

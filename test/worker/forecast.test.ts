@@ -223,3 +223,32 @@ describe('runForecastStep', () => {
     expect(seededDay.fetched_at).not.toBe(oldFetchedAt);
   });
 });
+
+describe('forecast_hours table', () => {
+  it('stores and reads back an hour, keyed on start_ms', async () => {
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    await env.DB.prepare(
+      `INSERT INTO forecast_hours
+         (start_ms, start_time, temp_f, category, is_daytime, icon_url, short_forecast, precip_pct, fetched_at)
+       VALUES (?, '2026-08-16T14:00:00-06:00', 66, 'thunderstorm', 1, 'https://x/tsra', 'Storms', 34, '2026-08-16T18:00:00.000Z')`,
+    )
+      .bind(Date.parse('2026-08-16T14:00:00-06:00'))
+      .run();
+
+    const row = (await env.DB.prepare('SELECT * FROM forecast_hours').first()) as any;
+    expect(row.start_ms).toBe(Date.parse('2026-08-16T14:00:00-06:00'));
+    expect(row.category).toBe('thunderstorm');
+    expect(row.is_daytime).toBe(1);
+  });
+
+  it('allows every reading column to be null', async () => {
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    await env.DB.prepare(
+      `INSERT INTO forecast_hours (start_ms, start_time, category, is_daytime, fetched_at)
+       VALUES (1, '2026-08-16T14:00:00-06:00', 'cloudy', 0, '2026-08-16T18:00:00.000Z')`,
+    ).run();
+    const row = (await env.DB.prepare('SELECT temp_f, precip_pct FROM forecast_hours').first()) as any;
+    expect(row.temp_f).toBeNull();
+    expect(row.precip_pct).toBeNull();
+  });
+});

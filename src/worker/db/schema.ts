@@ -173,6 +173,33 @@ export const forecastDays = sqliteTable('forecast_days', {
   fetchedAt: text('fetched_at').notNull(),
 });
 
+/**
+ * Hourly NWS periods backing the near-term forecast row. Fully REPLACED on
+ * each refresh rather than upserted: unlike `forecast_days`, whose rows are a
+ * stable set of dates worth revising in place, these are a sliding window
+ * where yesterday's 3 PM is simply gone. Replace-all keeps the table from
+ * growing a tail nobody reads and removes any need for a prune job.
+ */
+export const forecastHours = sqliteTable('forecast_hours', {
+  // Epoch milliseconds, parsed at write. The primary key, and the ONLY column
+  // ever compared or ordered on. The ISO string below cannot be used for
+  // either: across a DST change it sorts wrongly -- 01:30-06:00 (07:30Z) is
+  // earlier than 01:00-07:00 (08:00Z) but sorts after it. An integer instant
+  // cannot be ambiguous that way.
+  startMs: integer('start_ms').primaryKey(),
+  // The original ISO-with-offset string, for display and debugging only.
+  startTime: text('start_time').notNull(),
+  tempF: real('temp_f'),
+  category: text('category').notNull(),
+  // Whether NWS considers this period daylight. Stored because the glyph
+  // depends on it -- a clear 10 PM hour must not show a sun.
+  isDaytime: integer('is_daytime', { mode: 'boolean' }).notNull(),
+  iconUrl: text('icon_url'),
+  shortForecast: text('short_forecast'),
+  precipPct: integer('precip_pct'),
+  fetchedAt: text('fetched_at').notNull(),
+});
+
 export const id33Events = sqliteTable('id33_events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   capturedAt: text('captured_at').notNull(),
@@ -285,6 +312,7 @@ export const schema = {
   statusSnapshots,
   weatherSnapshots,
   forecastDays,
+  forecastHours,
   id33Events,
   detourSnapshots,
   alerts,

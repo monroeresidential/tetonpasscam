@@ -9,6 +9,8 @@ import {
   categorize,
   parseWindMph,
   rollupDaily,
+  takeHours,
+  STORED_HOURS,
   type HourlyPeriod,
 } from '../../src/worker/poller/nws-forecast';
 import { toIconPath } from '../../src/worker/api/wx-icon';
@@ -199,5 +201,70 @@ describe('rollupDaily', () => {
     for (const d of rollupDaily(live)) {
       expect(toIconPath(d.iconUrl)).not.toBeNull();
     }
+  });
+});
+
+describe('takeHours', () => {
+  it('caps at STORED_HOURS and preserves upstream order', () => {
+    const out = takeHours(live);
+    expect(out).toHaveLength(STORED_HOURS);
+    expect(out[0].startTime).toBe(live[0].startTime);
+    for (let i = 1; i < out.length; i++) {
+      expect(out[i].startMs).toBeGreaterThan(out[i - 1].startMs);
+    }
+  });
+
+  it('parses startMs as a true instant, not a string sort key', () => {
+    // The fall-back night: 01:30-06:00 is 07:30Z, EARLIER than 01:00-07:00
+    // (08:00Z), even though it sorts after it as a string. startMs must
+    // reflect the instant.
+    const out = takeHours([
+      period({ startTime: '2026-11-01T01:30:00-06:00' }),
+      period({ startTime: '2026-11-01T01:00:00-07:00' }),
+    ]);
+    expect(out[0].startMs).toBe(Date.parse('2026-11-01T01:30:00-06:00'));
+    expect(out[1].startMs).toBe(Date.parse('2026-11-01T01:00:00-07:00'));
+    expect(out[0].startMs).toBeLessThan(out[1].startMs);
+  });
+
+  it('carries isDaytime through per period', () => {
+    const out = takeHours([
+      period({ startTime: '2026-08-16T14:00:00-06:00', isDaytime: true }),
+      period({ startTime: '2026-08-16T22:00:00-06:00', isDaytime: false }),
+    ]);
+    expect(out[0].isDaytime).toBe(true);
+    expect(out[1].isDaytime).toBe(false);
+  });
+
+  it('reuses categorize, so an hour agrees with the daily rollup vocabulary', () => {
+    const out = takeHours([period({ startTime: '2026-08-16T14:00:00-06:00', shortForecast: 'Chance Snow Showers' })]);
+    expect(out[0].category).toBe('snow');
+  });
+
+  it('keeps a null precip as null, never 0', () => {
+    const out = takeHours([
+      period({ startTime: '2026-08-16T14:00:00-06:00', probabilityOfPrecipitation: { value: null } }),
+    ]);
+    expect(out[0].precipPct).toBeNull();
+  });
+
+  it('normalizes a Celsius period to Fahrenheit', () => {
+    const out = takeHours([
+      period({ startTime: '2026-08-16T14:00:00-06:00', temperature: 0, temperatureUnit: 'C' }),
+    ]);
+    expect(out[0].tempF).toBe(32);
+  });
+
+  it('drops a period whose startTime will not parse', () => {
+    const out = takeHours([
+      period({ startTime: 'not-a-time' }),
+      period({ startTime: '2026-08-16T14:00:00-06:00' }),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].startTime).toBe('2026-08-16T14:00:00-06:00');
+  });
+
+  it('returns an empty array for no periods', () => {
+    expect(takeHours([])).toEqual([]);
   });
 });
