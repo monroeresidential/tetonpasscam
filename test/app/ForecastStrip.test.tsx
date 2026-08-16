@@ -60,7 +60,7 @@ describe('ForecastStrip', () => {
     expect(screen.getByText('Today')).toBeInTheDocument();
   });
 
-  // The three tests previously here (`renders the text card when an icon
+  // The four tests previously here (`renders the text card when an icon
   // path is missing`, `drops an icon that fails to load...`, `reserves the
   // icon box...`, `keeps the icon slot occupied...`) all exercised the
   // image-fallback/onError machinery this task removes: a glyph tile is
