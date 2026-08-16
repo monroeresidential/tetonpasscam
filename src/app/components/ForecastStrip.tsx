@@ -60,26 +60,34 @@ export default function ForecastStrip({
             <p className="text-muted text-[10.5px] uppercase">
               {d.date === todayKey ? 'Today' : weekdayLabel(d.date)}
             </p>
-            {d.iconPath && !brokenIcons.has(d.date) && (
-              <img
-                src={d.iconPath}
-                alt={d.shortForecast ?? d.category}
-                width={ICON_PX}
-                height={ICON_PX}
-                loading="lazy"
-                className="h-10 w-10 rounded"
-                // A dead image drops out entirely rather than leaving a
-                // broken-image glyph -- the temperatures are the point of
-                // the card and they are unaffected.
-                onError={() =>
-                  setBrokenIcons((prev) => {
-                    const next = new Set(prev);
-                    next.add(d.date);
-                    return next;
-                  })
-                }
-              />
-            )}
+            {/* Fixed-size box present whether or not an image ends up inside
+                it -- a missing/failed icon must not let the temperature and
+                precip lines below shift up to fill the gap, which would
+                visibly misalign that card against its neighbors in the
+                five-across row. */}
+            <div className="h-10 w-10" data-testid="icon-slot">
+              {d.iconPath && !brokenIcons.has(d.date) && (
+                <img
+                  src={d.iconPath}
+                  alt={d.shortForecast ?? d.category}
+                  width={ICON_PX}
+                  height={ICON_PX}
+                  loading="lazy"
+                  className="h-10 w-10 rounded"
+                  // A dead image drops out entirely rather than leaving a
+                  // broken-image glyph -- the temperatures are the point of
+                  // the card and they are unaffected. The slot above keeps
+                  // its footprint either way.
+                  onError={() =>
+                    setBrokenIcons((prev) => {
+                      const next = new Set(prev);
+                      next.add(d.date);
+                      return next;
+                    })
+                  }
+                />
+              )}
+            </div>
             <p className="font-display text-[13px] font-extrabold">
               {d.highF !== null && d.lowF !== null
                 ? `${formatTemp(d.highF, unit)} / ${formatTemp(d.lowF, unit)}`

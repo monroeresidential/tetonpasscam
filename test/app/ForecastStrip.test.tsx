@@ -79,4 +79,28 @@ describe('ForecastStrip', () => {
     expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('62°F / 38°F')).toBeInTheDocument();
   });
+
+  it('reserves the icon box so a missing icon does not collapse the card upward', () => {
+    render(
+      <ForecastStrip
+        forecast={[day({ date: '2026-08-16' }), day({ date: '2026-08-17', iconPath: null })]}
+        now={NOON_MDT}
+      />,
+    );
+    const slots = screen.getAllByTestId('icon-slot');
+    expect(slots).toHaveLength(2);
+    // Same fixed footprint whether or not an icon is present, so the
+    // temperature/precip lines below it never shift up to fill the gap.
+    expect(slots[1].className).toBe(slots[0].className);
+  });
+
+  it('keeps the icon slot occupied after an icon fails to load', () => {
+    render(<ForecastStrip forecast={[day({ date: '2026-08-16' })]} now={NOON_MDT} />);
+    const slotBefore = screen.getByTestId('icon-slot');
+    const classNameBefore = slotBefore.className;
+    fireEvent.error(screen.getByRole('img'));
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    const slotAfter = screen.getByTestId('icon-slot');
+    expect(slotAfter.className).toBe(classNameBefore);
+  });
 });
