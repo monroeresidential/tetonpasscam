@@ -721,3 +721,117 @@ describe('GET /api/status — surfaceCondition', () => {
     expect(body.surfaceCondition).toBeNull();
   });
 });
+
+describe('forecast', () => {
+  async function insertForecastDay(o: {
+    date: string;
+    fetchedAt: string;
+    category?: string;
+    iconUrl?: string | null;
+    precipPct?: number | null;
+  }) {
+    await env.DB.prepare(
+      `INSERT INTO forecast_days
+         (date, high_f, low_f, category, icon_url, short_forecast, precip_pct, wind_gust_mph, fetched_at)
+       VALUES (?, 62, 38, ?, ?, 'Sunny', ?, 12, ?)
+       ON CONFLICT(date) DO UPDATE SET fetched_at = excluded.fetched_at`,
+    )
+      .bind(
+        o.date,
+        o.category ?? 'clear',
+        o.iconUrl === undefined ? 'https://api.weather.gov/icons/land/day/few?size=small' : o.iconUrl,
+        o.precipPct === undefined ? 10 : o.precipPct,
+        o.fetchedAt,
+      )
+      .run();
+  }
+
+  it('returns at most 5 upcoming days, oldest first, and never a past date', async () => {
+    await env.DB.prepare('DELETE FROM forecast_days').run();
+    const now = Date.parse('2026-08-16T18:00:00.000Z'); // noon Denver
+    setTestNowMs(now);
+    const fetchedAt = new Date(now).toISOString();
+    for (const date of [
+      '2026-08-14', // past -- must not appear
+      '2026-08-15', // past -- must not appear
+      '2026-08-16',
+      '2026-08-17',
+      '2026-08-18',
+      '2026-08-19',
+      '2026-08-20',
+      '2026-08-21', // 6th upcoming -- trimmed by the cap
+    ]) {
+      await insertForecastDay({ date, fetchedAt });
+    }
+
+    const { body } = await getStatus();
+    expect(body.forecast.map((d) => d.date)).toEqual([
+      '2026-08-16',
+      '2026-08-17',
+      '2026-08-18',
+      '2026-08-19',
+      '2026-08-20',
+    ]);
+    expect(body.forecastStale).toBe(false);
+    setTestNowMs(undefined);
+  });
+
+  it('rewrites the NWS icon URL to our proxy path and never leaks the upstream host', async () => {
+    await env.DB.prepare('DELETE FROM forecast_days').run();
+    const now = Date.parse('2026-08-16T18:00:00.000Z');
+    setTestNowMs(now);
+    await insertForecastDay({
+      date: '2026-08-16',
+      fetchedAt: new Date(now).toISOString(),
+      iconUrl: 'https://api.weather.gov/icons/land/day/tsra_hi,20?size=small',
+    });
+
+    const { body } = await getStatus();
+    expect(body.forecast[0].iconPath).toBe('/api/wx-icon/land/day/tsra_hi,20');
+    expect(JSON.stringify(body.forecast)).not.toContain('api.weather.gov');
+    setTestNowMs(undefined);
+  });
+
+  it('flags a forecast older than the stale window without hiding it', async () => {
+    await env.DB.prepare('DELETE FROM forecast_days').run();
+    const now = Date.parse('2026-08-16T18:00:00.000Z');
+    setTestNowMs(now);
+    await insertForecastDay({
+      date: '2026-08-17',
+      fetchedAt: new Date(now - 8 * HOUR_MS).toISOString(),
+    });
+
+    const { body } = await getStatus();
+    expect(body.forecast).toHaveLength(1);
+    expect(body.forecastStale).toBe(true);
+    setTestNowMs(undefined);
+  });
+
+  it('HARD RULE: no forecast leaves every other field identical', async () => {
+    // The forecast is weather adjacent to road state, never evidence about
+    // it. With NWS down (no rows at all), /api/status must be byte-identical
+    // apart from the two forecast fields themselves.
+    await env.DB.prepare('DELETE FROM forecast_days').run();
+    const now = Date.parse('2026-08-16T18:00:00.000Z');
+    setTestNowMs(now);
+    const { body: without } = await getStatus();
+
+    expect(without.forecast).toEqual([]);
+    expect(without.forecastStale).toBe(false);
+
+    await insertForecastDay({
+      date: '2026-08-16',
+      fetchedAt: new Date(now).toISOString(),
+      category: 'snow',
+    });
+    const { body: withForecast } = await getStatus();
+
+    const strip = (b: ApiStatus) => {
+      const { forecast, forecastStale, ...rest } = b;
+      return rest;
+    };
+    expect(strip(withForecast)).toEqual(strip(without));
+    expect(withForecast.status).toBe(without.status);
+    setTestNowMs(undefined);
+  });
+});

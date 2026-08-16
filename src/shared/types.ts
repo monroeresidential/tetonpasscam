@@ -110,6 +110,19 @@ export interface ApiStatus {
   id33Advisory: string | null;
   detours: { route: string; conditionText: string }[] | null; // only when closed
   alerts: PublicAlert[]; // active, unexpired community reports, newest first
+  // Up to 5 upcoming America/Denver days from api.weather.gov, oldest
+  // first, past dates excluded. An empty array is the honest
+  // representation of "we have nothing" -- there is no placeholder day.
+  //
+  // HARD RULE: this NEVER influences `status`. A forecast is weather
+  // adjacent to road state, not evidence about it, and its absence must
+  // never degrade the banner. See api-status.test.ts's byte-identical
+  // regression test.
+  forecast: ForecastDay[];
+  // Newest forecast_days.fetched_at older than FORECAST_STALE_HOURS. Same
+  // contract as `weatherStale`: the data is still returned, the frontend
+  // flags it rather than hiding it.
+  forecastStale: boolean;
 }
 
 /** One (weekday-class, hour, season) typical bucket for a route, as returned
@@ -168,6 +181,35 @@ export interface WeatherTypical {
 export interface WeatherHistoryResult {
   typicals: WeatherTypical[];
   today: { capturedAt: string; airF: number | null; surfaceF: number | null }[];
+}
+
+/** The eight display categories a forecast day collapses to. Drives the
+ *  severity tie-break in the poller's rollup and nothing else on the client
+ *  -- the picture itself comes from `iconPath`. */
+export type ForecastCategory =
+  | 'clear'
+  | 'partly-cloudy'
+  | 'cloudy'
+  | 'rain'
+  | 'snow'
+  | 'mixed'
+  | 'thunderstorm'
+  | 'fog';
+
+/** One day of the summit forecast, as embedded in `ApiStatus.forecast`.
+ *  Every reading is nullable and absence is `null` -- a day with no
+ *  precipitation data renders an em-dash, never "0%". */
+export interface ForecastDay {
+  date: string; // America/Denver yyyy-mm-dd
+  highF: number | null;
+  lowF: number | null;
+  category: ForecastCategory;
+  // A path on OUR origin (`/api/wx-icon/...`), never an api.weather.gov URL
+  // -- see api/wx-icon.ts. Null when the upstream icon was missing or
+  // failed validation; the card still renders its text.
+  iconPath: string | null;
+  shortForecast: string | null;
+  precipPct: number | null;
 }
 
 /** Response shape for `GET /api/history?route=<slug>`. `summary` is only

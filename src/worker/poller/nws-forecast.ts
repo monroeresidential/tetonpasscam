@@ -1,18 +1,12 @@
 import { denverDateKey } from '../tz';
 import { db, forecastDays } from '../db';
 import type { Env } from '../env';
+import type { ForecastCategory } from '../../shared/types';
 
-/** The eight display categories a forecast day collapses to. Moved to
- *  `src/shared/types.ts` in Task 5 once the client needs it too. */
-export type ForecastCategory =
-  | 'clear'
-  | 'partly-cloudy'
-  | 'cloudy'
-  | 'rain'
-  | 'snow'
-  | 'mixed'
-  | 'thunderstorm'
-  | 'fog';
+/** Moved to `src/shared/types.ts` in Task 5 now that the client needs it
+ *  too -- re-exported here so this module's own callers/tests keep
+ *  resolving it from its original location. */
+export type { ForecastCategory };
 
 /** One period from api.weather.gov's `/forecast/hourly`. Only the fields the
  *  rollup reads are declared; the real payload carries more. Optional/null

@@ -1,12 +1,13 @@
 import { desc, isNull, ne } from 'drizzle-orm';
 
-import type { ApiStatus } from '../../shared/types';
+import type { ApiStatus, ForecastDay } from '../../shared/types';
 import type { PassStatus } from '../../shared/types';
 import { db, id33Events, statusSnapshots, weatherSnapshots } from '../db';
 import type { Env } from '../env';
 import { formatShareCode } from '../share-code';
-import { denverParts } from '../tz';
+import { denverDateKey, denverParts } from '../tz';
 import { getActiveAlerts } from './alerts';
+import { toIconPath } from './wx-icon';
 
 /** Newest snapshot older than this ⇒ the poller itself is considered dead;
  *  the response's `status` is forced to 'unknown' regardless of what that
@@ -54,6 +55,13 @@ export const MIN_HISTORY_DAYS = 14;
  *  reopens and then closes again before the poller records a fresh detour
  *  cycle (e.g. a poller hiccup on the second closure). */
 export const DETOUR_FRESHNESS_MIN = 30;
+/** Newest forecast_days row older than this ⇒ `forecastStale` true. Six
+ *  hours rather than the one-hour refresh interval: NWS itself only
+ *  regenerates hourly, so a two-hour-old forecast is still a current
+ *  forecast, and flagging it would cry wolf. */
+export const FORECAST_STALE_HOURS = 6;
+/** Cards the home strip renders. */
+export const FORECAST_DAYS = 5;
 
 /**
  * Test-only clock override for `GET /status`'s "now". There is no
@@ -369,6 +377,63 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
       .map((r) => ({ route: r.route, conditionText: r.conditionText }));
   }
 
+  // Forecast. Wrapped in its own try/catch and defaulted to empty: a
+  // forecast failure must never fail the status response, which is the
+  // one endpoint the home screen depends on.
+  let forecast: ForecastDay[] = [];
+  let forecastStale = false;
+  try {
+    const today = denverDateKey(nowMs);
+    const forecastRows = (
+      await env.DB.prepare(
+        `SELECT date, high_f AS highF, low_f AS lowF, category, icon_url AS iconUrl,
+                short_forecast AS shortForecast, precip_pct AS precipPct, fetched_at AS fetchedAt
+           FROM forecast_days
+          WHERE date >= ?
+          ORDER BY date
+          LIMIT ?`,
+      )
+        .bind(today, FORECAST_DAYS)
+        .all()
+    ).results as unknown as {
+      date: string;
+      highF: number | null;
+      lowF: number | null;
+      category: string;
+      iconUrl: string | null;
+      shortForecast: string | null;
+      precipPct: number | null;
+      fetchedAt: string;
+    }[];
+
+    forecast = forecastRows.map((row) => ({
+      date: row.date,
+      highF: row.highF,
+      lowF: row.lowF,
+      category: row.category as ForecastDay['category'],
+      // Rewritten here, never in the DB: the stored value is NWS's own URL,
+      // and the client must only ever be handed a path on our origin.
+      iconPath: toIconPath(row.iconUrl),
+      shortForecast: row.shortForecast,
+      precipPct: row.precipPct,
+    }));
+
+    // Staleness keys on the freshest row we hold, not on the rows returned
+    // -- an all-past-dates table is stale by definition and would otherwise
+    // report fresh simply because it returned nothing.
+    const newestFetch = (await env.DB.prepare(
+      'SELECT MAX(fetched_at) AS fetchedAt FROM forecast_days',
+    ).first()) as { fetchedAt: string | null } | null;
+    if (newestFetch?.fetchedAt && forecast.length > 0) {
+      const ageMs = nowMs - Date.parse(newestFetch.fetchedAt);
+      forecastStale = !Number.isFinite(ageMs) || ageMs > FORECAST_STALE_HOURS * 3_600_000;
+    }
+  } catch (err) {
+    console.error('[status] forecast read failed', err);
+    forecast = [];
+    forecastStale = false;
+  }
+
   // Community reports are pure display data here -- this NEVER feeds back
   // into `status`/`isStale`/`pollerDead`/etc above; only WYDOT-derived data
   // drives those fields.
@@ -396,5 +461,7 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     id33Advisory,
     detours,
     alerts,
+    forecast,
+    forecastStale,
   };
 }
