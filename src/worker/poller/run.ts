@@ -12,6 +12,7 @@ import {
 } from '../db';
 import { fetchId33Events } from './idaho511';
 import { fetchRouteTime, inPollingWindow } from './google-routes';
+import { runForecastStep } from './nws-forecast';
 import {
   diffAdvisories,
   parseRoadClosures,
@@ -590,5 +591,15 @@ export async function runPollCycle(
     }
   } catch (err) {
     console.error('[poller] detour step failed', err);
+  }
+
+  // Step 7: NWS forecast. Self-throttled to FORECAST_REFRESH_MIN, so calling
+  // it every cycle costs one indexed MAX() most of the time. Wrapped like
+  // every other step: a forecast failure must never affect the status row
+  // written above.
+  try {
+    await runForecastStep(env, fetcher, nowMs);
+  } catch (err) {
+    console.error('[poller] forecast step failed', err);
   }
 }

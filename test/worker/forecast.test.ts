@@ -1,6 +1,29 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 
+import { runForecastStep, FORECAST_REFRESH_MIN } from '../../src/worker/poller/nws-forecast';
+import liveHourly from '../fixtures/nws-hourly.json';
+
+const HOUR_MS = 3_600_000;
+
+/** A fetcher that serves the captured NWS payload and counts its calls. */
+function fakeNws(): typeof fetch & { calls: string[] } {
+  const calls: string[] = [];
+  const f = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+    return new Response(JSON.stringify(liveHourly), {
+      status: 200,
+      headers: { 'Content-Type': 'application/geo+json' },
+    });
+  }) as typeof fetch & { calls: string[] };
+  f.calls = calls;
+  return f;
+}
+
+async function clearForecast() {
+  await env.DB.prepare('DELETE FROM forecast_days').run();
+}
+
 describe('forecast_days table', () => {
   it('stores and reads back a day, upserting on date', async () => {
     await env.DB.prepare(
@@ -37,5 +60,125 @@ describe('forecast_days table', () => {
     ).first()) as any;
     expect(row.precip_pct).toBeNull();
     expect(row.high_f).toBeNull();
+  });
+});
+
+describe('runForecastStep', () => {
+  it('writes daily rows and sends a descriptive User-Agent', async () => {
+    await clearForecast();
+    const fetcher = fakeNws();
+    let sentUa: string | null = null;
+    const spy = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      sentUa = new Headers(init?.headers).get('User-Agent');
+      return fetcher(input, init);
+    }) as typeof fetch;
+
+    await runForecastStep(env as any, spy, Date.parse('2026-08-16T16:00:00.000Z'));
+
+    const rows = await env.DB.prepare('SELECT * FROM forecast_days ORDER BY date').all();
+    expect(rows.results.length).toBeGreaterThanOrEqual(6);
+    expect(sentUa).toContain('tetonpasscam.com');
+    expect(sentUa).toContain('@');
+  });
+
+  it('skips the fetch entirely inside the refresh window', async () => {
+    await clearForecast();
+    const fetcher = fakeNws();
+    const t0 = Date.parse('2026-08-16T16:00:00.000Z');
+    await runForecastStep(env as any, fetcher, t0);
+    expect(fetcher.calls).toHaveLength(1);
+
+    // 10 minutes later -- the next poll cycle -- must not re-fetch.
+    await runForecastStep(env as any, fetcher, t0 + 10 * 60_000);
+    expect(fetcher.calls).toHaveLength(1);
+  });
+
+  it('re-fetches once the refresh window has elapsed, revising the same rows', async () => {
+    await clearForecast();
+    const fetcher = fakeNws();
+    const t0 = Date.parse('2026-08-16T16:00:00.000Z');
+    await runForecastStep(env as any, fetcher, t0);
+    const firstCount = (await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_days').first()) as any;
+
+    await runForecastStep(env as any, fetcher, t0 + (FORECAST_REFRESH_MIN + 1) * 60_000);
+    expect(fetcher.calls).toHaveLength(2);
+
+    const secondCount = (await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_days').first()) as any;
+    expect(secondCount.n).toBe(firstCount.n); // upsert, not append
+  });
+
+  it('leaves the table untouched when NWS fails', async () => {
+    await clearForecast();
+    const failing = (async () => new Response('boom', { status: 500 })) as typeof fetch;
+    await runForecastStep(env as any, failing, Date.parse('2026-08-16T16:00:00.000Z'));
+    const rows = await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_days').first();
+    expect((rows as any).n).toBe(0);
+  });
+
+  it('does not throw when NWS returns unparseable JSON', async () => {
+    await clearForecast();
+    const garbage = (async () => new Response('<html>nope</html>', { status: 200 })) as typeof fetch;
+    await expect(
+      runForecastStep(env as any, garbage, Date.parse('2026-08-16T16:00:00.000Z')),
+    ).resolves.toBeUndefined();
+  });
+
+  it('re-resolves the grid when the hardcoded gridpoint 404s', async () => {
+    // NWS occasionally re-grids, which retires an office/x/y triple. A 404
+    // means "this cell no longer exists", not "no forecast" -- so fall back
+    // to /points once rather than going dark until someone notices.
+    await clearForecast();
+    const urls: string[] = [];
+    const fetcher = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes('/gridpoints/RIW/35,140/')) {
+        return new Response('not found', { status: 404 });
+      }
+      if (url.includes('/points/')) {
+        return new Response(
+          JSON.stringify({
+            properties: {
+              forecastHourly: 'https://api.weather.gov/gridpoints/RIW/36,141/forecast/hourly',
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify(liveHourly), { status: 200 });
+    }) as typeof fetch;
+
+    await runForecastStep(env as any, fetcher, Date.parse('2026-08-16T16:00:00.000Z'));
+
+    expect(urls[0]).toContain('/gridpoints/RIW/35,140/');
+    expect(urls[1]).toContain('/points/43.4986,-110.9564');
+    expect(urls[2]).toContain('/gridpoints/RIW/36,141/');
+    const rows = await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_days').first();
+    expect((rows as any).n).toBeGreaterThanOrEqual(6);
+  });
+
+  it('gives up rather than looping when the re-resolved grid also fails', async () => {
+    await clearForecast();
+    let pointsCalls = 0;
+    const fetcher = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/points/')) {
+        pointsCalls++;
+        return new Response(
+          JSON.stringify({
+            properties: {
+              forecastHourly: 'https://api.weather.gov/gridpoints/RIW/36,141/forecast/hourly',
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response('not found', { status: 404 });
+    }) as typeof fetch;
+
+    await runForecastStep(env as any, fetcher, Date.parse('2026-08-16T16:00:00.000Z'));
+    expect(pointsCalls).toBe(1); // exactly one re-resolve, never a retry loop
+    const rows = await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_days').first();
+    expect((rows as any).n).toBe(0);
   });
 });

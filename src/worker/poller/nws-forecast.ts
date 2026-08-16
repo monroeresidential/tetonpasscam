@@ -1,4 +1,6 @@
 import { denverDateKey } from '../tz';
+import { db, forecastDays } from '../db';
+import type { Env } from '../env';
 
 /** The eight display categories a forecast day collapses to. Moved to
  *  `src/shared/types.ts` in Task 5 once the client needs it too. */
@@ -192,4 +194,170 @@ export function rollupDaily(periods: HourlyPeriod[]): DailyForecast[] {
       windGustMph: winds.length ? Math.max(...winds) : null,
     };
   });
+}
+
+/**
+ * NWS grid for the Teton Pass summit (43.4986,-110.9564), resolved once from
+ * `/points/{lat},{lon}` on 2026-08-16 rather than re-resolved every cycle.
+ *
+ * The resolved cell self-reports an elevation of 2582.88 m (8,474 ft), which
+ * is the check that matters for a mountain forecast: a neighbouring cell 6 km
+ * west covers Wilson at ~6,200 ft and would forecast a different mountain.
+ * If this constant is ever changed, re-verify that elevation.
+ */
+export const NWS_GRID = { office: 'RIW', x: 35, y: 140 } as const;
+
+const NWS_HOURLY_URL = `https://api.weather.gov/gridpoints/${NWS_GRID.office}/${NWS_GRID.x},${NWS_GRID.y}/forecast/hourly`;
+
+/** The summit point `NWS_GRID` was resolved from. Only used to re-resolve
+ *  the grid if the hardcoded triple ever 404s. */
+const NWS_POINT_URL = 'https://api.weather.gov/points/43.4986,-110.9564';
+
+const NWS_USER_AGENT = 'tetonpasscam.com poller (drew@monroeresidential.com)';
+
+/**
+ * Minimum age of the newest stored row before we fetch again.
+ *
+ * NWS regenerates these forecasts roughly hourly (`generatedAt` /
+ * `updateTime` in the payload), so polling at the cycle's own 10-minute
+ * cadence would pull identical bytes six times per update. Hourly is no less
+ * current and is a better neighbour to a free, unauthenticated public API.
+ */
+export const FORECAST_REFRESH_MIN = 60;
+
+/**
+ * One NWS GET with the same etiquette as `wydotFetch`: descriptive
+ * User-Agent with a contact address, 30s timeout, one retry after ~2s on 5xx
+ * or throw. Returns the parsed JSON body, or `{ notFound: true }` so a 404
+ * stays distinguishable from a plain failure -- the grid fallback below
+ * depends on telling those two apart.
+ */
+async function nwsGetJson(
+  url: string,
+  fetcher: typeof fetch,
+): Promise<{ body: unknown } | { notFound: true } | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await fetcher(url, {
+        headers: { 'User-Agent': NWS_USER_AGENT, Accept: 'application/geo+json' },
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (response.ok) return { body: await response.json() };
+      if (response.status === 404) return { notFound: true };
+      if (response.status >= 500 && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      return null;
+    } catch {
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
+function readPeriods(body: unknown): HourlyPeriod[] | null {
+  const periods = (body as { properties?: { periods?: HourlyPeriod[] } } | null)?.properties
+    ?.periods;
+  return Array.isArray(periods) ? periods : null;
+}
+
+/**
+ * Fetch the hourly forecast. Returns null on any failure -- callers treat
+ * null as "no forecast this cycle", never as "no forecast exists".
+ *
+ * A 404 on the hardcoded gridpoint means NWS has re-gridded and retired that
+ * cell, which is a different problem from a fetch failure: the forecast still
+ * exists, our address for it is stale. So a 404 (and only a 404) triggers one
+ * re-resolve through `/points`, using the `forecastHourly` URL it hands back.
+ * The re-resolved URL is used for this cycle only and never persisted --
+ * a permanent re-grid should be fixed by updating `NWS_GRID`, and the
+ * console.warn is what makes that visible instead of silently paying an
+ * extra round trip forever.
+ */
+export async function fetchHourlyPeriods(fetcher: typeof fetch): Promise<HourlyPeriod[] | null> {
+  const first = await nwsGetJson(NWS_HOURLY_URL, fetcher);
+  if (first && 'body' in first) return readPeriods(first.body);
+  if (!first || !('notFound' in first)) return null;
+
+  console.warn('[poller] NWS gridpoint 404 -- re-resolving grid via /points', NWS_GRID);
+  const points = await nwsGetJson(NWS_POINT_URL, fetcher);
+  if (!points || !('body' in points)) return null;
+
+  const hourlyUrl = (points.body as { properties?: { forecastHourly?: string } } | null)?.properties
+    ?.forecastHourly;
+  // Only follow a URL on the host we already trust -- `forecastHourly` is
+  // upstream-controlled, and this value is about to become a fetch target.
+  if (typeof hourlyUrl !== 'string' || !hourlyUrl.startsWith('https://api.weather.gov/')) {
+    return null;
+  }
+
+  // Deliberately NOT recursive: exactly one re-resolve per cycle, so a
+  // persistent 404 on both addresses fails fast instead of looping.
+  const second = await nwsGetJson(hourlyUrl, fetcher);
+  if (!second || !('body' in second)) return null;
+  return readPeriods(second.body);
+}
+
+/**
+ * One forecast refresh, self-throttled to `FORECAST_REFRESH_MIN`. Safe to
+ * call on every poll cycle -- inside the window it returns without touching
+ * the network.
+ */
+export async function runForecastStep(
+  env: Env,
+  fetcher: typeof fetch,
+  nowMs: number,
+): Promise<void> {
+  const newest = (await env.DB.prepare(
+    'SELECT MAX(fetched_at) AS fetchedAt FROM forecast_days',
+  ).first()) as { fetchedAt: string | null } | null;
+
+  if (newest?.fetchedAt) {
+    const ageMs = nowMs - Date.parse(newest.fetchedAt);
+    // A NaN age (unparseable stored timestamp) falls through to a fetch --
+    // refreshing on a corrupt marker is the harmless direction to err.
+    if (Number.isFinite(ageMs) && ageMs < FORECAST_REFRESH_MIN * 60_000) return;
+  }
+
+  const periods = await fetchHourlyPeriods(fetcher);
+  if (!periods) return;
+
+  const days = rollupDaily(periods);
+  if (days.length === 0) return;
+
+  const fetchedAt = new Date(nowMs).toISOString();
+  const database = db(env);
+  for (const day of days) {
+    await database
+      .insert(forecastDays)
+      .values({
+        date: day.date,
+        highF: day.highF,
+        lowF: day.lowF,
+        category: day.category,
+        iconUrl: day.iconUrl,
+        shortForecast: day.shortForecast,
+        precipPct: day.precipPct,
+        windGustMph: day.windGustMph,
+        fetchedAt,
+      })
+      .onConflictDoUpdate({
+        target: forecastDays.date,
+        set: {
+          highF: day.highF,
+          lowF: day.lowF,
+          category: day.category,
+          iconUrl: day.iconUrl,
+          shortForecast: day.shortForecast,
+          precipPct: day.precipPct,
+          windGustMph: day.windGustMph,
+          fetchedAt,
+        },
+      });
+  }
 }
