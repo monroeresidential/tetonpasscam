@@ -1,6 +1,6 @@
 import { desc, isNull, ne } from 'drizzle-orm';
 
-import type { ApiStatus, ForecastDay } from '../../shared/types';
+import type { ApiStatus, ForecastDay, ForecastHour } from '../../shared/types';
 import type { PassStatus } from '../../shared/types';
 import { db, id33Events, statusSnapshots, weatherSnapshots } from '../db';
 import type { Env } from '../env';
@@ -62,6 +62,8 @@ export const DETOUR_FRESHNESS_MIN = 30;
 export const FORECAST_STALE_HOURS = 6;
 /** Cards the home strip renders. */
 export const FORECAST_DAYS = 5;
+/** Hours the near-term strip renders. */
+export const HOURLY_HOURS = 12;
 
 /**
  * Test-only clock override for `GET /status`'s "now". There is no
@@ -437,6 +439,45 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     forecastStale = false;
   }
 
+  // Hourly. Its own try/catch for the same reason as the daily block: a
+  // forecast failure must never fail the one endpoint the home screen needs.
+  let hourly: ForecastHour[] = [];
+  try {
+    const hourRows = (
+      await env.DB.prepare(
+        `SELECT start_time AS startTime, temp_f AS tempF, category,
+                is_daytime AS isDaytime, short_forecast AS shortForecast,
+                precip_pct AS precipPct
+           FROM forecast_hours
+          WHERE start_ms >= ?
+          ORDER BY start_ms
+          LIMIT ?`,
+      )
+        .bind(nowMs, HOURLY_HOURS)
+        .all()
+    ).results as unknown as {
+      startTime: string;
+      tempF: number | null;
+      category: string;
+      isDaytime: number;
+      shortForecast: string | null;
+      precipPct: number | null;
+    }[];
+
+    hourly = hourRows.map((row) => ({
+      startTime: row.startTime,
+      tempF: row.tempF,
+      category: row.category as ForecastHour['category'],
+      // SQLite has no boolean type; the column stores 0/1.
+      isDaytime: row.isDaytime === 1,
+      shortForecast: row.shortForecast,
+      precipPct: row.precipPct,
+    }));
+  } catch (err) {
+    console.error('[status] hourly read failed', err);
+    hourly = [];
+  }
+
   // Community reports are pure display data here -- this NEVER feeds back
   // into `status`/`isStale`/`pollerDead`/etc above; only WYDOT-derived data
   // drives those fields.
@@ -466,5 +507,6 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     alerts,
     forecast,
     forecastStale,
+    hourly,
   };
 }

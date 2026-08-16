@@ -827,7 +827,7 @@ describe('forecast', () => {
     const { body: withForecast } = await getStatus();
 
     const strip = (b: ApiStatus) => {
-      const { forecast, forecastStale, ...rest } = b;
+      const { forecast, forecastStale, hourly, ...rest } = b;
       return rest;
     };
     expect(strip(withForecast)).toEqual(strip(without));
@@ -875,5 +875,96 @@ describe('forecast query failure (final review Fix 3)', () => {
     } finally {
       prepareSpy.mockRestore();
     }
+  });
+});
+
+describe('hourly', () => {
+  async function insertHour(o: { startTime: string; tempF?: number; isDaytime?: boolean; precipPct?: number | null }) {
+    await env.DB.prepare(
+      `INSERT INTO forecast_hours
+         (start_ms, start_time, temp_f, category, is_daytime, icon_url, short_forecast, precip_pct, fetched_at)
+       VALUES (?, ?, ?, 'clear', ?, NULL, 'Sunny', ?, '2026-08-16T18:00:00.000Z')`,
+    )
+      .bind(
+        Date.parse(o.startTime),
+        o.startTime,
+        o.tempF ?? 60,
+        o.isDaytime === false ? 0 : 1,
+        o.precipPct === undefined ? 10 : o.precipPct,
+      )
+      .run();
+  }
+
+  it('returns at most 12 upcoming hours, oldest first, none in the past', async () => {
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    const now = Date.parse('2026-08-16T18:00:00.000Z');
+    setTestNowMs(now);
+    for (let i = -3; i < 20; i++) {
+      await insertHour({ startTime: new Date(now + i * 3_600_000).toISOString() });
+    }
+
+    const { body } = await getStatus();
+    expect(body.hourly).toHaveLength(12);
+    expect(Date.parse(body.hourly[0].startTime)).toBeGreaterThanOrEqual(now);
+    for (let i = 1; i < body.hourly.length; i++) {
+      expect(Date.parse(body.hourly[i].startTime)).toBeGreaterThan(Date.parse(body.hourly[i - 1].startTime));
+    }
+    setTestNowMs(undefined);
+  });
+
+  it('orders correctly across a DST fall-back, where the ISO strings sort wrongly', async () => {
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    const now = Date.parse('2026-11-01T06:00:00.000Z');
+    setTestNowMs(now);
+    // 01:30-06:00 is 07:30Z; 01:00-07:00 is 08:00Z. Chronologically the
+    // former comes first, lexicographically the latter does.
+    await insertHour({ startTime: '2026-11-01T01:00:00-07:00' });
+    await insertHour({ startTime: '2026-11-01T01:30:00-06:00' });
+
+    const { body } = await getStatus();
+    expect(body.hourly.map((h) => h.startTime)).toEqual([
+      '2026-11-01T01:30:00-06:00',
+      '2026-11-01T01:00:00-07:00',
+    ]);
+    setTestNowMs(undefined);
+  });
+
+  it('exposes isDaytime as a boolean, not SQLite 0/1', async () => {
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    const now = Date.parse('2026-08-16T18:00:00.000Z');
+    setTestNowMs(now);
+    await insertHour({ startTime: new Date(now + 3_600_000).toISOString(), isDaytime: false });
+    const { body } = await getStatus();
+    expect(body.hourly[0].isDaytime).toBe(false);
+    setTestNowMs(undefined);
+  });
+
+  it('keeps a null precip as null', async () => {
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    const now = Date.parse('2026-08-16T18:00:00.000Z');
+    setTestNowMs(now);
+    await insertHour({ startTime: new Date(now + 3_600_000).toISOString(), precipPct: null });
+    const { body } = await getStatus();
+    expect(body.hourly[0].precipPct).toBeNull();
+    setTestNowMs(undefined);
+  });
+
+  it('degrades to [] when the hourly read fails, leaving the rest intact', async () => {
+    const now = Date.parse('2026-08-16T18:00:00.000Z');
+    setTestNowMs(now);
+    const original = env.DB.prepare.bind(env.DB);
+    const spy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
+      if (sql.includes('forecast_hours')) throw new Error('no such table');
+      return original(sql);
+    });
+
+    const { res, body } = await getStatus();
+    spy.mockRestore();
+
+    expect(res.status).toBe(200);
+    expect(body.hourly).toEqual([]);
+    expect(body.status).toBeDefined();
+    expect(body.conditionText).toBeDefined();
+    setTestNowMs(undefined);
   });
 });

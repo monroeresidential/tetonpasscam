@@ -123,6 +123,12 @@ export interface ApiStatus {
   // contract as `weatherStale`: the data is still returned, the frontend
   // flags it rather than hiding it.
   forecastStale: boolean;
+  // The next 12 hours from api.weather.gov, oldest first. Empty when
+  // unavailable. Governed by `forecastStale` above -- one upstream, one
+  // freshness signal.
+  //
+  // HARD RULE: like `forecast`, this NEVER influences `status`.
+  hourly: ForecastHour[];
 }
 
 /** One (weekday-class, hour, season) typical bucket for a route, as returned
@@ -208,6 +214,22 @@ export interface ForecastDay {
   // -- see api/wx-icon.ts. Null when the upstream icon was missing or
   // failed validation; the card still renders its text.
   iconPath: string | null;
+  shortForecast: string | null;
+  precipPct: number | null;
+}
+
+/** One upcoming hour of the summit forecast, as embedded in
+ *  `ApiStatus.hourly`. Absence is `null`, never `0`. */
+export interface ForecastHour {
+  // The original ISO-with-offset string from NWS. Display only -- ordering
+  // and filtering happen on the stored epoch key, never on this string,
+  // which sorts wrongly across a DST change.
+  startTime: string;
+  tempF: number | null;
+  category: ForecastCategory;
+  // NWS's own daylight flag for this period, so a clear 10 PM hour can show
+  // a moon rather than a sun.
+  isDaytime: boolean;
   shortForecast: string | null;
   precipPct: number | null;
 }
