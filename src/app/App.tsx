@@ -4,6 +4,7 @@ import StatusBanner from './components/StatusBanner';
 import DriveTimes from './components/DriveTimes';
 import WeatherStrip from './components/WeatherStrip';
 import ForecastStrip from './components/ForecastStrip';
+import HourlyStrip from './components/HourlyStrip';
 import AlertsStrip from './components/AlertsStrip';
 import Cameras from './components/Cameras';
 import Header from './components/Header';
@@ -127,6 +128,7 @@ function App() {
               weatherStale={data.weatherStale}
               unit={unit}
             />
+            <HourlyStrip hourly={data.hourly} unit={unit} />
             <ForecastStrip
               forecast={data.forecast}
               forecastStale={data.forecastStale}

@@ -25,6 +25,7 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
     alerts: [],
     forecast: [],
     forecastStale: false,
+    hourly: [],
     ...overrides,
   };
 }
@@ -279,26 +280,33 @@ describe('App', () => {
   });
 
   describe('forecast cache regression (final review Fix 1)', () => {
-    // `ApiStatus.forecast` is declared as a required array, but useStatus
-    // hydrates its initial render SYNCHRONOUSLY from `localStorage['last-status']`
-    // (src/app/useStatus.ts's useState initializer) -- a cache entry written
-    // by a bundle that predates this feature has no `forecast` key AT ALL
-    // (not `forecast: []`, deleted entirely, which is why this uses
-    // `forecast: undefined as any` rather than reusing the makeStatus()
-    // default -- an omitted key is exactly what a real pre-upgrade cached
-    // payload looks like, and it's precisely what the OTHER tests in this
-    // file conceal by always including `forecast: []`). If any consumer of
-    // that prop assumes it's always an array, the very FIRST render throws,
-    // before the mount effect ever runs refresh() to rewrite the cache with
-    // a valid payload -- every subsequent reload hits the same poisoned
-    // entry and crashes identically. This is worth owning as a permanent
-    // regression test: the same hazard exists for every future required
-    // field added to `ApiStatus`, since an old cached payload can never
-    // satisfy a newly-added required key.
-    it('does not crash on mount when the cached payload predates the forecast field', async () => {
-      const cachedWithoutForecast = makeStatus({ status: 'open', forecast: undefined as any });
+    // `ApiStatus.forecast` and `ApiStatus.hourly` are both declared as
+    // required arrays, but useStatus hydrates its initial render
+    // SYNCHRONOUSLY from `localStorage['last-status']` (src/app/useStatus.ts's
+    // useState initializer) -- a cache entry written by a bundle that
+    // predates one of these fields has no such key AT ALL (not `forecast:
+    // []`/`hourly: []`, deleted entirely, which is why this uses
+    // `undefined as any` rather than reusing the makeStatus() default -- an
+    // omitted key is exactly what a real pre-upgrade cached payload looks
+    // like, and it's precisely what the OTHER tests in this file conceal by
+    // always including both fields). If any consumer of either prop assumes
+    // it's always an array, the very FIRST render throws, before the mount
+    // effect ever runs refresh() to rewrite the cache with a valid payload --
+    // every subsequent reload hits the same poisoned entry and crashes
+    // identically. This is worth owning as a permanent regression test: the
+    // same hazard exists for every future required field added to
+    // `ApiStatus`, since an old cached payload can never satisfy a
+    // newly-added required key -- `hourly` (added alongside `HourlyStrip`)
+    // is exercised here for exactly that reason.
+    it('does not crash on mount when the cached payload predates the forecast/hourly fields', async () => {
+      const cachedWithoutForecast = makeStatus({
+        status: 'open',
+        forecast: undefined as any,
+        hourly: undefined as any,
+      });
       const raw = JSON.stringify(cachedWithoutForecast);
       expect(JSON.parse(raw)).not.toHaveProperty('forecast');
+      expect(JSON.parse(raw)).not.toHaveProperty('hourly');
       localStorage.setItem('last-status', raw);
       localStorage.setItem('last-status-at', new Date().toISOString());
       mockStatusOnlyFetch();
