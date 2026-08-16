@@ -7,6 +7,7 @@ import { postFeedback } from './feedback';
 import { getHistory } from './history';
 import { getStatus } from './status';
 import { getWeatherHistory } from './weather-history';
+import { getWxIcon } from './wx-icon';
 
 // Per-endpoint body size caps for `readJsonCapped` (see body.ts) -- sized to
 // comfortably fit each endpoint's legitimate payload (alerts: short enum +
@@ -71,4 +72,13 @@ api.get('/weather-history', async (c) => {
   const result = await getWeatherHistory(c.env);
   c.header('Cache-Control', 'public, max-age=300');
   return c.json(result);
+});
+
+// index.ts strips the leading `/api` before handing the request to this
+// app, so the path here is `/wx-icon/...`. Read it off `c.req.path` rather
+// than a param: the tail legitimately contains slashes and commas
+// ("land/day/rain,60/snow,40"), which a single param would not capture.
+api.get('/wx-icon/*', async (c) => {
+  const iconPath = c.req.path.slice('/wx-icon/'.length);
+  return getWxIcon(iconPath);
 });
