@@ -776,22 +776,6 @@ describe('forecast', () => {
     setTestNowMs(undefined);
   });
 
-  it('rewrites the NWS icon URL to our proxy path and never leaks the upstream host', async () => {
-    await env.DB.prepare('DELETE FROM forecast_days').run();
-    const now = Date.parse('2026-08-16T18:00:00.000Z');
-    setTestNowMs(now);
-    await insertForecastDay({
-      date: '2026-08-16',
-      fetchedAt: new Date(now).toISOString(),
-      iconUrl: 'https://api.weather.gov/icons/land/day/tsra_hi,20?size=small',
-    });
-
-    const { body } = await getStatus();
-    expect(body.forecast[0].iconPath).toBe('/api/wx-icon/land/day/tsra_hi,20');
-    expect(JSON.stringify(body.forecast)).not.toContain('api.weather.gov');
-    setTestNowMs(undefined);
-  });
-
   it('flags a forecast older than the stale window without hiding it', async () => {
     await env.DB.prepare('DELETE FROM forecast_days').run();
     const now = Date.parse('2026-08-16T18:00:00.000Z');
@@ -966,5 +950,16 @@ describe('hourly', () => {
     expect(body.status).toBeDefined();
     expect(body.conditionText).toBeDefined();
     setTestNowMs(undefined);
+  });
+});
+
+describe('icon proxy removal', () => {
+  it('no longer serves the icon proxy or exposes iconPath', async () => {
+    const res = await api.request('/wx-icon/land/day/few', {}, env as any);
+    expect(res.status).toBe(404);
+
+    const { body } = await getStatus();
+    expect(JSON.stringify(body.forecast)).not.toContain('iconPath');
+    expect(JSON.stringify(body)).not.toContain('api.weather.gov');
   });
 });

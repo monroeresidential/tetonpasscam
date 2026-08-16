@@ -164,8 +164,10 @@ export const forecastDays = sqliteTable('forecast_days', {
   highF: real('high_f'),
   lowF: real('low_f'),
   category: text('category').notNull(),
-  // The NWS icon URL as returned. Rewritten to our own proxy path at the
-  // API layer (see api/wx-icon.ts) -- never handed to a client as-is.
+  // The NWS icon URL as returned. Captured for its own sake and never read
+  // by the API layer -- the client renders a local glyph tile instead (see
+  // src/app/weatherGlyphs.ts). Retained rather than dropped: it costs
+  // nothing and is the raw material if upstream artwork is ever wanted back.
   iconUrl: text('icon_url'),
   shortForecast: text('short_forecast'),
   precipPct: integer('precip_pct'),

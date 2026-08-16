@@ -190,8 +190,8 @@ export interface WeatherHistoryResult {
 }
 
 /** The eight display categories a forecast day collapses to. Drives the
- *  severity tie-break in the poller's rollup and nothing else on the client
- *  -- the picture itself comes from `iconPath`. */
+ *  severity tie-break in the poller's rollup and, on the client, which
+ *  glyph tile renders (see `src/app/weatherGlyphs.ts`). */
 export type ForecastCategory =
   | 'clear'
   | 'partly-cloudy'
@@ -210,10 +210,6 @@ export interface ForecastDay {
   highF: number | null;
   lowF: number | null;
   category: ForecastCategory;
-  // A path on OUR origin (`/api/wx-icon/...`), never an api.weather.gov URL
-  // -- see api/wx-icon.ts. Null when the upstream icon was missing or
-  // failed validation; the card still renders its text.
-  iconPath: string | null;
   shortForecast: string | null;
   precipPct: number | null;
 }

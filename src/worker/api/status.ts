@@ -7,7 +7,6 @@ import type { Env } from '../env';
 import { formatShareCode } from '../share-code';
 import { denverDateKey, denverParts } from '../tz';
 import { getActiveAlerts } from './alerts';
-import { toIconPath } from './wx-icon';
 
 /** Newest snapshot older than this ⇒ the poller itself is considered dead;
  *  the response's `status` is forced to 'unknown' regardless of what that
@@ -388,7 +387,7 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     const today = denverDateKey(nowMs);
     const forecastRows = (
       await env.DB.prepare(
-        `SELECT date, high_f AS highF, low_f AS lowF, category, icon_url AS iconUrl,
+        `SELECT date, high_f AS highF, low_f AS lowF, category,
                 short_forecast AS shortForecast, precip_pct AS precipPct, fetched_at AS fetchedAt
            FROM forecast_days
           WHERE date >= ?
@@ -402,7 +401,6 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
       highF: number | null;
       lowF: number | null;
       category: string;
-      iconUrl: string | null;
       shortForecast: string | null;
       precipPct: number | null;
       fetchedAt: string;
@@ -413,9 +411,6 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
       highF: row.highF,
       lowF: row.lowF,
       category: row.category as ForecastDay['category'],
-      // Rewritten here, never in the DB: the stored value is NWS's own URL,
-      // and the client must only ever be handed a path on our origin.
-      iconPath: toIconPath(row.iconUrl),
       shortForecast: row.shortForecast,
       precipPct: row.precipPct,
     }));
