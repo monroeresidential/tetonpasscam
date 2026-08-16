@@ -107,4 +107,31 @@ describe('parseSensorPage — humidity and dew point', () => {
     const r = parseSensorPage(load('sensors-tetonpass.html'));
     expect(r?.dewPointF).not.toBe(32);
   });
+
+  // OBSERVED IN PRODUCTION 2026-08-15: WYDOT's humidity instrument failed
+  // and the page served the literal text "NaN%" in that cell, while every
+  // other sensor kept reporting normally. Derived from the live fixture by
+  // swapping only that one cell, following the same convention
+  // poller.test.ts uses for derived fixtures rather than adding a
+  // near-duplicate file.
+  it('a humidity cell reading "NaN%" yields null, and does not poison the other sensors', () => {
+    const html = load('sensors-tetonpass.html').replace(
+      '<font size="-1">34%</font>',
+      '<font size="-1">NaN%</font>',
+    );
+    const reading = parseSensorPage(html)!;
+
+    // No digits to extract, so the reading is absent -- not 0, which would
+    // assert a measured humidity of zero percent.
+    expect(reading.humidityPct).toBeNull();
+
+    // The real failure mode this guards: one unparseable cell taking the
+    // whole reading down with it. Every other sensor must survive.
+    expect(reading.airF).toBe(70);
+    expect(reading.surfaceF).not.toBeNull();
+    expect(reading.dewPointF).toBe(41);
+    expect(reading.windGustMph).not.toBeNull();
+    expect(reading.visibilityFt).not.toBeNull();
+    expect(reading.reportedAt).not.toBeNull();
+  });
 });

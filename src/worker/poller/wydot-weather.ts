@@ -134,6 +134,15 @@ function matchNumericLabel(label: string): NumericField | null {
   // point's carries the usual US-then-metric pair ("41°F (5°C)"), so both
   // fall out of the existing first-number extraction unchanged.
   if (/^relative humidity$/i.test(label)) return 'humidityPct';
+  // Stored verbatim, INCLUDING physically impossible values. Observed in
+  // production 2026-08-15: with the humidity instrument reporting "NaN%",
+  // WYDOT published a 54°F dew point against a 50°F air temperature --
+  // dew point is derived from humidity, so a failed humidity sensor yields
+  // a nonsense dew point. That is their instrument being wrong, and
+  // silently clamping it here would make US the ones inventing a figure.
+  // Nothing displays this field today; if it is ever charted, the honest
+  // move is to WITHHOLD or flag a reading that exceeds air temperature,
+  // never to adjust it into plausibility.
   if (/^dew point$/i.test(label)) return 'dewPointF';
   return null;
 }

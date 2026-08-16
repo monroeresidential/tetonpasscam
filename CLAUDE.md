@@ -13,9 +13,11 @@ npm run dev             # vite build, then wrangler dev (local Worker + local D1
 npm run build            # vite build only (outputs dist/)
 npm run deploy            # vite build, then wrangler deploy (real Cloudflare account required)
 npm run db:generate       # drizzle-kit generate (schema -> migrations/*.sql, after editing src/worker/db/schema.ts)
-                          #   NOTE: once a migration has been applied to remote D1, it's frozen -- never edit
-                          #   0000_polite_blur.sql/0001_mysterious_masked_marvel.sql in place, always generate
-                          #   a new 000N_*.sql for the next schema change (see docs/RUNBOOK.md §1).
+                          #   NOTE: EVERY migration already applied to remote D1 is frozen -- never edit one
+                          #   in place, always generate a new 000N_*.sql for the next schema change (see
+                          #   docs/RUNBOOK.md §1). Deliberately stated as a rule rather than a list of
+                          #   filenames: an enumerated list goes stale every time a migration lands, and a
+                          #   reader who trusts a short list will edit a frozen file that isn't on it.
 npm run db:migrate:local  # wrangler d1 migrations apply tetonpasscam --local
 npm run test              # vitest run --config vitest.config.ts    (test/parsers/** -- WYDOT HTML parsers, no DOM/Workers runtime)
 npm run test:worker       # vitest run --config vitest.workers.config.ts (test/worker/** -- Hono routes + D1, real Workers runtime via @cloudflare/vitest-pool-workers)
@@ -46,7 +48,8 @@ src/app/             React SPA (client-render only, no SSR)
 
 src/shared/types.ts   Types shared between worker and app (PassStatus, ApiStatus, PublicAlert, CameraId, etc.)
 
-migrations/           drizzle-kit-generated D1 migrations (0000_polite_blur.sql, 0001_mysterious_masked_marvel.sql)
+migrations/           drizzle-kit-generated D1 migrations, 0000-0008, all applied to remote D1 and frozen
+                      (run `ls migrations/` for the current set -- listing names here only goes stale)
 scripts/              verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts).
                       App icons/favicons come from design/logo-4c/ (the route-22 brand kit,
                       not generated) -- regenerate by re-copying its PNGs into public/ and
@@ -92,4 +95,6 @@ tetonpasscam.com — a Teton Pass (WY-22) status app: official WYDOT open/closed
 
 ## Definition of done (P1, from the spec)
 
-Deployed page passes curl checks (title/H1/meta in HTML); poller writes all four data types on schedule; killing the poller degrades the banner to UNKNOWN; `POST /api/alerts` rate-limits correctly (2/device/30min + IP throttle + honeypot); Lighthouse mobile ≥ 90; `npx cap sync` runs cleanly.
+Deployed page passes curl checks (title/H1/meta in HTML); poller writes all four data types on schedule; killing the poller degrades the banner to UNKNOWN; `POST /api/alerts` rate-limits correctly (2/device/30min + IP throttle + honeypot); Lighthouse mobile ≥ 90.
+
+`npx cap sync` was listed here originally but is a **P2 gate, not P1** — Capacitor has never been installed in this repo (no `@capacitor/*` dependency, no `capacitor.config.*`, nothing in any commit), so the check has never been passable and two verification passes have reported it as a failure. It belongs with the P2 iOS/Android wrap described under "Intended architecture" above. Keep the core UI framework-agnostic in the meantime so the sync is straightforward when that phase starts.
