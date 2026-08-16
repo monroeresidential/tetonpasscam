@@ -184,15 +184,13 @@ export default function TypicalChart({
   // them for free. Deliberately NOT a "nice round numbers" algorithm: mock
   // 2c's tidy 30m/45m/60m came from hand-drawn sample data, and min/mid/max
   // states the real domain without extra machinery to get wrong.
-  const yTicks = compact ? [] : [vMin, vMin + span / 2, vMax];
+  const yTicks = [vMin, vMin + span / 2, vMax];
 
   // X labels every three hours across the plotted range. Starts at the first
   // whole hour at or after hMin so a fractional domain edge can't produce a
   // label sitting outside the plot area.
   const xTicks: number[] = [];
-  if (!compact) {
-    for (let h = Math.ceil(hMin); h <= hMax; h += X_LABEL_STEP_HOURS) xTicks.push(h);
-  }
+  for (let h = Math.ceil(hMin); h <= hMax; h += X_LABEL_STEP_HOURS) xTicks.push(h);
 
   return (
     <svg
@@ -201,12 +199,14 @@ export default function TypicalChart({
       role="img"
       aria-label={ariaLabel}
     >
-      {/* Axis furniture first, so every series paints over it. Suppressed
-          entirely in compact mode -- the home card is a teaser linking
-          through to the full page, where axis text would be noise and, at
-          that size, illegible. */}
-      {!compact && (
-        <>
+      {/* Axis furniture first, so every series paints over it. Rendered on
+          BOTH surfaces, compact included. Compact originally suppressed all
+          of this on the theory that the home card is only a teaser linking
+          through to the full page -- but rendered, that produced a bare
+          line with no scale, where a reader could not tell thirty minutes
+          from ninety. `compact` now governs only the now-label text, which
+          is the one genuinely dense element. */}
+      <>
           <line
             data-testid="axis-y"
             x1={PAD.left}
@@ -256,8 +256,7 @@ export default function TypicalChart({
               {hourLabel(hour)}
             </text>
           ))}
-        </>
-      )}
+      </>
 
       {showReference && referenceValue && (
         <>

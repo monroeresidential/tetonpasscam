@@ -189,15 +189,12 @@ describe('TypicalChart — axes', () => {
     expect(screen.getByTestId('axis-x')).toBeTruthy();
   });
 
-  it('renders no axis furniture at all in compact mode', () => {
-    // The home card is a small teaser linking through to the full page;
-    // axis text there would be noise and, at that size, illegible.
-    render(<TypicalChart points={pts()} today={[]} compact />);
-    expect(screen.queryByTestId('axis-y')).toBeNull();
-    expect(screen.queryByTestId('axis-x')).toBeNull();
-    expect(screen.queryByText('28m')).toBeNull();
-    expect(screen.queryByText('4 AM')).toBeNull();
-  });
+  // NOTE: this suite originally asserted that compact mode rendered NO axis
+  // furniture. That expectation was reversed deliberately -- see the
+  // "compact keeps its axes" suite below -- after the home card was
+  // rendered and turned out to be a bare line with no scale. The assertion
+  // was removed because the BEHAVIOUR changed by decision, not because it
+  // was inconvenient; what compact still suppresses is pinned there.
 });
 
 // The reference line draws only when the data actually crosses it. The
@@ -294,5 +291,39 @@ describe('TypicalChart — now-label stays inside the viewBox', () => {
     // is never shortened as a workaround.
     render(<TypicalChart points={[pt(4), pt(10)]} today={[{ hour: 10, value: 2280 }]} />);
     expect(screen.getByText('now · 38m')).toBeTruthy();
+  });
+});
+
+// Compact mode originally suppressed all axis furniture on the theory that
+// the home card is a teaser. Rendered, that produced a bare line with no
+// scale -- you could not tell 30 minutes from 90. Compact now means only
+// "no now-label text"; the axes render on both surfaces.
+describe('TypicalChart — compact keeps its axes', () => {
+  function pt(hour: number, median: number): ChartPoint {
+    return { hour, median, p25: median - 60, p75: median + 60, distinctDays: 9 };
+  }
+  const points = [pt(5, 1740), pt(8, 2400), pt(11, 1860)];
+
+  it('renders axis lines and tick labels in compact mode', () => {
+    render(<TypicalChart points={points} today={[]} compact />);
+    expect(screen.getByTestId('axis-y')).toBeTruthy();
+    expect(screen.getByTestId('axis-x')).toBeTruthy();
+    expect(screen.getByText('28m')).toBeTruthy(); // p25 of the lowest bucket
+    expect(screen.getByText('5 AM')).toBeTruthy();
+  });
+
+  it('still suppresses the now-label text while keeping the dot', () => {
+    render(<TypicalChart points={points} today={[{ hour: 8, value: 2400 }]} compact />);
+    expect(screen.getByTestId('now-dot')).toBeTruthy();
+    expect(screen.queryByText(/now ·/)).toBeNull();
+  });
+
+  it('renders the same axis furniture as the non-compact chart', () => {
+    // The two surfaces should not disagree about how a chart is labelled.
+    const { container: compactSvg } = render(<TypicalChart points={points} today={[]} compact />);
+    const { container: fullSvg } = render(<TypicalChart points={points} today={[]} />);
+    const count = (c: HTMLElement, sel: string) => c.querySelectorAll(sel).length;
+    expect(count(compactSvg, 'text')).toBe(count(fullSvg, 'text'));
+    expect(count(compactSvg, 'line')).toBe(count(fullSvg, 'line'));
   });
 });
