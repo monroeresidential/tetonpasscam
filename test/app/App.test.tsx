@@ -320,6 +320,73 @@ describe('App', () => {
     });
   });
 
+  describe('forecast staleness caption (final review Fix 1)', () => {
+    // `forecastStale` is one flag governing BOTH the hourly and 5-day rows --
+    // it used to be rendered only inside ForecastStrip, below the hourly
+    // section, so an NWS outage captioned the 5-day cards but left the
+    // hourly row above them uncaptioned. It's now hoisted into App's wrapper
+    // div, above both strips.
+    function forecastDay() {
+      return {
+        date: '2026-08-16',
+        highF: 62,
+        lowF: 38,
+        category: 'clear' as const,
+        shortForecast: 'Sunny',
+        precipPct: 10,
+      };
+    }
+    function forecastHour() {
+      return {
+        startTime: '2026-08-16T13:00:00-06:00',
+        tempF: 60,
+        category: 'clear' as const,
+        isDaytime: true,
+        shortForecast: 'Sunny',
+        precipPct: 10,
+      };
+    }
+
+    it('shows exactly one "may be outdated" caption above both the hourly and 5-day rows when forecastStale is true', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : (input as Request).url;
+        if (url === '/api/status') {
+          return new Response(
+            JSON.stringify(
+              makeStatus({ forecast: [forecastDay()], hourly: [forecastHour()], forecastStale: true }),
+            ),
+            { status: 200 },
+          );
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+
+      render(<App />);
+      await screen.findByText('The pass is OPEN');
+
+      const captions = screen.getAllByText(/may be outdated/i);
+      expect(captions).toHaveLength(1);
+
+      // The caption precedes both strips in document order -- `compareDocumentPosition`
+      // rather than just "exists", so this fails if the caption were re-nested
+      // below either strip instead of hoisted above them.
+      const hourlyHeading = screen.getByRole('heading', { name: 'Next 12 hours' });
+      const forecastHeading = screen.getByRole('heading', { name: '5-day forecast' });
+      const position = captions[0].compareDocumentPosition(hourlyHeading);
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const positionVsForecast = captions[0].compareDocumentPosition(forecastHeading);
+      expect(positionVsForecast & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('shows no caption at all when forecastStale is false', async () => {
+      mockStatusOnlyFetch();
+      render(<App />);
+      await screen.findByText('The pass is OPEN');
+
+      expect(screen.queryByText(/may be outdated/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe('explainer relocation (scope addition)', () => {
     // main.tsx's #seo-shell hide/show logic lives outside App (it never
     // renders index.html's static markup -- App is only ever mounted into a

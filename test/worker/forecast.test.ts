@@ -297,6 +297,16 @@ describe('runForecastStep hourly write', () => {
     await expect(
       runForecastStep(env as any, fakeNws(), Date.parse('2026-08-16T16:00:00.000Z')),
     ).rejects.toThrow('boom');
+    // Asserted BEFORE mockRestore(): vitest's mockRestore() does everything
+    // mockReset() does (clears recorded calls) in addition to restoring the
+    // original implementation, so the call count would read back 0 no matter
+    // how many times batch() actually ran if checked after restoring.
+    //
+    // Pins the single-transaction property itself: a two-batch
+    // implementation would throw on the first batch identically (both
+    // tables would still read back empty), so without this count the
+    // assertions below cannot tell one batch from two.
+    expect(batchSpy).toHaveBeenCalledTimes(1);
     batchSpy.mockRestore();
 
     expect(((await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_days').first()) as any).n).toBe(0);

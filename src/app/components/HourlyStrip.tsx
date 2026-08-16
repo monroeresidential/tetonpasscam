@@ -45,11 +45,14 @@ export default function HourlyStrip({
               {HOUR_FORMAT.format(new Date(h.startTime))}
             </p>
             <div
-              aria-hidden="true"
               data-testid="glyph-tile"
               className="bg-icon-tile flex h-8 w-8 items-center justify-center rounded-[10px] text-[16px]"
             >
-              {glyphFor(h.category, h.isDaytime)}
+              {/* `aria-hidden` sits on the glyph itself (not the tile) so a
+                  screen reader skips the emoji and reads only the sr-only
+                  text beside it -- "Snow", not "snowflake emoji Snow". */}
+              <span aria-hidden="true">{glyphFor(h.category, h.isDaytime)}</span>
+              <span className="sr-only">{h.shortForecast ?? h.category}</span>
             </div>
             <p className="font-display text-[13px] font-extrabold">
               {h.tempF !== null ? formatTemp(h.tempF, unit) : '—'}

@@ -34,7 +34,7 @@ src/worker/          Cloudflare Worker (Hono) -- the only thing with DB/secret a
   index.ts             fetch()/scheduled() entrypoint; routes /api/* to Hono, everything else to ASSETS
   env.ts               Env interface (bindings + secrets)
   api/                 router.ts (mounts all routes) + status.ts, alerts.ts, feedback.ts, history.ts, admin.ts,
-                       weather-history.ts, wx-icon.ts (proxies NWS forecast icons to our own origin)
+                       weather-history.ts
   poller/              run.ts (poll cycle orchestration), wydot-status.ts, wydot-weather.ts, google-routes.ts,
                        idaho511.ts (per-source fetch+parse), aggregate.ts (nightly typicals job),
                        nws-forecast.ts (hourly-forecast fetch + Denver-day rollup)
@@ -51,9 +51,10 @@ src/app/             React SPA (client-render only, no SSR)
 src/shared/types.ts   Types shared between worker and app (PassStatus, ApiStatus, PublicAlert, CameraId, etc.)
 
 migrations/           drizzle-kit-generated D1 migrations. 0000-0008 are applied to remote D1 and
-                      frozen. 0009 (forecast_days) is applied LOCALLY ONLY and is NOT yet on remote
-                      -- it ships with the next deploy, and per docs/RUNBOOK.md the remote migration
-                      must be applied BEFORE the Worker that reads the table.
+                      frozen. 0009 (forecast_days) and 0010 (forecast_hours) are applied LOCALLY
+                      ONLY and are NOT yet on remote -- they ship with the next deploy, and per
+                      docs/RUNBOOK.md the remote migration must be applied BEFORE the Worker that
+                      reads either table.
                       (run `ls migrations/` for the current set -- listing names here only goes stale)
 scripts/              verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts).
                       App icons/favicons come from design/logo-4c/ (the route-22 brand kit,

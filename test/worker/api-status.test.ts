@@ -6,7 +6,9 @@ import { denverTypicalsKey, setTestNowMs } from '../../src/worker/api/status';
 import { seedRoutes } from '../../src/worker/db/seed-routes';
 import { setTestEmailFetcher } from '../../src/worker/notify';
 import { formatShareCode } from '../../src/worker/share-code';
+import { categorize, runForecastStep } from '../../src/worker/poller/nws-forecast';
 import type { ApiStatus } from '../../src/shared/types';
+import liveHourly from '../fixtures/nws-hourly.json';
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -947,9 +949,47 @@ describe('hourly', () => {
 
     expect(res.status).toBe(200);
     expect(body.hourly).toEqual([]);
-    expect(body.status).toBeDefined();
+    // Membership in the four-state enum, not merely "defined" -- "defined"
+    // would not catch `status` mangled to some other truthy value.
+    expect(['open', 'restricted', 'closed', 'unknown']).toContain(body.status);
     expect(body.conditionText).toBeDefined();
     setTestNowMs(undefined);
+  });
+});
+
+describe('poller -> API seam (final review Fix 4)', () => {
+  it('returns hourly rows through /api/status matching exactly what runForecastStep wrote', async () => {
+    // Every other hourly test either hand-writes rows and reads them back
+    // through /api/status, or runs the poller and only counts rows -- none
+    // crosses the seam by running the real poller write and then reading it
+    // back through the real API. That's the one place a silent encoding
+    // mismatch would hide: `is_daytime` is written through drizzle's boolean
+    // mode and read back by raw SQL as `row.isDaytime === 1`
+    // (src/worker/api/status.ts's hourly block) -- correct today, but if
+    // drizzle's encoding ever changed, every hour would silently become
+    // night and every other test would still pass. This also pins the
+    // `start_ms` unit round-trip and the `category` string round-trip.
+    await env.DB.prepare('DELETE FROM forecast_days').run();
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+
+    const fetcher = (async () =>
+      new Response(JSON.stringify(liveHourly), {
+        status: 200,
+        headers: { 'Content-Type': 'application/geo+json' },
+      })) as typeof fetch;
+
+    const firstPeriod = (liveHourly as { properties: { periods: any[] } }).properties.periods[0];
+    const writeAt = Date.parse(firstPeriod.startTime);
+    await runForecastStep(env as any, fetcher, writeAt);
+
+    setTestNowMs(writeAt);
+    const { body } = await getStatus();
+    setTestNowMs(undefined);
+
+    expect(body.hourly).toHaveLength(12);
+    expect(body.hourly[0].startTime).toBe(firstPeriod.startTime);
+    expect(body.hourly[0].isDaytime).toBe(firstPeriod.isDaytime);
+    expect(body.hourly[0].category).toBe(categorize(firstPeriod.shortForecast));
   });
 });
 

@@ -64,4 +64,29 @@ describe('HourlyStrip', () => {
     const { container } = render(<HourlyStrip hourly={undefined} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  // Final review Fix 2: the deleted `<img alt={...}>` was the only thing
+  // announcing the condition to a screen reader; `aria-hidden` on the glyph
+  // with nothing else in the card left it unannounced. This asserts the
+  // replacement text is actually IN the accessibility tree -- `getByText`
+  // finds it regardless of the `sr-only` class visually hiding it.
+  it('carries the condition to a screen reader via sr-only text beside the aria-hidden glyph', () => {
+    render(
+      <HourlyStrip
+        hourly={[hour({ startTime: '2026-08-16T13:00:00-06:00', shortForecast: 'Snow Showers' })]}
+      />,
+    );
+    expect(screen.getByText('Snow Showers')).toBeInTheDocument();
+  });
+
+  it('falls back to the category when shortForecast is null', () => {
+    render(
+      <HourlyStrip
+        hourly={[
+          hour({ startTime: '2026-08-16T13:00:00-06:00', shortForecast: null, category: 'fog' }),
+        ]}
+      />,
+    );
+    expect(screen.getByText('fog')).toBeInTheDocument();
+  });
 });

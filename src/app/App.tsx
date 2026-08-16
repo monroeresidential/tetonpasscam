@@ -128,12 +128,21 @@ function App() {
               weatherStale={data.weatherStale}
               unit={unit}
             />
+            {/* `forecastStale` governs BOTH the hourly and 5-day rows below --
+                one upstream fetch, one freshness signal, no second flag. It
+                used to live inside ForecastStrip, below the hourly row, which
+                meant an NWS outage captioned the 5-day section but left the
+                hourly row showing a day-old model run with no caption at all.
+                Hoisted here, above both strips, so a reader sees it once and
+                it unambiguously applies to everything below it. Gated on
+                there being anything to caption -- a bare "may be outdated"
+                floating over two empty strips would be worse than saying
+                nothing. */}
+            {data.forecastStale && (data.hourly?.length || data.forecast?.length) ? (
+              <p className="text-muted mb-1 text-[11px]">Forecast may be outdated</p>
+            ) : null}
             <HourlyStrip hourly={data.hourly} unit={unit} />
-            <ForecastStrip
-              forecast={data.forecast}
-              forecastStale={data.forecastStale}
-              unit={unit}
-            />
+            <ForecastStrip forecast={data.forecast} unit={unit} />
           </div>
           <div>
             <Sponsor />

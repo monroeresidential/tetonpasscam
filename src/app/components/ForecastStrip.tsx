@@ -20,7 +20,6 @@ const DENVER_DATE_KEY = new Intl.DateTimeFormat('en-CA', {
 
 export default function ForecastStrip({
   forecast,
-  forecastStale = false,
   now = new Date(),
   unit = 'F',
 }: {
@@ -33,7 +32,6 @@ export default function ForecastStrip({
   // (component-side) rather than at the App.tsx call site so every future
   // consumer of this prop inherits the same protection.
   forecast: ForecastDay[] | undefined;
-  forecastStale?: boolean;
   now?: Date;
   unit?: TempUnit;
 }) {
@@ -49,7 +47,6 @@ export default function ForecastStrip({
       <h2 id="forecast-heading" className="font-display text-[15px] font-bold">
         5-day forecast
       </h2>
-      {forecastStale && <p className="text-muted mb-1 text-[11px]">Forecast may be outdated</p>}
       <div className="mt-1 grid grid-cols-5 gap-2">
         {forecast.map((d) => (
           <div
@@ -60,14 +57,17 @@ export default function ForecastStrip({
               {d.date === todayKey ? 'Today' : weekdayLabel(d.date)}
             </p>
             <div
-              aria-hidden="true"
               data-testid="glyph-tile"
               className="bg-icon-tile flex h-10 w-10 items-center justify-center rounded-[10px] text-[20px]"
             >
               {/* Daily cards always take the day glyph: a whole-day summary
                   is not an hour, so a moon would be as wrong at noon as a
-                  sun is at midnight. */}
-              {glyphFor(d.category, true)}
+                  sun is at midnight. `aria-hidden` sits on the glyph itself
+                  (not the tile) so a screen reader skips the emoji and reads
+                  only the sr-only text beside it -- "Snow", not "snowflake
+                  emoji Snow". */}
+              <span aria-hidden="true">{glyphFor(d.category, true)}</span>
+              <span className="sr-only">{d.shortForecast ?? d.category}</span>
             </div>
             <p className="font-display text-[13px] font-extrabold">
               {d.highF !== null && d.lowF !== null
