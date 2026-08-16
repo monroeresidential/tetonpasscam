@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import ChartLegend, { type LegendItem } from './components/ChartLegend';
 import SeasonCompare from './components/SeasonCompare';
 import TempUnitToggle from './components/TempUnitToggle';
 import TypicalChart, { type ChartPoint } from './components/TypicalChart';
@@ -15,6 +16,37 @@ import type {
   WeatherMetric,
   WeatherTypical,
 } from '../shared/types';
+
+// Legend definitions live beside the page that renders them, but the
+// swatch rendering is shared (ChartLegend) so no two charts can disagree
+// about what a series looks like. Colours are the SAME tokens TypicalChart
+// strokes with -- accent for today, status-open for the typical series,
+// muted for the dashed secondary.
+const TYPICAL = 'var(--color-status-open)';
+const TODAY = 'var(--color-accent)';
+
+const DRIVE_TIME_LEGEND: LegendItem[] = [
+  { label: 'Today', kind: 'line', color: TODAY },
+  { label: 'Typical day', kind: 'line', color: TYPICAL },
+  { label: 'Typical range', kind: 'band', color: TYPICAL },
+];
+
+// "Today (air)" rather than plain "Today": only air carries a today trace
+// here, surface is plotted as a typical median alone, and a bare "Today"
+// would leave a reader guessing which of the two it tracks.
+const TEMP_LEGEND: LegendItem[] = [
+  { label: 'Today (air)', kind: 'line', color: TODAY },
+  { label: 'Air, typical', kind: 'line', color: TYPICAL },
+  { label: 'Typical range', kind: 'band', color: TYPICAL },
+  { label: 'Road surface, typical', kind: 'dashed', color: 'var(--color-muted)' },
+];
+
+// Says what the shaded range IS, not merely when it appears. The previous
+// caption explained only the withholding rule, leaving "p25-p75" in the
+// legend as the sole (and unreadable) definition.
+const TYPICAL_RANGE_CAPTION =
+  'The typical range covers the middle half of recorded days — a quarter came in faster, a quarter slower. ' +
+  "It's shown only for hours with enough separate days behind them.";
 
 /** Filters `/api/weather-history`'s `typicals` -- every (metric,
  *  weekday-class, hour, season) bucket, station-wide -- down to the ONE
@@ -114,7 +146,7 @@ export default function HistoryPage() {
 
         <h1 className="font-display text-[30px] font-extrabold tracking-tight">When should you leave?</h1>
         <p className="text-muted mt-1 text-sm">
-          {`Travel time by hour of day — today's line against the typical band for a ${season} ${weekday}.`}
+          {`Travel time by hour of day — today's line against the typical range for a ${season} ${weekday}.`}
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -142,15 +174,11 @@ export default function HistoryPage() {
         </div>
 
         <section className="bg-card border-card-border mt-4 rounded-2xl border p-5">
-          <div className="text-muted mb-2.5 flex flex-wrap gap-4 text-[11.5px]">
-            <span>— Today</span>
-            <span>▬ Typical band (p25–p75)</span>
-            <span>— Typical median</span>
+          <div className="mb-2.5">
+            <ChartLegend items={DRIVE_TIME_LEGEND} />
           </div>
           <TypicalChart points={points} today={today} />
-          <p className="text-muted mt-2 text-[11.5px]">
-            The band is shown only for hours with enough separate days of history behind them.
-          </p>
+          <p className="text-muted mt-2 text-[11.5px]">{TYPICAL_RANGE_CAPTION}</p>
         </section>
 
         <section data-testid="temp-card" className="bg-card border-card-border mt-4 rounded-2xl border p-5">
@@ -160,17 +188,7 @@ export default function HistoryPage() {
           </p>
 
           <div className="mt-4 mb-2.5 flex flex-wrap items-center justify-between gap-2">
-            {/* Names every series on the chart, matching the drive-time
-                card's legend. "Today (air)" rather than plain "Today"
-                because only air has a today trace here -- surface is
-                plotted as a typical median alone, and a bare "Today" would
-                leave a reader guessing which of the two it tracks. */}
-            <div className="text-muted flex flex-wrap gap-4 text-[11.5px]">
-              <span>— Today (air)</span>
-              <span>— Air (median)</span>
-              <span>▬ Typical band (p25–p75)</span>
-              <span>┄ Surface (median)</span>
-            </div>
+            <ChartLegend items={TEMP_LEGEND} />
             <TempUnitToggle unit={unit} onChange={setUnit} />
           </div>
           <TypicalChart
@@ -183,7 +201,7 @@ export default function HistoryPage() {
             emptyMessage="Temperature history is still being collected for this station."
           />
           <p className="text-muted mt-2 text-[11.5px]">
-            The band is shown only for hours with enough separate days of history behind them.
+            {TYPICAL_RANGE_CAPTION}
           </p>
         </section>
 

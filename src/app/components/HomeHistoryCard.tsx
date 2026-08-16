@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 
+import ChartLegend, { type LegendItem } from './ChartLegend';
 import TypicalChart, { type ChartPoint } from './TypicalChart';
 import { denverNow, todayToChartPoints, typicalsToChartPoints } from '../historyChart';
 import { getHistory } from '../historyApi';
+
+// Same three series, same colours, same shared component as the drive-time
+// chart on /history -- this card plots exactly that data, so the two must
+// not describe it differently. The explaining caption is deliberately NOT
+// repeated here: this is a teaser and the sentence would dominate it, and
+// the card links through to the page that carries it.
+const HOME_LEGEND: LegendItem[] = [
+  { label: 'Today', kind: 'line', color: 'var(--color-accent)' },
+  { label: 'Typical day', kind: 'line', color: 'var(--color-status-open)' },
+  { label: 'Typical range', kind: 'band', color: 'var(--color-status-open)' },
+];
 
 export default function HomeHistoryCard({ slug, routeName }: { slug: string; routeName: string }) {
   const [points, setPoints] = useState<ChartPoint[]>([]);
@@ -45,9 +57,10 @@ export default function HomeHistoryCard({ slug, routeName }: { slug: string; rou
         <span className="text-muted text-[13px]">See full history →</span>
       </div>
       <p className="text-muted text-[12px]">{routeName}</p>
-      <div className="mt-2">
-        <TypicalChart points={points} today={today} compact />
+      <div className="mt-2 mb-1.5">
+        <ChartLegend items={HOME_LEGEND} />
       </div>
+      <TypicalChart points={points} today={today} compact />
     </a>
   );
 }
