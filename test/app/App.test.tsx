@@ -23,6 +23,8 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
     id33Advisory: null,
     detours: null,
     alerts: [],
+    forecast: [],
+    forecastStale: false,
     ...overrides,
   };
 }
