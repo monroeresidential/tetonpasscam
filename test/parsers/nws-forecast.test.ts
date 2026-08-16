@@ -67,6 +67,11 @@ describe('categorize', () => {
     expect(categorize('Breezy')).toBe('cloudy');
     expect(categorize(null)).toBe('cloudy');
   });
+
+  it('classifies showers without explicit rain as rain', () => {
+    expect(categorize('Chance Showers')).toBe('rain');
+    expect(categorize('Showers Likely')).toBe('rain');
+  });
 });
 
 describe('parseWindMph', () => {

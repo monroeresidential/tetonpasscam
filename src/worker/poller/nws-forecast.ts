@@ -57,7 +57,7 @@ const SEVERITY: Record<ForecastCategory, number> = {
 };
 
 const SNOW_RX = /snow|flurr|sleet|wintry|freezing|ice pellets/;
-const RAIN_RX = /rain|drizzle/;
+const RAIN_RX = /rain|shower|drizzle/;
 
 /**
  * Map an NWS `shortForecast` string to one of the eight categories.
@@ -66,6 +66,13 @@ const RAIN_RX = /rain|drizzle/;
  * names the precipitation alongside them ("Rain Showers And Thunderstorms")
  * and the storm is the headline. Mixed is checked before snow because
  * "Rain And Snow" matches both token sets and mixed is the truer answer.
+ *
+ * When both snowy and rainy tokens are present, only classify as mixed if an
+ * explicit conjunction appears. "Freezing Rain" contains both "freezing"
+ * (SNOW_RX) and "rain" (RAIN_RX) but describes a single hazardous phenomenon
+ * (frozen precipitation), so it returns snow. "Rain And Snow" contains an
+ * explicit "and" and represents two separate precipitation types, so it
+ * returns mixed. This distinction matters for a mountain pass.
  *
  * Unrecognized text falls back to `cloudy` rather than `clear`: this feeds a
  * severity tie-break, and the failure mode of guessing "clear" on an unknown
@@ -80,9 +87,7 @@ export function categorize(shortForecast: string | null): ForecastCategory {
   if (s.includes('thunder')) return 'thunderstorm';
   const snowy = SNOW_RX.test(s);
   const rainy = RAIN_RX.test(s);
-  // Only classify as mixed when both precipitation types are explicitly named
-  // together (e.g., "Rain And Snow", not "Freezing Rain")
-  if (snowy && rainy && s.includes('and')) return 'mixed';
+  if (snowy && rainy && /\band\b/.test(s)) return 'mixed';
   if (snowy) return 'snow';
   if (rainy) return 'rain';
   if (/fog|haze|smoke/.test(s)) return 'fog';
