@@ -163,19 +163,36 @@ function mergeAgreeing(primary: StatusResult, fallback: StatusResult): StatusRes
   };
 }
 
-/** Consult the Statewide cross-check page as a last resort and return its
- *  verdict, but only from an explicit allowlist ('closed' | 'restricted') --
- *  never trust it to hand back 'open'. Statewide's own parser today never
- *  emits 'open' (it only ever lists problem segments), but that invariant
- *  belongs here too, at the one call site that decides whether a crosscheck
- *  verdict gets to set the banner, not only inside a module this function
- *  doesn't control. Returns null when Statewide itself can't resolve it
- *  (fetch failure or no recognizable verdict) -- callers report 'unknown'. */
-async function consultStatewide(fetcher: typeof fetch): Promise<'closed' | 'restricted' | null> {
+/** Consult the Statewide cross-check page as a last resort. It may only ever
+ *  ESCALATE to 'closed' -- it can never establish that the pass is passable.
+ *
+ *  The allowlist used to be ('closed' | 'restricted'), guarding only against
+ *  a literal 'open'. That was a half-measure, because 'restricted' sits on
+ *  the same PASSABLE axis as 'open' (see `passAxis`), and it failed open in
+ *  production: on a closure day the primary RoadClosures page flips to
+ *  CLOSED first while RoutesResults lags reporting open, and Statewide
+ *  returns 'restricted' for the standing 'Falling Rock' advisory that has
+ *  sat on this segment all summer. The disagreement path below then resolved
+ *  a definite, authoritative closure to an amber RESTRICTED banner carrying
+ *  live drive times and none of the "Closed -- do not attempt" legal copy
+ *  that a Wyoming closure (W.S. 24-1-109) requires. No attacker needed.
+ *
+ *  Statewide is the weakest of the three sources and structurally cannot
+ *  prove passability: its own parser documents that the page "only ever
+ *  lists problem segments, it has no explicit 'open' list", so the absence
+ *  of a closure heading there means nothing, and the presence of an advisory
+ *  heading means only that an advisory exists. It can corroborate a closure.
+ *  That is all it can do, and now all it is permitted to do.
+ *
+ *  Returns null when Statewide can't resolve it (fetch failure, no
+ *  recognizable verdict, or any non-'closed' verdict) -- callers then report
+ *  'unknown', which is the spec's answer for an unresolved conflict and
+ *  whose UI withholds drive times and points at Wyoming 511. */
+async function consultStatewide(fetcher: typeof fetch): Promise<'closed' | null> {
   try {
     const html = await wydotFetch(STATEWIDE_URL, fetcher);
     const statewideStatus = html === null ? 'unknown' : parseStatewide(html);
-    return statewideStatus === 'closed' || statewideStatus === 'restricted' ? statewideStatus : null;
+    return statewideStatus === 'closed' ? 'closed' : null;
   } catch {
     return null;
   }
@@ -204,15 +221,22 @@ async function consultStatewide(fetcher: typeof fetch): Promise<'closed' | 'rest
  *      closed, the other says open/restricted) -- this is the exact
  *      scenario a primary-only read can never catch, and is why fallback is
  *      now fetched unconditionally. Consult the Statewide crosscheck: if it
- *      resolves to closed/restricted, use that (source 'crosscheck');
- *      otherwise the cycle is genuinely unresolved (source 'unresolved').
- *      INVARIANT: this path must NEVER return 'open' -- consultStatewide
- *      only ever hands back 'closed' | 'restricted' | null, by construction.
+ *      corroborates a CLOSURE, use that (source 'crosscheck'); anything
+ *      else leaves the cycle genuinely unresolved (source 'unresolved',
+ *      status 'unknown').
+ *      INVARIANT: this path must NEVER resolve onto the PASSABLE axis --
+ *      not 'open' and not 'restricted'. consultStatewide hands back only
+ *      'closed' | null, by construction, so the crosscheck can escalate a
+ *      closure but can never license passage. A definite CLOSED from the
+ *      authoritative primary is never downgraded here; when the crosscheck
+ *      is silent the answer is UNKNOWN, whose UI withholds drive times.
  *   5. Both unknown -> neither source has an opinion to agree or disagree
- *      with, so as a last resort consult Statewide the same way; if it
- *      still can't resolve it, report 'unknown' (source 'primary', kept as
- *      the historical label for this specific both-failed path so existing
- *      snapshots/tests that depend on it are undisturbed).
+ *      with, so as a last resort consult Statewide the same way; only a
+ *      corroborated closure counts, and if it can't resolve one, report
+ *      'unknown' (source 'primary', kept as the historical label for this
+ *      specific both-failed path so existing snapshots/tests that depend on
+ *      it are undisturbed). A standing advisory on the statewide page is
+ *      NOT evidence of passability and no longer produces 'restricted'.
  */
 export async function resolveStatus(fetcher: typeof fetch): Promise<ResolvedStatus> {
   let primary: StatusResult;

@@ -22,6 +22,7 @@ import routesresultsWy22Closed from '../fixtures/routesresults-wy22-closed.html?
 import routesresultsWy22Open from '../fixtures/routesresults-wy22.html?raw';
 import sensorsTetonpass from '../fixtures/sensors-tetonpass.html?raw';
 import statewideClosed from '../fixtures/statewide-closed.html?raw';
+import statewideOpenDay from '../fixtures/statewide.html?raw';
 
 import { parseRoadClosures, parseRoutesResults, SEGMENT_TEXT } from '../../src/worker/poller/wydot-status';
 
@@ -797,4 +798,82 @@ describe('runPollCycle — persists the road surface condition', () => {
     expect(row.conditionText).not.toBeNull();
     expect(row.conditionText).not.toBe('Dry');
   });
+});
+
+// SECURITY (Loupe finding #38, CWE-636): a definite CLOSED from the
+// authoritative primary must never be resolved onto the PASSABLE axis by
+// the Statewide crosscheck. Statewide only ever lists problem segments --
+// its 'restricted' proves an advisory heading exists, never that the pass
+// is passable -- so accepting it on the disagreement path fails OPEN
+// against CLAUDE.md hard rule 1.
+describe('resolveStatus — crosscheck must not downgrade a definite closure', () => {
+  it(
+    'primary CLOSED + fallback open + statewide restricted ⇒ never passable',
+    async () => {
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresClosed,
+          'SelectedRoute=WY22': routesresultsWy22Open,
+          'MEDIA.Statewide': statewideOpenDay,
+        }),
+      );
+      expect(['closed', 'unknown']).toContain(result.status);
+    },
+    20_000,
+  );
+
+  it(
+    'primary CLOSED + fallback open + statewide restricted ⇒ resolves UNKNOWN, and shows no drive-time-bearing status',
+    async () => {
+      // Pinning the exact resolution, not just "not passable": the spec's
+      // answer for an unresolved conflict is UNKNOWN, whose UI withholds
+      // drive times and points at Wyoming 511.
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresClosed,
+          'SelectedRoute=WY22': routesresultsWy22Open,
+          'MEDIA.Statewide': statewideOpenDay,
+        }),
+      );
+      expect(result.status).toBe('unknown');
+      expect(result.source).toBe('unresolved');
+    },
+    20_000,
+  );
+
+  it(
+    'BOTH sources fail + statewide restricted ⇒ unknown, not a passable restricted',
+    async () => {
+      // The scan's secondary manifestation: with neither authoritative page
+      // resolvable, a standing advisory on the weakest page must not be
+      // promoted into a passable status.
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': 500,
+          'SelectedRoute=WY22': 500,
+          'MEDIA.Statewide': statewideOpenDay,
+        }),
+      );
+      expect(result.status).toBe('unknown');
+    },
+    20_000,
+  );
+
+  it(
+    'statewide CLOSED still escalates on disagreement -- the fix must not neuter the crosscheck',
+    async () => {
+      // Guard against over-correcting: narrowing the allowlist must leave
+      // the crosscheck able to do the one thing it is genuinely good for.
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresOpen,
+          'SelectedRoute=WY22': routesresultsWy22Closed,
+          'MEDIA.Statewide': statewideClosed,
+        }),
+      );
+      expect(result.status).toBe('closed');
+      expect(result.source).toBe('crosscheck');
+    },
+    20_000,
+  );
 });
