@@ -52,7 +52,7 @@ describe('GET /api/wx-icon/*', () => {
     const res = await api.request('/wx-icon/land/day/tsra_hi,20', {}, env as any);
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('image/png');
-    expect(res.headers.get('Cache-Control')).toContain('immutable');
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
 
     // Upstream is built from the validated match, with size forced.
     expect(fetcher.urls).toEqual([
@@ -64,11 +64,13 @@ describe('GET /api/wx-icon/*', () => {
     // `api.request()` builds a real `Request`, and the WHATWG URL parser
     // collapses dot-segments during that construction -- before Hono ever
     // sees the path. `/wx-icon/../../secret` (and its `%2e%2e`-encoded
-    // equivalent, since dots aren't reserved and decodeURI resolves them too)
-    // arrives as `/secret`, matches no route, and is handled by Hono's
-    // default not-found -- our regex is never reached because the platform
-    // neutralized the input one layer earlier. This is deliberately a 404,
-    // not a 400 like its siblings below: don't "fix" it to match them.
+    // equivalent, since the parser resolves percent-encoded dots the same
+    // way -- this is the URL parser's own normalization, NOT `decodeURI`,
+    // which never runs on this input at all) arrives as `/secret`, matches
+    // no route, and is handled by Hono's default not-found -- our regex is
+    // never reached because the platform neutralized the input one layer
+    // earlier. This is deliberately a 404, not a 400 like its siblings
+    // below: don't "fix" it to match them.
     const fetcher = captureFetcher();
     setTestIconFetcher(fetcher);
 
@@ -114,6 +116,40 @@ describe('GET /api/wx-icon/*', () => {
     setTestIconFetcher(
       (async () =>
         new Response('<html/>', { status: 200, headers: { 'Content-Type': 'text/html' } })) as typeof fetch,
+    );
+    expect((await api.request('/wx-icon/land/day/snow', {}, env as any)).status).toBe(502);
+  });
+
+  it('returns 502 on a redirect rather than following it', async () => {
+    // A fixed-host constant only means anything if we choose the
+    // destination -- so a 3xx from NWS's own CDN must not be followed to
+    // wherever its Location header points. The fetch call is made with
+    // `redirect: 'manual'`, so the fake fetcher below returns the 3xx
+    // itself (never invoked a second time for the Location target).
+    const urls: string[] = [];
+    setTestIconFetcher((async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'https://evil.example/steal.png' },
+      });
+    }) as typeof fetch);
+
+    const res = await api.request('/wx-icon/land/day/snow', {}, env as any);
+    expect(res.status).toBe(502);
+    expect(urls).toEqual(['https://api.weather.gov/icons/land/day/snow?size=medium']);
+  });
+
+  it('returns 502 for a non-raster content type such as SVG', async () => {
+    // `image/svg+xml` would pass a naive `startsWith('image/')` check, but
+    // an SVG is an active document (inline <script> runs same-origin) --
+    // not something we can serve verbatim from our own origin.
+    setTestIconFetcher(
+      (async () =>
+        new Response('<svg onload="alert(1)"/>', {
+          status: 200,
+          headers: { 'Content-Type': 'image/svg+xml' },
+        })) as typeof fetch,
     );
     expect((await api.request('/wx-icon/land/day/snow', {}, env as any)).status).toBe(502);
   });
