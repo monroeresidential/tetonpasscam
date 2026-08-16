@@ -594,9 +594,10 @@ export async function runPollCycle(
   }
 
   // Step 7: NWS forecast. Self-throttled to FORECAST_REFRESH_MIN, so calling
-  // it every cycle costs one indexed MAX() most of the time. Wrapped like
-  // every other step: a forecast failure must never affect the status row
-  // written above.
+  // it every cycle costs one MAX(fetched_at) most of the time -- a small
+  // full table scan (forecast_days has no index beyond its `date` primary
+  // key), harmless at ~365 rows/year. Wrapped like every other step: a
+  // forecast failure must never affect the status row written above.
   try {
     await runForecastStep(env, fetcher, nowMs);
   } catch (err) {

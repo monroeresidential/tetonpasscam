@@ -33,9 +33,11 @@ All three test suites are separate configs (different environments: node/parsers
 src/worker/          Cloudflare Worker (Hono) -- the only thing with DB/secret access
   index.ts             fetch()/scheduled() entrypoint; routes /api/* to Hono, everything else to ASSETS
   env.ts               Env interface (bindings + secrets)
-  api/                 router.ts (mounts all routes) + status.ts, alerts.ts, feedback.ts, history.ts, admin.ts
+  api/                 router.ts (mounts all routes) + status.ts, alerts.ts, feedback.ts, history.ts, admin.ts,
+                       weather-history.ts, wx-icon.ts (proxies NWS forecast icons to our own origin)
   poller/              run.ts (poll cycle orchestration), wydot-status.ts, wydot-weather.ts, google-routes.ts,
-                       idaho511.ts (per-source fetch+parse), aggregate.ts (nightly typicals job)
+                       idaho511.ts (per-source fetch+parse), aggregate.ts (nightly typicals job),
+                       nws-forecast.ts (hourly-forecast fetch + Denver-day rollup)
   db/                  schema.ts (drizzle schema), index.ts (db() helper), seed-routes.ts (ROUTES data + one-off seeder)
   notify.ts            Resend email helper (used by alerts/feedback/camera-error)
   profanity.ts         alert-note filter
@@ -48,7 +50,7 @@ src/app/             React SPA (client-render only, no SSR)
 
 src/shared/types.ts   Types shared between worker and app (PassStatus, ApiStatus, PublicAlert, CameraId, etc.)
 
-migrations/           drizzle-kit-generated D1 migrations, 0000-0008, all applied to remote D1 and frozen
+migrations/           drizzle-kit-generated D1 migrations, 0000-0009, all applied to remote D1 and frozen
                       (run `ls migrations/` for the current set -- listing names here only goes stale)
 scripts/              verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts).
                       App icons/favicons come from design/logo-4c/ (the route-22 brand kit,

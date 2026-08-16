@@ -419,8 +419,11 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     }));
 
     // Staleness keys on the freshest row we hold, not on the rows returned
-    // -- an all-past-dates table is stale by definition and would otherwise
-    // report fresh simply because it returned nothing.
+    // above -- MAX(fetched_at) is read from the whole table, independent of
+    // the `date >= today` filter those rows were selected with. The
+    // `forecast.length > 0` guard below means an all-past-dates table (or an
+    // empty one) reports forecastStale: false, same as having no forecast
+    // opinion at all -- there is nothing rendered for staleness to qualify.
     const newestFetch = (await env.DB.prepare(
       'SELECT MAX(fetched_at) AS fetchedAt FROM forecast_days',
     ).first()) as { fetchedAt: string | null } | null;
