@@ -278,6 +278,40 @@ describe('App', () => {
     });
   });
 
+  describe('forecast cache regression (final review Fix 1)', () => {
+    // `ApiStatus.forecast` is declared as a required array, but useStatus
+    // hydrates its initial render SYNCHRONOUSLY from `localStorage['last-status']`
+    // (src/app/useStatus.ts's useState initializer) -- a cache entry written
+    // by a bundle that predates this feature has no `forecast` key AT ALL
+    // (not `forecast: []`, deleted entirely, which is why this uses
+    // `forecast: undefined as any` rather than reusing the makeStatus()
+    // default -- an omitted key is exactly what a real pre-upgrade cached
+    // payload looks like, and it's precisely what the OTHER tests in this
+    // file conceal by always including `forecast: []`). If any consumer of
+    // that prop assumes it's always an array, the very FIRST render throws,
+    // before the mount effect ever runs refresh() to rewrite the cache with
+    // a valid payload -- every subsequent reload hits the same poisoned
+    // entry and crashes identically. This is worth owning as a permanent
+    // regression test: the same hazard exists for every future required
+    // field added to `ApiStatus`, since an old cached payload can never
+    // satisfy a newly-added required key.
+    it('does not crash on mount when the cached payload predates the forecast field', async () => {
+      const cachedWithoutForecast = makeStatus({ status: 'open', forecast: undefined as any });
+      const raw = JSON.stringify(cachedWithoutForecast);
+      expect(JSON.parse(raw)).not.toHaveProperty('forecast');
+      localStorage.setItem('last-status', raw);
+      localStorage.setItem('last-status-at', new Date().toISOString());
+      mockStatusOnlyFetch();
+
+      render(<App />);
+
+      // Cached (poisoned) data renders first, then the mount-effect fetch
+      // resolves with a complete payload -- either way, the page must never
+      // go blank.
+      expect(await screen.findByText('The pass is OPEN')).toBeInTheDocument();
+    });
+  });
+
   describe('explainer relocation (scope addition)', () => {
     // main.tsx's #seo-shell hide/show logic lives outside App (it never
     // renders index.html's static markup -- App is only ever mounted into a

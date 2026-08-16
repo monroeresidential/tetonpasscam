@@ -30,7 +30,15 @@ export default function ForecastStrip({
   now = new Date(),
   unit = 'F',
 }: {
-  forecast: ForecastDay[];
+  // `ApiStatus.forecast` is declared non-optional -- every LIVE `/api/status`
+  // response always includes it -- but a payload read back out of
+  // `localStorage['last-status']` (see useStatus.ts) is only ever as fresh
+  // as whichever bundle version wrote it. A cache entry written before this
+  // field existed has no `forecast` key at all, so at runtime this can still
+  // arrive as `undefined` despite the type saying otherwise. Guarded here
+  // (component-side) rather than at the App.tsx call site so every future
+  // consumer of this prop inherits the same protection.
+  forecast: ForecastDay[] | undefined;
   forecastStale?: boolean;
   now?: Date;
   unit?: TempUnit;
@@ -40,8 +48,9 @@ export default function ForecastStrip({
   const [brokenIcons, setBrokenIcons] = useState<Set<string>>(() => new Set());
 
   // Nothing to show renders nothing -- an empty framed section would imply
-  // we have a forecast and it is blank.
-  if (forecast.length === 0) return null;
+  // we have a forecast and it is blank. `forecast?.length` (not
+  // `forecast.length`) is the actual fix: see the prop comment above.
+  if (!forecast?.length) return null;
 
   const todayKey = DENVER_DATE_KEY.format(now);
 
