@@ -1,10 +1,8 @@
 import { env } from 'cloudflare:test';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { runForecastStep, FORECAST_REFRESH_MIN } from '../../src/worker/poller/nws-forecast';
 import liveHourly from '../fixtures/nws-hourly.json';
-
-const HOUR_MS = 3_600_000;
 
 /** A fetcher that serves the captured NWS payload and counts its calls. */
 function fakeNws(): typeof fetch & { calls: string[] } {
@@ -180,5 +178,48 @@ describe('runForecastStep', () => {
     expect(pointsCalls).toBe(1); // exactly one re-resolve, never a retry loop
     const rows = await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_days').first();
     expect((rows as any).n).toBe(0);
+  });
+
+  it('leaves every row untouched on a mid-write failure, then re-fetches next cycle instead of skipping', async () => {
+    // A sequential per-day loop could leave some rows written with a fresh
+    // fetchedAt and others not, which would make a genuinely failed cycle
+    // look "fresh" to the throttle's MAX(fetched_at) check. The fix is a
+    // single db.batch() so the whole write is all-or-nothing; this test
+    // forces the underlying D1 batch call to fail and checks both halves of
+    // that guarantee: (1) nothing was written, and (2) the next cycle still
+    // sees the OLD fetchedAt and therefore refetches rather than skipping.
+    await clearForecast();
+    const oldFetchedAt = '2026-08-16T10:00:00.000Z';
+    await env.DB.prepare(
+      `INSERT INTO forecast_days (date, category, high_f, fetched_at)
+       VALUES ('2026-08-16', 'clear', 50, ?)`,
+    )
+      .bind(oldFetchedAt)
+      .run();
+
+    const fetcher = fakeNws();
+    const t0 = Date.parse('2026-08-16T16:00:00.000Z'); // 6h after oldFetchedAt, past the refresh window
+
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockImplementationOnce(async () => {
+      throw new Error('boom');
+    });
+    await expect(runForecastStep(env as any, fetcher, t0)).rejects.toThrow('boom');
+    batchSpy.mockRestore();
+
+    // Nothing committed: the seeded row is exactly as it was.
+    const afterFailure = await env.DB.prepare('SELECT * FROM forecast_days').all();
+    expect(afterFailure.results).toHaveLength(1);
+    expect((afterFailure.results[0] as any).category).toBe('clear');
+    expect((afterFailure.results[0] as any).high_f).toBe(50);
+    expect((afterFailure.results[0] as any).fetched_at).toBe(oldFetchedAt);
+
+    // The actual bug under test: MAX(fetched_at) still reads the OLD
+    // timestamp (nothing bumped it), so this next cycle must refetch rather
+    // than silently skip inside the refresh window.
+    await runForecastStep(env as any, fetcher, t0);
+    const afterRetry = await env.DB.prepare('SELECT * FROM forecast_days ORDER BY date').all();
+    expect(afterRetry.results.length).toBeGreaterThanOrEqual(6);
+    const seededDay = afterRetry.results.find((r: any) => r.date === '2026-08-16') as any;
+    expect(seededDay.fetched_at).not.toBe(oldFetchedAt);
   });
 });

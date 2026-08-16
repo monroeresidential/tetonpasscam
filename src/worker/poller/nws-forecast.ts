@@ -332,8 +332,17 @@ export async function runForecastStep(
 
   const fetchedAt = new Date(nowMs).toISOString();
   const database = db(env);
-  for (const day of days) {
-    await database
+
+  // A single db.batch() rather than a sequential per-day loop: D1 runs a
+  // batch as one transaction, so a mid-loop failure (day k throws) can no
+  // longer leave days 0..k-1 committed with a fresh fetchedAt while the rest
+  // keep stale data -- that partial-write state is what let a genuinely
+  // failed cycle look "fresh" to the next cycle's MAX(fetched_at) throttle
+  // check above, silently suppressing the retry that should have happened.
+  // `days.length === 0` already returned above, so this array is always
+  // non-empty, satisfying db.batch()'s non-empty-tuple requirement.
+  const statements = days.map((day) =>
+    database
       .insert(forecastDays)
       .values({
         date: day.date,
@@ -358,6 +367,7 @@ export async function runForecastStep(
           windGustMph: day.windGustMph,
           fetchedAt,
         },
-      });
-  }
+      }),
+  );
+  await database.batch(statements as [(typeof statements)[number], ...(typeof statements)[number][]]);
 }
