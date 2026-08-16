@@ -77,6 +77,41 @@ function nowLabelAnchor(px: number): 'start' | 'middle' | 'end' {
   return 'middle';
 }
 
+const NOW_LABEL_FONT_SIZE = 11;
+/** Gap between the dot and its label, in viewBox units. */
+const NOW_LABEL_OFFSET = 14;
+/** Width of the card-coloured halo knocked out behind the now-label. Painted
+ *  as a stroke UNDER the fill (paint-order), so the text punches a gap
+ *  through whatever sits behind it -- the today line, the median, a
+ *  gridline, or the band edge. The label and the today line share
+ *  --color-accent, so an overlap is same-colour-on-same-colour and the halo
+ *  is what keeps it readable; slope-aware placement below only reduces how
+ *  often the overlap happens at all. */
+const NOW_LABEL_HALO_WIDTH = 4;
+
+/**
+ * Baseline y for the now-label, given its dot and whether today's line is
+ * rising into that dot.
+ *
+ * A rising line approaches the dot from BELOW, leaving the space above it
+ * clear -- so the label goes above. A falling line comes from higher on
+ * screen, and that is exactly where a fixed above-the-dot label used to
+ * land: on the live temperature chart "now · 46°F" sat directly on the
+ * trace. Falling therefore puts the label below instead.
+ *
+ * Clamped into the plot area so a reading at either extreme cannot push its
+ * label out of frame. At the very edges the label may still sit near the
+ * dot; the halo is what keeps it legible there.
+ */
+function nowLabelY(dotY: number, rising: boolean): number {
+  const raw = rising
+    ? dotY - NOW_LABEL_OFFSET
+    : dotY + NOW_LABEL_OFFSET + NOW_LABEL_FONT_SIZE * 0.8;
+  const top = PAD.top + NOW_LABEL_FONT_SIZE;
+  const bottom = VB_H - PAD.bottom;
+  return Math.min(Math.max(raw, top), bottom);
+}
+
 /** 24-hour clock value -> the mock's 12-hour label ("13" -> "1 PM"). */
 function hourLabel(hour: number): string {
   const h = Math.round(hour) % 24;
@@ -178,6 +213,11 @@ export default function TypicalChart({
 
   const todayPts = today.map((t) => `${x(t.hour)},${y(t.value)}`).join(' ');
   const last = today[today.length - 1];
+  // Is today's line rising into its final point? Decides which side of the
+  // dot the label sits on -- see nowLabelY. A single reading has no slope to
+  // read, so it defaults to the historical above-the-dot placement.
+  const prevToday = today.length >= 2 ? today[today.length - 2] : null;
+  const nowLabelRising = prevToday === null || last.value >= prevToday.value;
 
   // Three y-ticks at the domain's min, midpoint and max, each rendered
   // through `formatValue` so the temperature chart's unit toggle relabels
@@ -342,11 +382,14 @@ export default function TypicalChart({
           {!compact && (
             <text
               x={x(last.hour)}
-              y={y(last.value) - 14}
+              y={nowLabelY(y(last.value), nowLabelRising)}
               textAnchor={nowLabelAnchor(x(last.hour))}
-              fontSize="11"
+              fontSize={NOW_LABEL_FONT_SIZE}
               fontWeight="700"
               fill="var(--color-accent)"
+              stroke="var(--color-card)"
+              strokeWidth={NOW_LABEL_HALO_WIDTH}
+              paintOrder="stroke"
             >
               {`now · ${formatValue(last.value)}`}
             </text>

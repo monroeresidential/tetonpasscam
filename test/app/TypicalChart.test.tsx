@@ -327,3 +327,94 @@ describe('TypicalChart — compact keeps its axes', () => {
     expect(count(compactSvg, 'line')).toBe(count(fullSvg, 'line'));
   });
 });
+
+// The now-label sat a fixed 14 units above its dot with no awareness of
+// what was underneath. Since the label and the today line share
+// --color-accent, an overlap was same-colour-on-same-colour: on the live
+// temperature chart "now · 46°F" landed directly on the trace and was
+// genuinely hard to read.
+describe('TypicalChart — now-label legibility and placement', () => {
+  function pt(hour: number, median: number): ChartPoint {
+    return { hour, median, p25: median - 200, p75: median + 200, distinctDays: 9 };
+  }
+  const points = [pt(4, 1800), pt(8, 2400), pt(12, 1800)];
+  const label = () => screen.getByText(/now ·/);
+
+  it('knocks a card-coloured halo out behind the text', () => {
+    // paint-order:stroke draws the stroke first and the fill over it, so
+    // the label punches a gap through whatever sits behind -- the today
+    // line, the median, gridlines, or the band edge.
+    render(<TypicalChart points={points} today={[{ hour: 6, value: 2000 }]} />);
+    const el = label();
+    expect(el.getAttribute('paint-order')).toBe('stroke');
+    expect(el.getAttribute('stroke')).toBe('var(--color-card)');
+    expect(Number(el.getAttribute('stroke-width'))).toBeGreaterThan(0);
+  });
+
+  it('sits ABOVE the dot when the line rises into it', () => {
+    // Rising means the line approaches from below, leaving the space above
+    // the dot clear.
+    render(
+      <TypicalChart
+        points={points}
+        today={[
+          { hour: 5, value: 1800 },
+          { hour: 6, value: 2200 },
+        ]}
+      />,
+    );
+    const dotY = Number(screen.getByTestId('now-dot').getAttribute('cy'));
+    expect(Number(label().getAttribute('y'))).toBeLessThan(dotY);
+  });
+
+  it('sits BELOW the dot when the line falls into it', () => {
+    // Falling means the line comes from higher on screen, so the space
+    // above the dot is exactly where the trace already is.
+    render(
+      <TypicalChart
+        points={points}
+        today={[
+          { hour: 5, value: 2200 },
+          { hour: 6, value: 1800 },
+        ]}
+      />,
+    );
+    const dotY = Number(screen.getByTestId('now-dot').getAttribute('cy'));
+    expect(Number(label().getAttribute('y'))).toBeGreaterThan(dotY);
+  });
+
+  it('keeps the label inside the plot area when the reading is at the top', () => {
+    // A dot at the very top must not push its label off the top edge.
+    render(
+      <TypicalChart
+        points={points}
+        today={[
+          { hour: 5, value: 1000 },
+          { hour: 6, value: 2600 },
+        ]}
+      />,
+    );
+    expect(Number(label().getAttribute('y'))).toBeGreaterThanOrEqual(0);
+  });
+
+  it('keeps the label inside the plot area when the reading is at the bottom', () => {
+    render(
+      <TypicalChart
+        points={points}
+        today={[
+          { hour: 5, value: 2600 },
+          { hour: 6, value: 1000 },
+        ]}
+      />,
+    );
+    const viewBoxHeight = 260;
+    expect(Number(label().getAttribute('y'))).toBeLessThanOrEqual(viewBoxHeight);
+  });
+
+  it('places the label above when there is only one reading to go on', () => {
+    // No previous point means no slope; default to the historical placement.
+    render(<TypicalChart points={points} today={[{ hour: 6, value: 2000 }]} />);
+    const dotY = Number(screen.getByTestId('now-dot').getAttribute('cy'));
+    expect(Number(label().getAttribute('y'))).toBeLessThan(dotY);
+  });
+});
