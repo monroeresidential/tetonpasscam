@@ -1,7 +1,6 @@
-import { useState } from 'react';
-
 import type { ForecastDay } from '../../shared/types';
 import { formatTemp, type TempUnit } from '../units';
+import { glyphFor } from '../weatherGlyphs';
 
 /** Weekday from a `yyyy-mm-dd` key. Parsed as UTC noon rather than
  *  `new Date('2026-08-16')` local-midnight: a Denver browser reading a
@@ -18,11 +17,6 @@ const DENVER_DATE_KEY = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 });
-
-/** Icons are square at their rendered size; declaring both dimensions keeps
- *  five late-arriving images from shifting the page (the P1 Lighthouse
- *  mobile >= 90 gate is sensitive to CLS). */
-const ICON_PX = 40;
 
 export default function ForecastStrip({
   forecast,
@@ -43,10 +37,6 @@ export default function ForecastStrip({
   now?: Date;
   unit?: TempUnit;
 }) {
-  // Dates whose icon failed to load. Keyed by date rather than a single
-  // boolean so one dead image never blanks the other four.
-  const [brokenIcons, setBrokenIcons] = useState<Set<string>>(() => new Set());
-
   // Nothing to show renders nothing -- an empty framed section would imply
   // we have a forecast and it is blank. `forecast?.length` (not
   // `forecast.length`) is the actual fix: see the prop comment above.
@@ -69,33 +59,15 @@ export default function ForecastStrip({
             <p className="text-muted text-[10.5px] uppercase">
               {d.date === todayKey ? 'Today' : weekdayLabel(d.date)}
             </p>
-            {/* Fixed-size box present whether or not an image ends up inside
-                it -- a missing/failed icon must not let the temperature and
-                precip lines below shift up to fill the gap, which would
-                visibly misalign that card against its neighbors in the
-                five-across row. */}
-            <div className="h-10 w-10" data-testid="icon-slot">
-              {d.iconPath && !brokenIcons.has(d.date) && (
-                <img
-                  src={d.iconPath}
-                  alt={d.shortForecast ?? d.category}
-                  width={ICON_PX}
-                  height={ICON_PX}
-                  loading="lazy"
-                  className="h-10 w-10 rounded"
-                  // A dead image drops out entirely rather than leaving a
-                  // broken-image glyph -- the temperatures are the point of
-                  // the card and they are unaffected. The slot above keeps
-                  // its footprint either way.
-                  onError={() =>
-                    setBrokenIcons((prev) => {
-                      const next = new Set(prev);
-                      next.add(d.date);
-                      return next;
-                    })
-                  }
-                />
-              )}
+            <div
+              aria-hidden="true"
+              data-testid="glyph-tile"
+              className="bg-icon-tile flex h-10 w-10 items-center justify-center rounded-[10px] text-[20px]"
+            >
+              {/* Daily cards always take the day glyph: a whole-day summary
+                  is not an hour, so a moon would be as wrong at noon as a
+                  sun is at midnight. */}
+              {glyphFor(d.category, true)}
             </div>
             <p className="font-display text-[13px] font-extrabold">
               {d.highF !== null && d.lowF !== null

@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import ForecastStrip from '../../src/app/components/ForecastStrip';
+import { WEATHER_GLYPH } from '../../src/app/weatherGlyphs';
 import type { ForecastDay } from '../../src/shared/types';
 
 const NOON_MDT = new Date('2026-08-16T18:00:00.000Z'); // Sunday Aug 16, noon Denver
@@ -11,7 +12,6 @@ function day(over: Partial<ForecastDay> & { date: string }): ForecastDay {
     highF: 62,
     lowF: 38,
     category: 'clear',
-    iconPath: '/api/wx-icon/land/day/few',
     shortForecast: 'Sunny',
     precipPct: 10,
     ...over,
@@ -33,12 +33,6 @@ describe('ForecastStrip', () => {
     expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('Mon')).toBeInTheDocument();
     expect(screen.getByText('Thu')).toBeInTheDocument();
-    expect(screen.getAllByRole('img')).toHaveLength(5);
-  });
-
-  it('describes each icon with the forecast text', () => {
-    render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
-    expect(screen.getByRole('img', { name: 'Snow' })).toBeInTheDocument();
   });
 
   it('renders temperatures in the selected unit', () => {
@@ -66,41 +60,22 @@ describe('ForecastStrip', () => {
     expect(screen.getByText('Today')).toBeInTheDocument();
   });
 
-  it('renders the text card when an icon path is missing', () => {
-    render(<ForecastStrip forecast={[day({ date: '2026-08-16', iconPath: null })]} now={NOON_MDT} />);
+  // The three tests previously here (`renders the text card when an icon
+  // path is missing`, `drops an icon that fails to load...`, `reserves the
+  // icon box...`, `keeps the icon slot occupied...`) all exercised the
+  // image-fallback/onError machinery this task removes: a glyph tile is
+  // always present regardless of data, so there is no "missing icon" state
+  // left to test. Replaced by the two glyph-tile tests below.
+
+  it('renders a glyph tile per card rather than a remote image', () => {
+    render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getAllByTestId('glyph-tile')).toHaveLength(5);
   });
 
-  it('drops an icon that fails to load, keeping the rest of the card', () => {
-    render(<ForecastStrip forecast={[day({ date: '2026-08-16' })]} now={NOON_MDT} />);
-    fireEvent.error(screen.getByRole('img'));
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(screen.getByText('Today')).toBeInTheDocument();
-    expect(screen.getByText('62°F / 38°F')).toBeInTheDocument();
-  });
-
-  it('reserves the icon box so a missing icon does not collapse the card upward', () => {
-    render(
-      <ForecastStrip
-        forecast={[day({ date: '2026-08-16' }), day({ date: '2026-08-17', iconPath: null })]}
-        now={NOON_MDT}
-      />,
-    );
-    const slots = screen.getAllByTestId('icon-slot');
-    expect(slots).toHaveLength(2);
-    // Same fixed footprint whether or not an icon is present, so the
-    // temperature/precip lines below it never shift up to fill the gap.
-    expect(slots[1].className).toBe(slots[0].className);
-  });
-
-  it('keeps the icon slot occupied after an icon fails to load', () => {
-    render(<ForecastStrip forecast={[day({ date: '2026-08-16' })]} now={NOON_MDT} />);
-    const slotBefore = screen.getByTestId('icon-slot');
-    const classNameBefore = slotBefore.className;
-    fireEvent.error(screen.getByRole('img'));
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    const slotAfter = screen.getByTestId('icon-slot');
-    expect(slotAfter.className).toBe(classNameBefore);
+  it('uses the day glyph for daily cards regardless of the hour', () => {
+    render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
+    const tiles = screen.getAllByTestId('glyph-tile');
+    expect(tiles[1]).toHaveTextContent(WEATHER_GLYPH.snow);
   });
 });
