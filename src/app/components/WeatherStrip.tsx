@@ -1,6 +1,23 @@
 import type { WeatherReading } from '../../worker/poller/wydot-weather';
 import { formatTemp, type TempUnit } from '../units';
 
+/** The posted highway summit elevation. Deliberately NOT the 8,474 ft the
+ *  NWS grid cell self-reports (a 2.5 km cell average, recorded in the
+ *  forecast spec purely as evidence the cell covers the pass) -- 8,431 ft is
+ *  the number on the sign and the number a driver recognizes. */
+const SUMMIT_ELEVATION_LABEL = 'WY-22 summit · 8,431 ft';
+
+function SummitHeading() {
+  return (
+    <>
+      <h2 id="summit-conditions-heading" className="font-display text-[15px] font-bold">
+        Summit conditions
+      </h2>
+      <p className="text-muted mb-1 text-[11px]">{SUMMIT_ELEVATION_LABEL}</p>
+    </>
+  );
+}
+
 interface Tile {
   label: string;
   value: string;
@@ -74,7 +91,8 @@ export default function WeatherStrip({
 }) {
   if (!weather) {
     return (
-      <section aria-label="Summit weather" className="mt-4">
+      <section aria-labelledby="summit-conditions-heading" className="mt-4">
+        <SummitHeading />
         <p className="text-muted text-sm">Weather data unavailable.</p>
       </section>
     );
@@ -108,7 +126,8 @@ export default function WeatherStrip({
     weatherStale && weather.reportedAt ? REPORTED_AT_FORMAT.format(new Date(weather.reportedAt)) : null;
 
   return (
-    <section aria-label="Summit weather" className="mt-4">
+    <section aria-labelledby="summit-conditions-heading" className="mt-4">
+      <SummitHeading />
       {weatherStale && (
         <p className="text-muted mb-1 text-[11px]">
           Weather may be outdated{reportedAtLabel ? ` — (as of ${reportedAtLabel})` : ''}

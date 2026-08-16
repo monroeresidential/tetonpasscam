@@ -171,4 +171,22 @@ describe('WeatherStrip — temperature unit', () => {
     render(<WeatherStrip weather={reading} now={new Date('2026-01-15T12:00:00.000Z')} />);
     expect(screen.getByText('28°F')).toBeInTheDocument();
   });
+
+  it('labels the tiles as summit readings with a visible heading', () => {
+    render(<WeatherStrip weather={reading} now={new Date('2026-01-15T12:00:00.000Z')} />);
+    const heading = screen.getByRole('heading', { name: 'Summit conditions' });
+    expect(heading).toBeInTheDocument();
+    expect(screen.getByText(/8,431 ft/)).toBeInTheDocument();
+  });
+
+  it('names the section from the visible heading rather than duplicating it', () => {
+    render(<WeatherStrip weather={reading} now={new Date('2026-01-15T12:00:00.000Z')} />);
+    expect(screen.getByRole('region', { name: 'Summit conditions' })).toBeInTheDocument();
+  });
+
+  it('keeps the heading when there is no weather data at all', () => {
+    render(<WeatherStrip weather={null} />);
+    expect(screen.getByRole('heading', { name: 'Summit conditions' })).toBeInTheDocument();
+    expect(screen.getByText('Weather data unavailable.')).toBeInTheDocument();
+  });
 });
