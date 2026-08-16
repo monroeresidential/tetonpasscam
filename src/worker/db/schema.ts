@@ -147,6 +147,32 @@ export const weatherSnapshots = sqliteTable('weather_snapshots', {
   reportedAt: text('reported_at'),
 });
 
+/**
+ * One row per America/Denver calendar day of the NWS forecast, upserted by
+ * date each refresh so the same five-ish rows are revised rather than
+ * accumulating. Past dates are left in place: they cost nothing and are the
+ * raw material for any future forecast-vs-actual comparison.
+ *
+ * Every reading is nullable for the same reason the sensor columns are --
+ * an individual field can be absent from the upstream payload without
+ * invalidating the day. `category` is the exception: the rollup always
+ * resolves one (falling back to 'cloudy'), so a row without it would mean a
+ * bug, not missing data.
+ */
+export const forecastDays = sqliteTable('forecast_days', {
+  date: text('date').primaryKey(), // America/Denver yyyy-mm-dd
+  highF: real('high_f'),
+  lowF: real('low_f'),
+  category: text('category').notNull(),
+  // The NWS icon URL as returned. Rewritten to our own proxy path at the
+  // API layer (see api/wx-icon.ts) -- never handed to a client as-is.
+  iconUrl: text('icon_url'),
+  shortForecast: text('short_forecast'),
+  precipPct: integer('precip_pct'),
+  windGustMph: real('wind_gust_mph'),
+  fetchedAt: text('fetched_at').notNull(),
+});
+
 export const id33Events = sqliteTable('id33_events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   capturedAt: text('captured_at').notNull(),
@@ -258,6 +284,7 @@ export const schema = {
   weatherTypicals,
   statusSnapshots,
   weatherSnapshots,
+  forecastDays,
   id33Events,
   detourSnapshots,
   alerts,

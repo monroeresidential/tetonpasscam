@@ -64,6 +64,13 @@
       "when": 1786818691968,
       "tag": "0008_long_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1786897933093,
+      "tag": "0009_slim_darwin",
+      "breakpoints": true
     }
   ]
 }
