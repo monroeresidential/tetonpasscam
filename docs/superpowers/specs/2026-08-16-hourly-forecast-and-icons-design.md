@@ -81,9 +81,14 @@ below still applies.
  * accumulating a tail nobody reads and removes any need for a prune job.
  */
 export const forecastHours = sqliteTable('forecast_hours', {
-  // ISO instant with offset, exactly as NWS sends it. Primary key because a
-  // period is uniquely identified by when it starts.
-  startTime: text('start_time').primaryKey(),
+  // Epoch milliseconds, parsed from NWS's startTime at write. The primary key
+  // and the ONLY thing ever compared or ordered on: an integer instant is
+  // unambiguous, whereas the ISO-with-offset string below sorts incorrectly
+  // across a DST change (01:30-06:00 is earlier than 01:00-07:00 but sorts
+  // after it). See the API section.
+  startMs: integer('start_ms').primaryKey(),
+  // The original ISO string with offset, kept for display and debugging.
+  startTime: text('start_time').notNull(),
   tempF: real('temp_f'),
   category: text('category').notNull(),
   // Whether NWS considers this period daylight. Stored because the glyph
@@ -140,20 +145,23 @@ export interface ForecastHour {
 hourly: ForecastHour[];   // next 12 hours, oldest first; [] when unavailable
 ```
 
-**Query, and why it is not a single SQL comparison.** The obvious form is
-`WHERE start_time >= ? ORDER BY start_time LIMIT 12` with the current instant
-bound as a string. That is a lexicographic comparison of ISO-with-offset
-strings, which is only equivalent to a chronological one while the offset is
-constant. Across a DST change it is not: `2026-11-01T01:00:00-06:00` and
-`2026-11-01T01:00:00-07:00` are the same wall-clock text with an hour between
-them, and they sort by the wrong key.
+**Query, and why the table stores an epoch column.** The obvious form is
+`WHERE start_time >= ? ORDER BY start_time LIMIT 12`, comparing ISO-with-offset
+strings. That is only equivalent to a chronological comparison while the offset
+is constant, and across a DST change it is not — `2026-11-01T01:30:00-06:00`
+(07:30Z) sorts *after* `2026-11-01T01:00:00-07:00` (08:00Z) lexicographically,
+while being an earlier instant. Both the `WHERE` and the `ORDER BY` are wrong
+on the fall-back night.
 
-So the read is: `SELECT ... ORDER BY start_time LIMIT 24`, then filter in JS
-with `Date.parse(row.startTime) >= nowMs` and take the first 12. Parsing gives
-a true instant regardless of offset. Twenty-four rows is a trivial read, and
-this removes the whole class of bug rather than reasoning about whether it can
-bite. Teton Pass shifts offset twice a year — and those two nights are exactly
-when someone is checking a dark, icy pass.
+Rather than work around that in JS, `forecast_hours` stores **`start_ms`, the
+parsed epoch milliseconds, as its primary key**, with `start_time` kept
+alongside for display and debugging. The read is then
+`WHERE start_ms >= ? ORDER BY start_ms LIMIT 12` — chronologically correct by
+construction, indexed by the primary key, and with no post-filtering.
+
+An integer instant cannot be ambiguous the way an offset string can. This costs
+one column and removes the entire class of bug, on the two nights a year when
+someone is checking a dark, icy pass.
 
 Same failure contract as `forecast`: its own try/catch, degrading to `[]`, and
 a read failure must not fail `/api/status`.
