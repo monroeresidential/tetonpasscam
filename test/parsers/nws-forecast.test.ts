@@ -11,6 +11,7 @@ import {
   rollupDaily,
   type HourlyPeriod,
 } from '../../src/worker/poller/nws-forecast';
+import { toIconPath } from '../../src/worker/api/wx-icon';
 
 const live = JSON.parse(readFileSync('test/fixtures/nws-hourly.json', 'utf8'))
   .properties.periods as HourlyPeriod[];
@@ -185,5 +186,18 @@ describe('rollupDaily', () => {
 
   it('returns an empty array for no periods', () => {
     expect(rollupDaily([])).toEqual([]);
+  });
+
+  it('produces an iconUrl for every live day that survives the proxy\'s toIconPath allowlist', () => {
+    // The rollup and the proxy are otherwise tested against hand-picked
+    // strings in separate files -- nothing previously asserted that the
+    // icons the REAL fixture actually produces survive `toIconPath`'s
+    // regex. This is a guard, not a bug fix: verified manually that all 24
+    // distinct icon URLs in the live fixture pass today. Its job is to fail
+    // this test instead of silently blanking the home-screen forecast strip
+    // the day NWS's icon vocabulary changes.
+    for (const d of rollupDaily(live)) {
+      expect(toIconPath(d.iconUrl)).not.toBeNull();
+    }
   });
 });

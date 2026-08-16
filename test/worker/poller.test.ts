@@ -129,6 +129,22 @@ function fakeFetch(map: Record<string, string | number>, capturedUrls?: string[]
 
 beforeAll(async () => {
   await seedRoutes(env.DB);
+  // Step 7 of runPollCycle (the NWS forecast) self-throttles via
+  // MAX(fetched_at) FROM forecast_days (see nws-forecast.ts's
+  // runForecastStep). Without a seeded row, every one of this file's 14
+  // runPollCycle() calls falls through to a live NWS fetch, which
+  // fakeFetch's catch-all 500 always fails -- paying nwsGetJson's real ~2s
+  // setTimeout backoff TWICE per call, roughly 28s of this suite's ~95s
+  // proving nothing about the status/weather/travel-times behavior this
+  // file actually tests. Seeding one fresh row with a fetchedAt far in the
+  // future relative to every nowMs used below keeps every cycle inside the
+  // refresh window regardless of which fixed IN/OUT_OF_WINDOW timestamp a
+  // given test passes, so the forecast step returns immediately without
+  // touching the network. The real fetch/backoff/re-grid paths are
+  // exercised deliberately in test/worker/forecast.test.ts instead.
+  await env.DB.prepare(
+    `INSERT INTO forecast_days (date, category, fetched_at) VALUES ('2026-08-09', 'clear', '2030-01-01T00:00:00.000Z')`,
+  ).run();
 });
 
 describe('runPollCycle', () => {

@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:test';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../../src/worker/api/router';
 import { denverTypicalsKey, setTestNowMs } from '../../src/worker/api/status';
@@ -833,5 +833,47 @@ describe('forecast', () => {
     expect(strip(withForecast)).toEqual(strip(without));
     expect(withForecast.status).toBe(without.status);
     setTestNowMs(undefined);
+  });
+});
+
+describe('forecast query failure (final review Fix 3)', () => {
+  it('still returns a complete, valid ApiStatus when the forecast_days read throws', async () => {
+    // status.ts wraps the forecast read in its own try/catch specifically so
+    // a not-yet-applied migration (forecast_days missing during a deploy
+    // gap) can never turn every homepage request into a 500 -- the single
+    // most likely production failure this feature introduces. That branch
+    // was asserted nowhere before this test.
+    await env.DB.prepare('DELETE FROM status_snapshots').run();
+    const capturedAt = new Date().toISOString();
+    await insertStatusSnapshot({
+      capturedAt,
+      status: 'open',
+      conditionText: 'Road Open',
+      advisories: ['Falling Rock'],
+    });
+
+    // Stub env.DB.prepare to throw only for the forecast_days queries --
+    // every other query on this shared connection (travel times, detours,
+    // etc.) must keep working normally, same as it would with a real
+    // missing-table error confined to that one query.
+    const realPrepare = env.DB.prepare.bind(env.DB);
+    const prepareSpy = vi.spyOn(env.DB, 'prepare').mockImplementation((sql: string) => {
+      if (sql.includes('forecast_days')) throw new Error('no such table: forecast_days');
+      return realPrepare(sql);
+    });
+    try {
+      const { res, body } = await getStatus();
+      expect(res.status).toBe(200);
+      expect(body.status).toBe('open');
+      expect(body.pollerDead).toBe(false);
+      expect(body.conditionText).toBe('Road Open');
+      expect(body.advisories).toEqual(['Falling Rock']);
+      expect(body.lastConfirmed).not.toBeNull();
+      // The degraded-but-valid contract: absence is [] / false, never a 500.
+      expect(body.forecast).toEqual([]);
+      expect(body.forecastStale).toBe(false);
+    } finally {
+      prepareSpy.mockRestore();
+    }
   });
 });
