@@ -252,3 +252,54 @@ describe('forecast_hours table', () => {
     expect(row.precip_pct).toBeNull();
   });
 });
+
+describe('runForecastStep hourly write', () => {
+  it('writes hours and days from the same fetch, in one batch', async () => {
+    await clearForecast();
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    const fetcher = fakeNws();
+
+    await runForecastStep(env as any, fetcher, Date.parse('2026-08-16T16:00:00.000Z'));
+
+    const hours = await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_hours').first();
+    expect((hours as any).n).toBe(48);
+
+    // Same fetch ⇒ same fetched_at in both tables. The two are rendered
+    // adjacent, so a reader would notice them disagreeing.
+    const dayStamp = (await env.DB.prepare('SELECT fetched_at AS f FROM forecast_days LIMIT 1').first()) as any;
+    const hourStamp = (await env.DB.prepare('SELECT fetched_at AS f FROM forecast_hours LIMIT 1').first()) as any;
+    expect(hourStamp.f).toBe(dayStamp.f);
+  });
+
+  it('replaces hours wholesale rather than accumulating', async () => {
+    await clearForecast();
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    // A stale row from a previous window that no longer appears upstream.
+    await env.DB.prepare(
+      `INSERT INTO forecast_hours (start_ms, start_time, category, is_daytime, fetched_at)
+       VALUES (1, '2020-01-01T00:00:00-07:00', 'cloudy', 0, '2020-01-01T00:00:00.000Z')`,
+    ).run();
+
+    await runForecastStep(env as any, fakeNws(), Date.parse('2026-08-16T16:00:00.000Z'));
+
+    const stale = await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_hours WHERE start_ms = 1').first();
+    expect((stale as any).n).toBe(0);
+    const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_hours').first();
+    expect((total as any).n).toBe(48);
+  });
+
+  it('leaves BOTH tables untouched when the batch fails', async () => {
+    await clearForecast();
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    const batchSpy = vi.spyOn(env.DB, 'batch').mockImplementationOnce(async () => {
+      throw new Error('boom');
+    });
+    await expect(
+      runForecastStep(env as any, fakeNws(), Date.parse('2026-08-16T16:00:00.000Z')),
+    ).rejects.toThrow('boom');
+    batchSpy.mockRestore();
+
+    expect(((await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_days').first()) as any).n).toBe(0);
+    expect(((await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_hours').first()) as any).n).toBe(0);
+  });
+});

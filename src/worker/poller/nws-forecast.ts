@@ -1,5 +1,5 @@
 import { denverDateKey } from '../tz';
-import { db, forecastDays } from '../db';
+import { db, forecastDays, forecastHours } from '../db';
 import type { Env } from '../env';
 import type { ForecastCategory } from '../../shared/types';
 
@@ -374,6 +374,8 @@ export async function runForecastStep(
   const days = rollupDaily(periods);
   if (days.length === 0) return;
 
+  const hours = takeHours(periods);
+
   const fetchedAt = new Date(nowMs).toISOString();
   const database = db(env);
 
@@ -413,5 +415,32 @@ export async function runForecastStep(
         },
       }),
   );
-  await database.batch(statements as [(typeof statements)[number], ...(typeof statements)[number][]]);
+
+  // The hourly window is REPLACED, not upserted -- see the forecastHours
+  // schema comment. The delete and the inserts join the day upserts in ONE
+  // batch (D1 runs a batch as a single transaction) so the two tables can
+  // never disagree about which fetch they came from. They render adjacent to
+  // each other, and a today-card contradicting the hour beneath it is the
+  // kind of inconsistency a reader notices immediately.
+  const allStatements = [
+    ...statements,
+    database.delete(forecastHours),
+    ...hours.map((h) =>
+      database.insert(forecastHours).values({
+        startMs: h.startMs,
+        startTime: h.startTime,
+        tempF: h.tempF,
+        category: h.category,
+        isDaytime: h.isDaytime,
+        iconUrl: h.iconUrl,
+        shortForecast: h.shortForecast,
+        precipPct: h.precipPct,
+        fetchedAt,
+      }),
+    ),
+  ];
+
+  await database.batch(
+    allStatements as [(typeof allStatements)[number], ...(typeof allStatements)[number][]],
+  );
 }
