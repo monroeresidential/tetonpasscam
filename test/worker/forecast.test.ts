@@ -91,6 +91,33 @@ describe('runForecastStep', () => {
     expect(fetcher.calls).toHaveLength(1);
   });
 
+  it('fetches when a table this step writes has never been written, however fresh the other is', async () => {
+    // The production case this exists for: the hourly table shipped after
+    // the daily one, so on the deploy that introduced it `forecast_days`
+    // carried a timestamp minutes old while `forecast_hours` was empty. A
+    // throttle keyed only on the daily table declined to fetch, and the new
+    // table stayed empty for up to a full refresh window. An empty table has
+    // no data of any age, so it must always force a fetch.
+    await clearForecast();
+    await env.DB.prepare('DELETE FROM forecast_hours').run();
+    const t0 = Date.parse('2026-08-16T16:00:00.000Z');
+
+    // A daily row one minute old -- comfortably inside the refresh window.
+    await env.DB.prepare(
+      `INSERT INTO forecast_days (date, category, fetched_at)
+       VALUES ('2026-08-16', 'clear', ?)`,
+    )
+      .bind(new Date(t0 - 60_000).toISOString())
+      .run();
+
+    const fetcher = fakeNws();
+    await runForecastStep(env as any, fetcher, t0);
+
+    expect(fetcher.calls).toHaveLength(1);
+    const hours = await env.DB.prepare('SELECT COUNT(*) AS n FROM forecast_hours').first();
+    expect((hours as any).n).toBe(48);
+  });
+
   it('re-fetches once the refresh window has elapsed, revising the same rows', async () => {
     await clearForecast();
     const fetcher = fakeNws();

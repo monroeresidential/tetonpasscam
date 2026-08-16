@@ -357,15 +357,32 @@ export async function runForecastStep(
   fetcher: typeof fetch,
   nowMs: number,
 ): Promise<void> {
-  const newest = (await env.DB.prepare(
-    'SELECT MAX(fetched_at) AS fetchedAt FROM forecast_days',
-  ).first()) as { fetchedAt: string | null } | null;
+  // The throttle asks "does EVERY table this step writes hold recent data?",
+  // not "did we fetch recently?". Those differ the moment the step gains a
+  // table: `forecast_hours` shipped after `forecast_days`, and on that deploy
+  // the daily table carried a fresh timestamp while the hourly one was empty,
+  // so a throttle keyed on the daily table alone declined to fetch and left
+  // the new table empty for most of an hour in production.
+  //
+  // Each table's newest stamp is read as its own column and compared in JS.
+  // Deliberately NOT a single `MIN()` over both: SQLite's aggregates SKIP
+  // nulls, so `MIN()` would quietly return the populated table's timestamp
+  // and reproduce the very bug this replaces. Any table added to this step
+  // must be added here too -- that is the whole point.
+  const stamps = (await env.DB.prepare(
+    `SELECT (SELECT MAX(fetched_at) FROM forecast_days)  AS daysFetchedAt,
+            (SELECT MAX(fetched_at) FROM forecast_hours) AS hoursFetchedAt`,
+  ).first()) as { daysFetchedAt: string | null; hoursFetchedAt: string | null } | null;
 
-  if (newest?.fetchedAt) {
-    const ageMs = nowMs - Date.parse(newest.fetchedAt);
+  const written = [stamps?.daysFetchedAt, stamps?.hoursFetchedAt];
+  // An empty table holds no data of any age, so it can never be "fresh
+  // enough" -- skip the throttle entirely and fetch.
+  if (written.every((s): s is string => typeof s === 'string' && s.length > 0)) {
+    // Throttle on the OLDEST of the two, so the staler table governs.
+    const oldestAgeMs = Math.max(...written.map((s) => nowMs - Date.parse(s)));
     // A NaN age (unparseable stored timestamp) falls through to a fetch --
     // refreshing on a corrupt marker is the harmless direction to err.
-    if (Number.isFinite(ageMs) && ageMs < FORECAST_REFRESH_MIN * 60_000) return;
+    if (Number.isFinite(oldestAgeMs) && oldestAgeMs < FORECAST_REFRESH_MIN * 60_000) return;
   }
 
   const periods = await fetchHourlyPeriods(fetcher);
