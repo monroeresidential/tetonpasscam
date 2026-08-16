@@ -195,13 +195,18 @@ export const WEATHER_GLYPH_NIGHT: Partial<Record<ForecastCategory, string>> = {
 export function glyphFor(category: ForecastCategory, isDaytime: boolean): string;
 ```
 
-Every glyph above uses **emoji presentation**, with an explicit U+FE0F
-variation selector on the characters that would otherwise default to
-monochrome text (`☀️`, `☁️`, `❄️`). That is a deliberate choice for internal
-consistency: a row mixing flat-ink and full-colour glyphs looks broken in a way
-neither style does on its own. Note this differs from `alertTypes.ts`, which
-uses bare `❄` and `⚠` — those appear one at a time, so the inconsistency never
-shows.
+Every glyph above uses **emoji presentation**. Checked empirically against
+`\p{Emoji_Presentation}` rather than assumed: of the eight base characters,
+**only `⛅` (U+26C5) is emoji by default**. The other seven — `☀ ☁ ❄ 🌧 🌨 ⛈ 🌫`
+— default to monochrome text and carry an explicit U+FE0F. `⛅` must *not* have
+one; a selector on an already-emoji character is noise that invites someone to
+add them "consistently" everywhere and mask a real omission. Of the night
+variants, `🌙` (U+1F319) is emoji by default and `☁️` needs the selector.
+
+This matters because a row mixing flat-ink and full-colour glyphs looks broken
+in a way neither style does on its own. Note it differs from `alertTypes.ts`,
+which uses bare `❄` and `⚠` — those appear one at a time, so the inconsistency
+never shows.
 
 Day/night matters for exactly two categories — `clear` and `partly-cloudy` — a
 clear 10 PM hour showing a sun is the kind of small wrongness that makes a
