@@ -5,26 +5,22 @@ import { formatTemp, type TempUnit } from '../units';
  *  NWS grid cell self-reports (a 2.5 km cell average, recorded in the
  *  forecast spec purely as evidence the cell covers the pass) -- 8,431 ft is
  *  the number on the sign and the number a driver recognizes. */
-const SUMMIT_ELEVATION_LABEL = 'WY-22 summit · 8,431 ft';
+const SUMMIT_ELEVATION_LABEL = 'WY-22 · 8,431 ft';
 
 function SummitHeading() {
   return (
-    <>
+    <div className="flex items-baseline justify-between">
       <h2 id="summit-conditions-heading" className="font-display text-[15px] font-bold">
         Summit conditions
       </h2>
-      <p className="text-muted mb-1 text-[11px]">{SUMMIT_ELEVATION_LABEL}</p>
-    </>
+      <p className="text-muted text-[11px]">{SUMMIT_ELEVATION_LABEL}</p>
+    </div>
   );
 }
 
 interface Tile {
   label: string;
   value: string;
-  /** Widen this tile to two grid cells. Used only by the road-surface
-   *  condition, whose value is prose ("Snow packed, slick in spots") rather
-   *  than a short reading, and would otherwise wrap badly in a narrow cell. */
-  wide?: boolean;
 }
 
 const REPORTED_AT_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -34,22 +30,12 @@ const REPORTED_AT_FORMAT = new Intl.DateTimeFormat('en-US', {
   hour12: true,
 });
 
-/**
- * Winter (Nov-Apr) vs summer (May-Oct) split, same months as the backend's
- * `denverParts` season rule -- but read from the CLIENT's local wall clock,
- * not America/Denver, because this only decides display ORDER (which stat
- * leads), not anything safety-relevant. A user viewing right at a month
- * boundary in a non-Denver timezone could see the "wrong" order for a few
- * hours; that's an acceptable tradeoff for a cosmetic ordering preference.
- */
-function isWinterMonth(date: Date): boolean {
-  const month = date.getMonth() + 1; // 1-12
-  return month >= 11 || month <= 4;
-}
-
 function gustValue(weather: WeatherReading): string {
   if (weather.windGustMph === null) return '—';
-  return weather.windDir !== null ? `${weather.windGustMph} mph ${weather.windDir}` : `${weather.windGustMph} mph`;
+  // Rounded to a whole number so the value can never wrap inside the tile's
+  // fixed height (e.g. "11.2 mph W").
+  const rounded = Math.round(weather.windGustMph);
+  return weather.windDir !== null ? `${rounded} mph ${weather.windDir}` : `${rounded} mph`;
 }
 
 const FEET_PER_MILE = 5280;
@@ -75,18 +61,17 @@ export default function WeatherStrip({
   weather,
   surfaceCondition = null,
   weatherStale = false,
-  now = new Date(),
   unit = 'F',
 }: {
   weather: WeatherReading | null;
   /** WYDOT's road-surface description from the RoutesResults "Conditions"
    *  cell ("Dry", "Snow packed"). Comes from a DIFFERENT page than the
-   *  sensor readings above and can be absent on its own, so the tile is
-   *  omitted entirely rather than rendered with an em-dash: an empty
-   *  "Surface —" would imply we checked and the road had no condition. */
+   *  sensor readings above and can be absent on its own -- the tile is
+   *  always rendered (the grid is a fixed 2x2), falling back to "No report"
+   *  rather than a bare em-dash: an empty "Surface —" would read as a
+   *  condition WYDOT actually reported (ruling R2). */
   surfaceCondition?: string | null;
   weatherStale?: boolean;
-  now?: Date;
   unit?: TempUnit;
 }) {
   if (!weather) {
@@ -98,26 +83,14 @@ export default function WeatherStrip({
     );
   }
 
-  const airTile: Tile = { label: 'Air', value: weather.airF !== null ? formatTemp(weather.airF, unit) : '—' };
-  const roadTile: Tile = {
-    label: 'Road',
-    value: weather.surfaceF !== null ? formatTemp(weather.surfaceF, unit) : '—',
-  };
-  const gustTile: Tile = { label: 'Gust', value: gustValue(weather) };
-  const visibilityTile: Tile = { label: 'Visibility', value: visibilityValue(weather.visibilityFt) };
-
-  // Road (surface) temp matters most in winter (ice risk); air temp leads
-  // the rest of the year.
-  const tempTiles = isWinterMonth(now) ? [roadTile, airTile] : [airTile, roadTile];
-  const tiles: Tile[] = [...tempTiles, gustTile, visibilityTile];
-  if (surfaceCondition) {
-    tiles.push({ label: 'Surface', value: surfaceCondition, wide: true });
-  }
-
-  // The grid is sized so every row comes out exactly full rather than
-  // leaving an orphan: 4 sensor tiles fill a 4-column row, and adding the
-  // double-width surface tile makes 6 cells, which fill two 3-column rows.
-  const gridCols = surfaceCondition ? 'grid-cols-3' : 'grid-cols-4';
+  const airValue = weather.airF !== null ? formatTemp(weather.airF, unit) : '—';
+  const roadValue = weather.surfaceF !== null ? formatTemp(weather.surfaceF, unit) : '—';
+  const tiles: Tile[] = [
+    { label: 'Air / Road', value: `${airValue} / ${roadValue}` },
+    { label: 'Surface', value: surfaceCondition ?? 'No report' },
+    { label: 'Gust', value: gustValue(weather) },
+    { label: 'Visibility', value: visibilityValue(weather.visibilityFt) },
+  ];
 
   // A missing/unparseable reportedAt still lets the tiles render (the
   // numeric readings are independent of it) -- the "as of" suffix simply
@@ -133,16 +106,15 @@ export default function WeatherStrip({
           Weather may be outdated{reportedAtLabel ? ` — (as of ${reportedAtLabel})` : ''}
         </p>
       )}
-      <div className={`grid ${gridCols} gap-2`}>
+      <div className="grid grid-cols-2 gap-2">
         {tiles.map((tile) => (
           <div
             key={tile.label}
-            className={`bg-card border-card-border rounded-card border p-3 text-center${
-              tile.wide ? ' col-span-2' : ''
-            }`}
+            data-testid="weather-tile"
+            className="bg-card border-card-border rounded-card flex h-16 flex-col justify-center border px-3.5 py-2.5 text-left"
           >
-            <p className="font-display text-lg font-extrabold">{tile.value}</p>
-            <p className="text-muted text-[10.5px] uppercase">{tile.label}</p>
+            <p className="text-muted text-[10.5px] uppercase tracking-[0.04em]">{tile.label}</p>
+            <p className="font-display text-[19px] font-extrabold whitespace-nowrap">{tile.value}</p>
           </div>
         ))}
       </div>
