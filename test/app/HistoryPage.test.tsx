@@ -59,32 +59,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('HistoryPage subtitle', () => {
-  it('says "summer Saturday" in August', async () => {
-    // shouldAdvanceTime is required, not optional: waitFor polls on timers,
-    // so plain useFakeTimers() freezes it and the test hangs to timeout.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date('2026-08-15T18:00:00.000Z')); // Sat, 12:00 MDT
-    stubApi();
-    render(<HistoryPage />);
-    // Matched against the drive-time subtitle specifically ("Travel time...")
-    // -- the temp card's subtitle (added for I1) names the same season/weekday
-    // population and would otherwise make this match ambiguous.
-    await waitFor(() => expect(screen.getByText(/Travel time.*summer Saturday/)).toBeTruthy());
-  });
-
-  it('says "winter Wednesday" in January', async () => {
-    // shouldAdvanceTime is required, not optional: waitFor polls on timers,
-    // so plain useFakeTimers() freezes it and the test hangs to timeout.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date('2026-01-14T19:00:00.000Z')); // Wed, 12:00 MST
-    stubApi();
-    render(<HistoryPage />);
-    // Matched against the drive-time subtitle specifically -- see the comment
-    // in the "summer Saturday" test above.
-    await waitFor(() => expect(screen.getByText(/Travel time.*winter Wednesday/)).toBeTruthy());
-  });
-});
+// The visible subtitle these tests used to check ("Travel time by hour of
+// day ... for a summer Saturday") was removed by Task 6, the same relocation
+// as the caption/subline removals -- see "drops the removed copy" below,
+// which now also asserts this specific sentence is gone. The season/weekday
+// *derivation* these tests exercised (denverNow() classifying these exact
+// two dates correctly) is already covered directly, and more precisely, by
+// `describe('denverNow', ...)` in historyChart.test.ts -- these two tests
+// were only ever a thinner, page-level proxy for that same assertion, so
+// deleting them does not leave the derivation logic untested.
 
 describe('HistoryPage chart filtering (C1)', () => {
   it('plots only the weekday-class/season population matching now, not every bucket', async () => {
@@ -379,6 +362,10 @@ describe('HistoryPage controls (native select + segmented, tighter type scale)',
     // broader match would flag it as a false regression.
     expect(screen.queryByText(/middle half of recorded days/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/today's air reading against/i)).not.toBeInTheDocument();
+    // The drive chart's top-level subtitle, matched on its em dash so this
+    // is specific to the visible sentence and cannot collide with the
+    // chart's own aria-label, which uses a comma instead of a dash.
+    expect(screen.queryByText(/Travel time by hour of day —/)).not.toBeInTheDocument();
   });
 
   it('shortens the back link so it cannot wrap', () => {

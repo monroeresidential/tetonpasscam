@@ -122,7 +122,11 @@ export default function HistoryPage() {
     };
   }, [active]);
 
-  const { weekday, weekdayClass, season } = denverNow();
+  // `weekday` (the human string, e.g. "Saturday") isn't destructured here --
+  // it only ever fed the visible subtitle removed by this task; the season/
+  // weekday-CLASS population selection below is the only part of `denverNow`
+  // this page still needs.
+  const { weekdayClass, season } = denverNow();
 
   const points = typicalsToChartPoints(data?.typicals ?? [], weekdayClass, season);
   const today = todayToChartPoints(data?.today ?? []);
@@ -147,9 +151,6 @@ export default function HistoryPage() {
         </header>
 
         <h1 className="font-display text-[24px] font-extrabold tracking-tight">When should you leave?</h1>
-        <p className="text-muted mt-1 text-sm">
-          {`Travel time by hour of day — today's line against the typical range for a ${season} ${weekday}.`}
-        </p>
 
         <div className="mt-4 flex gap-2">
           <div className="relative min-w-[200px] flex-1">
