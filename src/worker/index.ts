@@ -23,7 +23,21 @@ async function serveHomepage(req: Request, env: Env, ctx: ExecutionContext): Pro
   // one. Only `.match`/`.put` are used below, which both `Cache` types agree
   // on.
   const cache = (caches as unknown as { default: Cache }).default;
-  const cached = await cache.match(req);
+
+  // The cache key is scoped to the DEPLOYMENT, not just the URL. Without
+  // this, a deploy left the previous build's injected HTML sitting in
+  // `caches.default` for up to s-maxage (300s) while that same deploy pruned
+  // the content-hashed assets the HTML references -- so every visitor who
+  // hit a warm cache during that window loaded `<script src=main-OLD.js>`,
+  // got a 404, and saw only the static `#seo-shell` instead of the app.
+  // Observed live twice on 2026-08-17: documentElement had the SEO shell and
+  // zero React children, with `main-<previous-hash>.js` 404ing.
+  //
+  // A synthetic key, never a redirect or a user-visible URL: `cache.match`/
+  // `cache.put` only use it to address an entry. The version id changes on
+  // every deploy, so a new build starts cold and stale entries age out.
+  const cacheKey = versionedCacheKey(req, env);
+  const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
   // Strip conditional-request headers before asking ASSETS: dist/index.html
@@ -58,8 +72,27 @@ async function serveHomepage(req: Request, env: Env, ctx: ExecutionContext): Pro
   finalResponse.headers.delete('ETag');
   finalResponse.headers.delete('Last-Modified');
 
-  ctx.waitUntil(cache.put(req, finalResponse.clone()));
+  ctx.waitUntil(cache.put(cacheKey, finalResponse.clone()));
   return finalResponse;
+}
+
+/**
+ * The homepage cache key, scoped to the running deployment.
+ *
+ * Falls back to the literal `'dev'` when the `version_metadata` binding is
+ * absent — it does not exist in the vitest-pool-workers runtime, and may be
+ * absent in some local dev setups. That fallback is correct in both: no
+ * deploy happens mid-test, so there is no stale-asset window to guard
+ * against, and a stable key preserves the existing cache-hit behaviour the
+ * tests assert.
+ */
+export function versionedCacheKey(req: Request, env: Env): Request {
+  const version = env.CF_VERSION_METADATA?.id ?? 'dev';
+  const url = new URL(req.url);
+  url.searchParams.set('__v', version);
+  // GET-only: `cache.match`/`put` reject other methods, and this path is
+  // only reached for a homepage navigation.
+  return new Request(url.toString(), { method: 'GET', headers: req.headers });
 }
 
 export default {

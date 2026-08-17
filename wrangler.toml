@@ -58,5 +58,14 @@ fallthrough = true
 # together cover the same 11:00 UTC-06:59 UTC window.
 crons = ["*/10 11-23 * * *", "*/10 0-6 * * *", "0 7-10 * * *", "10 9 * * *"]
 
+# Exposes the running deployment's id to the Worker. Used solely to scope the
+# homepage cache key (see serveHomepage in src/worker/index.ts): without it, a
+# deploy served the PREVIOUS build's injected index.html from caches.default
+# for up to s-maxage=300 while that same deploy pruned the content-hashed
+# assets that HTML points at -- a five-minute window after every deploy where
+# a visitor got a 404 on the main bundle and saw only the static SEO shell.
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
 [vars]
 ADMIN_EMAIL = "drew@monroeresidential.com"

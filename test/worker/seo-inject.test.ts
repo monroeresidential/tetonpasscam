@@ -210,6 +210,52 @@ describe('GET / — homepage live-status injection', () => {
     );
   });
 
+  it('a new deployment id busts the homepage cache instead of serving pre-deploy HTML', async () => {
+    // The bug this guards, observed live twice on 2026-08-17: the cache key
+    // was the URL alone, so after a deploy `caches.default` kept serving the
+    // PREVIOUS build's injected index.html for up to s-maxage (300s) -- while
+    // that same deploy had already pruned the content-hashed assets the HTML
+    // referenced. Visitors got a 404 on `main-<old-hash>.js` and saw only the
+    // static #seo-shell, with zero React children.
+    //
+    // Scoping the key to the deployment id makes a new build start cold. This
+    // asserts the mechanism directly: same URL, different version id, must
+    // NOT reuse the earlier entry.
+    await insertStatusSnapshot({
+      capturedAt: new Date(Date.now()).toISOString(),
+      status: 'open',
+      conditionText: 'Road Open — deploy v1',
+    });
+
+    const envV1 = { ...env, CF_VERSION_METADATA: { id: 'deploy-v1' } };
+    const ctx1 = createExecutionContext();
+    const res1 = await worker.fetch(new Request('https://x/?case=deploy-bust'), envV1 as any, ctx1);
+    await waitOnExecutionContext(ctx1);
+    expect(extractLiveStatusDiv(await res1.text())).toContain('deploy v1');
+
+    // A newer snapshot that only appears if D1 is re-read.
+    await insertStatusSnapshot({
+      capturedAt: new Date(Date.now()).toISOString(),
+      status: 'closed',
+      conditionText: 'Road Closed — deploy v2',
+    });
+
+    // Same URL, SAME version: still cached (proves the cache is actually on).
+    const ctx2 = createExecutionContext();
+    const res2 = await worker.fetch(new Request('https://x/?case=deploy-bust'), envV1 as any, ctx2);
+    await waitOnExecutionContext(ctx2);
+    expect(extractLiveStatusDiv(await res2.text())).toContain('deploy v1');
+
+    // Same URL, NEW version: must miss and re-read D1.
+    const envV2 = { ...env, CF_VERSION_METADATA: { id: 'deploy-v2' } };
+    const ctx3 = createExecutionContext();
+    const res3 = await worker.fetch(new Request('https://x/?case=deploy-bust'), envV2 as any, ctx3);
+    await waitOnExecutionContext(ctx3);
+    const afterDeploy = extractLiveStatusDiv(await res3.text());
+    expect(afterDeploy).toContain('deploy v2');
+    expect(afterDeploy).not.toContain('deploy v1');
+  });
+
   it('prefers wydotReportTime over capturedAt for the "as of" timestamp', async () => {
     const capturedAt = new Date(Date.now()).toISOString();
     // A distinctly different, still-fresh report time -- if the bug
