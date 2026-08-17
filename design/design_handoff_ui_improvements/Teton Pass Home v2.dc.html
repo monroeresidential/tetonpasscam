@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<style>
+@font-face{font-family:'Bricolage Grotesque';src:url('fonts/bricolage-latin-wght.woff2') format('woff2-variations');font-weight:200 800;font-display:swap}
+@font-face{font-family:'Atkinson Hyperlegible';src:url('fonts/atkinson-latin-400.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Atkinson Hyperlegible';src:url('fonts/atkinson-latin-700.woff2') format('woff2');font-weight:700;font-display:swap}
+body{margin:0;background:#211d17;color:#f0ebe1;font-family:'Atkinson Hyperlegible',ui-sans-serif,sans-serif}
+a{color:oklch(0.75 0.11 60)}a:hover{color:oklch(0.82 0.11 60)}
+</style>
+</helmet>
+<div style="min-height:100vh;padding-bottom:110px">
+<div style="max-width:960px;margin:0 auto;padding:0 14px">
+
+<header style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0 10px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:10px"><img src="icons/icon-192-dark.png" width="40" height="40" alt="" style="border-radius:9px"><div style="font:800 20px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">Teton Pass Cam</div></div>
+<div style="display:flex;align-items:center;gap:14px">
+<span style="font-size:11.5px;color:#a39880">Mon 10:50 PM</span>
+<sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{ openReport }}" style="border:none;cursor:pointer;background:#f0ebe1;color:#211d17;border-radius:999px;padding:10px 18px;font:700 13px 'Bricolage Grotesque',sans-serif">⚠ Report conditions</button>
+</sc-if>
+</div>
+</header>
+
+<div style="background: {{ bannerBg }};border-radius:18px;padding:18px 20px;color:#fff">
+<div style="font:800 34px/1.05 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">{{ bannerHeadline }}</div>
+<div style="font-size:13px;margin-top:6px;opacity:.9">Last confirmed open 5:48 AM · WYDOT</div>
+</div>
+
+<section style="margin-top:18px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+<h2 style="margin:0;font:700 16px 'Bricolage Grotesque',sans-serif">Drive times right now</h2>
+<sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}"><div style="font-size:11.5px;color:#a39880">Updated 10:50 PM · <button type="button" onClick="{{ flip }}" style="border:none;background:none;cursor:pointer;padding:0;font:700 12px 'Atkinson Hyperlegible',sans-serif;color:oklch(0.75 0.11 60)">⇄ Flip direction</button></div></sc-if>
+<sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#a39880">Updated 10:50 PM</div></sc-if>
+</div>
+<sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;margin-top:8px">
+<div style="display:inline-flex;background:#2b2620;border:1px solid #3a342b;border-radius:999px;padding:3px;gap:3px">
+<button type="button" onClick="{{ pickVictor }}" style="{{ victorStyle }}">Victor</button>
+<button type="button" onClick="{{ pickDriggs }}" style="{{ driggsStyle }}">Driggs</button>
+</div>
+<div style="display:inline-flex;background:#2b2620;border:1px solid #3a342b;border-radius:999px;padding:3px;gap:3px">
+<button type="button" onClick="{{ pickWy }}" style="{{ wyStyle }}">→ WY</button>
+<button type="button" onClick="{{ pickId }}" style="{{ idStyle }}">→ ID</button>
+</div>
+</div>
+</sc-if>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:8px;margin-top:8px">
+<sc-for list="{{ routes }}" as="r" hint-placeholder-count="6">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;gap:10px">
+<div><div style="font:700 16.5px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">{{ r.name }}</div><div style="font-size:11.5px;color:#a39880">{{ r.sub }}</div></div>
+<div style="text-align:right;flex:none"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">{{ r.mins }} min</div><div style="font-weight:700;font-size:11px;color: {{ r.deltaColor }}">{{ r.delta }}</div></div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<a href="Teton Pass History v2.dc.html" style="display:block;text-decoration:none;color:#f0ebe1;background:#2b2620;border:1px solid #3a342b;border-radius:16px;padding:16px;margin-top:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><div style="font:700 15px 'Bricolage Grotesque',sans-serif">When should you leave?</div><div style="font-size:12px;color:#a39880">See full history →</div></div>
+<div style="font-size:12px;color:#a39880">{{ chartRouteName }}</div>
+<div style="display:flex;gap:14px;align-items:center;margin:10px 0 4px;font-size:11px;color:#a39880">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.75 0.11 60);border-radius:1px"></span>Today</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.45 0.11 150);border-radius:1px"></span>Typical day</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:9px;background:oklch(0.45 0.11 150);opacity:.45;border-radius:1px"></span>Typical range</span>
+</div>
+<svg viewBox="0 0 {{ chart.w }} {{ chart.h }}" style="display:block;width:100%;height:auto" role="img" aria-label="Travel time by hour of day, today against the typical range">
+<line x1="{{ chart.padL }}" y1="{{ chart.padT }}" x2="{{ chart.padL }}" y2="{{ chart.plotB }}" stroke="#3a342b"></line>
+<line x1="{{ chart.padL }}" y1="{{ chart.plotB }}" x2="{{ chart.plotR }}" y2="{{ chart.plotB }}" stroke="#3a342b"></line>
+{{ chart.ticks }}
+<polygon points="{{ chart.band }}" fill="oklch(0.45 0.11 150)" fill-opacity="0.16"></polygon>
+<polyline points="{{ chart.med }}" fill="none" stroke="oklch(0.45 0.11 150)" stroke-width="2"></polyline>
+<polyline points="{{ chart.today }}" fill="none" stroke="oklch(0.75 0.11 60)" stroke-width="3" stroke-linecap="round"></polyline>
+<circle cx="{{ chart.nowX }}" cy="{{ chart.nowY }}" r="4.5" fill="oklch(0.75 0.11 60)"></circle>
+<text x="{{ chart.nowX }}" y="{{ chart.nowLabelY }}" text-anchor="middle" font-size="11" font-weight="700" fill="oklch(0.75 0.11 60)" stroke="#2b2620" stroke-width="4" paint-order="stroke">{{ chart.nowLabel }}</text>
+<text x="{{ chart.xTitleX }}" y="{{ chart.xTitleY }}" text-anchor="middle" font-size="11" font-weight="700" fill="#6e6553" letter-spacing="0.04em">{{ chart.xTitle }}</text>
+<text x="12" y="{{ chart.yTitleY }}" transform="{{ chart.yTitleTransform }}" text-anchor="middle" font-size="11" font-weight="700" fill="#6e6553" letter-spacing="0.04em">{{ chart.yTitle }}</text>
+</svg>
+</a>
+
+<section style="margin-top:18px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0;font:700 16px 'Bricolage Grotesque',sans-serif">Summit conditions</h2><div style="font-size:11px;color:#a39880">WY-22 · 8,431 ft</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center"><div style="font-size:10.5px;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Air / Road</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif;white-space:nowrap">50°F <span style="color:#a39880;font-weight:400">/</span> 51°F</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center"><div style="font-size:10.5px;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Surface</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif;white-space:nowrap">Wet with rain</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center"><div style="font-size:10.5px;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Gust</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif;white-space:nowrap">11 mph E</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center"><div style="font-size:10.5px;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Visibility</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif;white-space:nowrap">1.2 mi</div></div>
+</div>
+</section>
+
+<section style="margin-top:18px">
+<h2 style="margin:0;font:700 15px 'Bricolage Grotesque',sans-serif">Next 12 hours</h2>
+<div style="display:flex;gap:8px;overflow-x:auto;padding:8px 0 4px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="6">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;flex:1 0 62px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;text-align:center">
+<div style="font-size:10.5px;color:#a39880;text-transform:uppercase">{{ h.label }}</div>
+<div style="background:oklch(0.34 0.03 60);width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px">{{ h.glyph }}</div>
+<div style="font:800 13px 'Bricolage Grotesque',sans-serif">{{ h.temp }}</div>
+<div style="font-size:10.5px;color:#a39880;white-space:nowrap">{{ h.pglyph }} {{ h.precip }}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="margin-top:14px">
+<h2 style="margin:0;font:700 15px 'Bricolage Grotesque',sans-serif">5-day forecast <span style="font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">high / low °F</span></h2>
+<sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px">
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="5">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px;box-sizing:border-box">
+<div style="font-size:11.5px;font-weight:700;color:#a39880;text-transform:uppercase;letter-spacing:.04em">{{ d.label }}</div>
+<div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+<div style="background:oklch(0.34 0.03 60);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none">{{ d.glyph }}</div>
+<div style="min-width:0">
+<div style="font:800 17px 'Bricolage Grotesque',sans-serif;white-space:nowrap">{{ d.hi }} <span style="font-weight:400;font-size:14px;color:#a39880">{{ d.lo }}</span></div>
+<div style="font-size:11px;color:#a39880;margin-top:2px;white-space:nowrap">{{ d.pglyph }} {{ d.precip }}</div>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px">
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="5">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 2px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;min-width:0">
+<div style="font-size:10.5px;font-weight:700;color:#a39880;text-transform:uppercase">{{ d.label }}</div>
+<div style="background:oklch(0.34 0.03 60);width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px">{{ d.glyph }}</div>
+<div style="font:800 13px 'Bricolage Grotesque',sans-serif;white-space:nowrap">{{ d.hi }} <span style="font-weight:400;color:#a39880">{{ d.lo }}</span></div>
+<div style="font-size:10px;color:#a39880;white-space:nowrap">{{ d.pglyph }} {{ d.precip }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</section>
+
+<footer style="display:flex;gap:18px;padding:26px 0 10px;font-size:12px;color:#a39880">
+<a href="Teton Pass History v2.dc.html" style="font-weight:700">History →</a>
+<span>Imagery: WYDOT Wyoming 511</span>
+</footer>
+</div>
+</div>
+
+<sc-if value="{{ showPill }}" hint-placeholder-val="{{ true }}">
+<div style="position:fixed;left:0;right:0;bottom:0;z-index:40;pointer-events:none">
+<div style="height:60px;background:linear-gradient(to bottom,rgba(33,29,23,0),#211d17)"></div>
+<div style="background:#211d17;padding:0 16px 16px">
+<button type="button" onClick="{{ openReport }}" style="pointer-events:auto;border:none;cursor:pointer;width:100%;min-height:48px;border-radius:999px;background:#f0ebe1;color:#211d17;font:700 15px 'Bricolage Grotesque',sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.4)">⚠ Report conditions</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:60;background:#f0ebe1;color:#211d17;border-radius:999px;padding:10px 18px;font:700 13px 'Atkinson Hyperlegible',sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.4)">Thanks — report submitted.</div>
+</sc-if>
+
+<sc-if value="{{ reportOpen }}" hint-placeholder-val="{{ false }}">
+<div role="dialog" aria-modal="true" aria-label="What are you seeing?" style="position:fixed;inset:0;z-index:50">
+<div onClick="{{ closeReport }}" style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+<div style="position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;max-height:85dvh;background:#2b2620;border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-sizing:border-box">
+<div style="padding:10px 16px 0;flex:none">
+<div style="width:36px;height:4px;border-radius:999px;background:#3a342b;margin:0 auto"></div>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:12px;gap:8px">
+<div><div style="font:800 20px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">What are you seeing?</div><div style="font-size:12px;color:#a39880;margin-top:2px">No account needed. Reports expire on their own.</div></div>
+<button type="button" onClick="{{ closeReport }}" aria-label="Close" style="border:none;background:none;cursor:pointer;color:#a39880;font-size:15px;padding:4px">✕</button>
+</div>
+</div>
+<div style="padding:12px 16px 8px;overflow-y:auto;flex:1;min-height:0">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<sc-for list="{{ typeOptions }}" as="t" hint-placeholder-count="7">
+<button type="button" onClick="{{ t.pick }}" style="{{ t.style }}"><span style="font-size:16px">{{ t.icon }}</span><span style="font:700 13px 'Atkinson Hyperlegible',sans-serif;color:#f0ebe1">{{ t.label }}</span></button>
+</sc-for>
+</div>
+<div role="group" aria-label="Direction" style="display:flex;gap:8px;margin-top:10px">
+<sc-for list="{{ dirOptions }}" as="d" hint-placeholder-count="2">
+<button type="button" onClick="{{ d.pick }}" style="{{ d.style }}">{{ d.label }}</button>
+</sc-for>
+</div>
+<textarea rows="2" maxLength="{{ noteMax }}" value="{{ note }}" onChange="{{ setNote }}" placeholder="Add a note (optional, 140 chars)…" style="box-sizing:border-box;width:100%;margin-top:10px;background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px;color:#f0ebe1;font:400 13.5px 'Atkinson Hyperlegible',sans-serif;resize:none"></textarea>
+</div>
+<div style="padding:8px 16px 16px;flex:none;border-top:1px solid #3a342b">
+<button type="button" onClick="{{ send }}" style="{{ sendStyle }}">Send report</button>
+<div style="font-size:10.5px;line-height:1.5;color:#6e6553;text-align:center;margin-top:8px">This report does not change the official status — only WYDOT does. Limit 2 reports per 30 min.</div>
+</div>
+</div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;status&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;open&quot;, &quot;restricted&quot;, &quot;closed&quot;], &quot;default&quot;: &quot;open&quot;, &quot;tsType&quot;: &quot;'open' | 'restricted' | 'closed'&quot;, &quot;section&quot;: &quot;Status banner&quot;}}">
+const HOURS = Array.from({length: 18}, (_, i) => i + 5);
+const SHAPE38 = [32, 35, 42, 46, 44, 43, 42.5, 42, 40, 39.5, 40, 40.5, 39, 36, 35.5, 35.5, 36, 35.5];
+
+function hourLabel(h) {
+  const suffix = h < 12 ? 'AM' : 'PM';
+  const d = h % 12 === 0 ? 12 : h % 12;
+  return d + ' ' + suffix;
+}
+
+function makeChart(values, todayVals, isDesktop, fmt, bandDelta, titles) {
+  const W = isDesktop ? 900 : 360, H = isDesktop ? 236 : 216;
+  const padL = isDesktop ? 60 : 50, padR = 10, padT = 14, padB = isDesktop ? 46 : 42;
+  const plotR = W - padR, plotB = H - padB;
+  const all = values.concat(todayVals.map(t => t.v), values.map(v => v + bandDelta), values.map(v => v - bandDelta * 0.7));
+  const vMin = Math.min(...all), vMax = Math.max(...all);
+  const span = vMax > vMin ? vMax - vMin : 1;
+  const x = h => padL + (h - 5) / 17 * (plotR - padL);
+  const y = v => padT + (1 - (v - vMin) / span) * (plotB - padT);
+  const pts = arr => arr.map(p => x(p.h).toFixed(1) + ',' + y(p.v).toFixed(1)).join(' ');
+  const series = values.map((v, i) => ({h: HOURS[i], v}));
+  const top = series.map(p => ({h: p.h, v: p.v + bandDelta}));
+  const bot = series.map(p => ({h: p.h, v: p.v - bandDelta * 0.7})).reverse();
+  const last = todayVals[todayVals.length - 1];
+  const yTickVals = [vMin, vMin + span / 2, vMax];
+  const fs = isDesktop ? 13 : 11;
+  const labelY = plotB + (isDesktop ? 19 : 17);
+  // Tick lines/labels built as React elements: <sc-for> inside <svg> does not
+  // survive SVG foreign-content parsing, so loops can't live in the template.
+  const ticks = [
+    ...yTickVals.map(v => React.createElement('g', {key: 'y' + v},
+      React.createElement('line', {x1: padL, y1: y(v), x2: plotR, y2: y(v), stroke: '#3a342b', strokeOpacity: 0.5}),
+      React.createElement('text', {x: padL - 8, y: y(v) + 4, textAnchor: 'end', fontSize: fs, fill: '#a39880'}, fmt(v)))),
+    ...HOURS.filter(h => (h - 5) % (isDesktop ? 3 : 4) === 0).map(h =>
+      React.createElement('text', {key: 'x' + h, x: x(h), y: labelY, textAnchor: 'middle', fontSize: fs, fill: '#a39880'}, hourLabel(h))),
+  ];
+  return {
+    ticks,
+    w: W, h: H, padL, padT, plotR, plotB, fs: isDesktop ? 13 : 11,
+    yLabelX: padL - 8, labelY: plotB + (isDesktop ? 19 : 17),
+    xTitle: titles.x, yTitle: titles.y,
+    xTitleX: padL + (plotR - padL) / 2, xTitleY: plotB + (isDesktop ? 40 : 36),
+    yTitleTransform: 'rotate(-90 12 ' + ((padT + plotB) / 2).toFixed(0) + ')',
+    yTitleY: (padT + plotB) / 2,
+    med: pts(series), band: pts(top) + ' ' + pts(bot), today: pts(todayVals),
+    nowX: x(last.h).toFixed(1), nowY: y(last.v).toFixed(1), nowLabelY: (y(last.v) - 13).toFixed(1),
+    nowLabel: 'now · ' + fmt(last.v),
+    yTicks: yTickVals.map(v => ({y: y(v).toFixed(1), ty: (y(v) + 4).toFixed(1), label: fmt(v)})),
+    xTicks: HOURS.filter(h => (h - 5) % (isDesktop ? 3 : 4) === 0).map(h => ({x: x(h).toFixed(1), label: hourLabel(h)})),
+  };
+}
+
+const EB = [
+  {slug: 'vj', name: 'Victor → Jackson', sub: 'Town Square', mins: 38, delta: '2 min faster than usual', tone: 'pos'},
+  {slug: 'dj', name: 'Driggs → Jackson', sub: 'Town Square', mins: 48, delta: 'about usual', tone: 'muted'},
+  {slug: 'vt', name: 'Victor → Teton Village', sub: 'JHMR', mins: 37, delta: 'about usual', tone: 'muted'},
+  {slug: 'dt', name: 'Driggs → Teton Village', sub: 'JHMR', mins: 48, delta: 'about usual', tone: 'muted'},
+  {slug: 'va', name: 'Victor → Airport', sub: 'Airport', mins: 52, delta: '6 min slower than usual', tone: 'neg'},
+  {slug: 'da', name: 'Driggs → Airport', sub: 'Airport', mins: 63, delta: '10 min slower than usual', tone: 'neg'},
+];
+const WB = [
+  {slug: 'jv', name: 'Jackson → Victor', sub: 'Town Square', mins: 36, delta: 'about usual', tone: 'muted'},
+  {slug: 'jd', name: 'Jackson → Driggs', sub: 'Town Square', mins: 46, delta: 'about usual', tone: 'muted'},
+  {slug: 'tv', name: 'Teton Village → Victor', sub: 'JHMR', mins: 35, delta: '3 min faster than usual', tone: 'pos'},
+  {slug: 'td', name: 'Teton Village → Driggs', sub: 'JHMR', mins: 47, delta: 'about usual', tone: 'muted'},
+  {slug: 'av', name: 'Airport → Victor', sub: 'Airport', mins: 50, delta: 'about usual', tone: 'muted'},
+  {slug: 'ad', name: 'Airport → Driggs', sub: 'Airport', mins: 61, delta: '4 min slower than usual', tone: 'neg'},
+];
+const TONE_COLOR = {pos: 'oklch(0.72 0.12 150)', neg: 'oklch(0.72 0.14 30)', muted: '#a39880'};
+
+const TYPES = [
+  {id: 'crash', icon: '💥', label: 'Crash'},
+  {id: 'slideoff', icon: '🛞', label: 'Slide-off'},
+  {id: 'ice', icon: '❄️', label: 'Slick/Ice'},
+  {id: 'wildlife', icon: '🦌', label: 'Wildlife'},
+  {id: 'stopped', icon: '🚗', label: 'Stopped traffic'},
+  {id: 'closure', icon: '🚧', label: 'Closure'},
+  {id: 'other', icon: '⚠️', label: 'Other'},
+];
+
+const DESKTOP_Q = '(min-width: 860px)';
+
+class Component extends DCLogic {
+  state = {
+    town: 'victor',
+    direction: 'eb',
+    isDesktop: typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(DESKTOP_Q).matches : false,
+    reportOpen: false, type: null, rdir: '', note: '', toast: false,
+  };
+
+  componentDidMount() {
+    this.mql = window.matchMedia(DESKTOP_Q);
+    this.onMql = () => this.setState({isDesktop: this.mql.matches});
+    this.mql.addEventListener('change', this.onMql);
+  }
+  componentWillUnmount() {
+    if (this.mql) this.mql.removeEventListener('change', this.onMql);
+    document.body.style.overflow = '';
+  }
+
+  setReportOpen(open) {
+    document.body.style.overflow = open ? 'hidden' : '';
+    this.setState({reportOpen: open, type: null, rdir: '', note: ''});
+  }
+
+  renderVals() {
+    const {town, direction, isDesktop, reportOpen, type, rdir, note, toast} = this.state;
+    // Idaho-town filter (phone only): eb slugs start with the origin town
+    // letter, wb slugs end with the destination town letter — either way the
+    // route's Idaho side is 'v' or 'd'.
+    const townOf = r => (direction === 'eb' ? r.slug[0] : r.slug[1]) === 'v' ? 'victor' : 'driggs';
+    const all = (direction === 'eb' ? EB : WB).map(r => ({...r, deltaColor: TONE_COLOR[r.tone]}));
+    const routes = isDesktop ? all : all.filter(r => townOf(r) === town);
+    const segOn = 'border:none;cursor:pointer;padding:8px 16px;border-radius:999px;background:#f0ebe1;color:#211d17;font:700 12.5px Atkinson Hyperlegible,sans-serif;';
+    const segOff = 'border:none;cursor:pointer;padding:8px 16px;border-radius:999px;background:none;color:#a39880;font:700 12.5px Atkinson Hyperlegible,sans-serif;';
+    const first = routes[0];
+    const vals = SHAPE38.map(v => v * first.mins / 38);
+    const todayVals = vals.slice(0, 9).map((v, i) => ({h: HOURS[i], v: v + 1}));
+    todayVals[8] = {h: HOURS[8], v: first.mins};
+    const chart = makeChart(vals, todayVals, isDesktop, v => Math.round(v) + 'm', 2.4 * first.mins / 38, {x: 'Time of day (MT)', y: 'Travel time (min)'});
+
+    const status = this.props.status ?? 'open';
+    const banner = {
+      open: {bg: 'oklch(0.45 0.11 150)', headline: 'Open'},
+      restricted: {bg: 'oklch(0.62 0.13 60)', headline: 'RESTRICTED — No trailers'},
+      closed: {bg: 'oklch(0.5 0.17 25)', headline: 'Closed — do not attempt'},
+    }[status] || {bg: 'oklch(0.45 0.11 150)', headline: 'Open'};
+
+    const tileBase = 'border-radius:14px;padding:12px;display:flex;align-items:center;gap:8px;background:#2b2620;cursor:pointer;text-align:left;';
+    const typeOptions = TYPES.map(t => ({
+      ...t,
+      pick: () => this.setState({type: t.id}),
+      style: tileBase + (t.id === 'other' ? 'grid-column:span 2;justify-content:center;' : '') +
+        (type === t.id ? 'border:2px solid #f0ebe1;padding:11px;' : 'border:1px solid #3a342b;'),
+    }));
+    const dirBase = 'flex:1;border-radius:999px;padding:10px 0;text-align:center;font:700 13px Atkinson Hyperlegible,sans-serif;background:#2b2620;cursor:pointer;';
+    const dirOptions = [{id: 'wb', label: 'WB → Victor'}, {id: 'eb', label: 'EB → Jackson'}].map(d => ({
+      ...d,
+      pick: () => this.setState({rdir: rdir === d.id ? '' : d.id}),
+      style: dirBase + (rdir === d.id ? 'border:2px solid #f0ebe1;color:#f0ebe1;' : 'border:1px solid #3a342b;color:#a39880;'),
+    }));
+
+    return {
+      isDesktop, isPhone: !isDesktop, showPill: !isDesktop, routes, chart, chartRouteName: first.name,
+      pickWy: () => this.setState({direction: 'eb'}),
+      pickId: () => this.setState({direction: 'wb'}),
+      wyStyle: direction === 'eb' ? segOn : segOff,
+      idStyle: direction === 'wb' ? segOn : segOff,
+      pickVictor: () => this.setState({town: 'victor'}),
+      pickDriggs: () => this.setState({town: 'driggs'}),
+      victorStyle: town === 'victor' ? segOn : segOff,
+      driggsStyle: town === 'driggs' ? segOn : segOff,
+      bannerBg: banner.bg, bannerHeadline: banner.headline,
+      flip: () => this.setState({direction: direction === 'eb' ? 'wb' : 'eb'}),
+      reportOpen, toast, typeOptions, dirOptions, note, noteMax: 140,
+      openReport: () => this.setReportOpen(true),
+      closeReport: () => this.setReportOpen(false),
+      setNote: e => this.setState({note: e.target.value}),
+      sendStyle: 'border:none;width:100%;height:46px;border-radius:999px;background:#f0ebe1;color:#211d17;font:700 15px Bricolage Grotesque,sans-serif;' +
+        (type ? 'cursor:pointer;opacity:1;' : 'opacity:.5;'),
+      send: () => {
+        if (!type) return;
+        this.setReportOpen(false);
+        this.setState({toast: true});
+        setTimeout(() => this.setState({toast: false}), 3500);
+      },
+      // pglyph: 💧 = chance of rain, ❄️ = chance of snow (driven by the
+      // forecast category in production — snow categories get the flake).
+      hourly: [
+        {label: '4 AM', glyph: '☁️', temp: '51°F', precip: '1%', pglyph: '💧'},
+        {label: '5 AM', glyph: '☁️', temp: '52°F', precip: '1%', pglyph: '💧'},
+        {label: '6 AM', glyph: '☀️', temp: '50°F', precip: '2%', pglyph: '💧'},
+        {label: '7 AM', glyph: '☀️', temp: '50°F', precip: '2%', pglyph: '💧'},
+        {label: '8 AM', glyph: '☀️', temp: '53°F', precip: '2%', pglyph: '💧'},
+        {label: '9 AM', glyph: '☀️', temp: '56°F', precip: '3%', pglyph: '💧'},
+        {label: '10 AM', glyph: '🌤', temp: '59°F', precip: '4%', pglyph: '💧'},
+        {label: '11 AM', glyph: '🌤', temp: '62°F', precip: '6%', pglyph: '💧'},
+      ],
+      days: [
+        {label: 'Today', glyph: '🌦', hi: '68°', lo: '50°', precip: '21%', pglyph: '💧'},
+        {label: 'Tue', glyph: '⛈', hi: '66°', lo: '51°', precip: '22%', pglyph: '💧'},
+        {label: 'Wed', glyph: '☀️', hi: '66°', lo: '51°', precip: '3%', pglyph: '💧'},
+        {label: 'Thu', glyph: '☀️', hi: '71°', lo: '52°', precip: '5%', pglyph: '💧'},
+        {label: 'Fri', glyph: '🌨', hi: '39°', lo: '28°', precip: '45%', pglyph: '❄️'},
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

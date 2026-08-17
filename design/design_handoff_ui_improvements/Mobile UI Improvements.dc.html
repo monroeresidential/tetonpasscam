@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<style>
+@font-face{font-family:'Bricolage Grotesque';src:url('fonts/bricolage-latin-wght.woff2') format('woff2-variations');font-weight:200 800;font-display:swap}
+@font-face{font-family:'Atkinson Hyperlegible';src:url('fonts/atkinson-latin-400.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Atkinson Hyperlegible';src:url('fonts/atkinson-latin-700.woff2') format('woff2');font-weight:700;font-display:swap}
+body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}
+a{color:#2a78d6}a:hover{color:#1b5eae}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55);max-width:400px}
+.dv-card{max-width:100%;background:#211d17;border:1px solid rgba(0,0,0,.15);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow:hidden;color:#f0ebe1;font-family:'Atkinson Hyperlegible',sans-serif}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.dv-grp{flex-basis:100%;font:700 13px system-ui,sans-serif;color:#1a1a1a;margin:18px 0 -14px}
+.dv-grp span{font-weight:400;color:rgba(0,0,0,.5)}
+</style>
+</helmet>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Mobile + desktop UI fixes — drive times, charts, /history, weather, report sheet</span></div>
+<div style="font:400 12px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:760px;margin:-8px 0 6px">
+Recreated from the live source (DriveTimes.tsx, TypicalChart.tsx, HistoryPage.tsx, WeatherStrip.tsx, ReportModal.tsx) using the Trailhead dark tokens. Root causes found in code: the chart is one fixed 940-unit SVG viewBox, so its 13-unit axis text renders at ~5px on a phone; the report sheet lives inside a padded flex overlay instead of being pinned to the viewport, so a tall sheet pushes off-screen. "Current" reference cards shown muted for comparison.
+</div>
+<div class="dv-opts">
+
+<div class="dv-grp">A · Drive-time rows <span>— route name promoted to match the numeral; "as of" said once, not six times</span></div>
+
+<div class="dv-opt" id="cur-dt" style="opacity:.75">
+<div class="dv-olabel"><span class="dv-oid" style="background:rgba(0,0,0,.04);color:rgba(0,0,0,.45)">current</span>Recreated from DriveTimes.tsx — 14px name vs 22px numeral, "as of" repeated per row</div>
+<div class="dv-card" style="width:390px;padding:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 15px 'Bricolage Grotesque',sans-serif">Drive times right now</div><div style="font:700 12px 'Atkinson Hyperlegible',sans-serif;color:oklch(0.75 0.11 60)">⇄ Flip direction</div></div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px"><div><div style="font:700 14px 'Atkinson Hyperlegible',sans-serif">Victor → Jackson</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Town Square</div></div><div style="text-align:right"><div style="font:800 22px 'Bricolage Grotesque',sans-serif">38 min</div><div style="font:700 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">as of 10:50 PM</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px"><div><div style="font:700 14px 'Atkinson Hyperlegible',sans-serif">Driggs → Jackson</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Town Square</div></div><div style="text-align:right"><div style="font:800 22px 'Bricolage Grotesque',sans-serif">48 min</div><div style="font:700 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">as of 10:50 PM</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px"><div><div style="font:700 14px 'Atkinson Hyperlegible',sans-serif">Victor → Teton Village</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">JHMR</div></div><div style="text-align:right"><div style="font:800 22px 'Bricolage Grotesque',sans-serif">37 min</div><div style="font:700 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">as of 10:50 PM</div></div></div>
+</div></div>
+</div>
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Balanced hierarchy — route name 16.5px display bold, numeral 19px; freshness stated once in the header</div>
+<div class="dv-card" style="width:390px;padding:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Drive times right now</div><div style="font:700 12px 'Atkinson Hyperlegible',sans-serif;color:oklch(0.75 0.11 60)">⇄ Flip</div></div>
+<div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;margin-top:2px">Updated 10:50 PM</div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;gap:10px"><div><div style="font:700 16.5px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">Victor → Jackson</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Town Square</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">38 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:oklch(0.72 0.12 150)">2 min faster than usual</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;gap:10px"><div><div style="font:700 16.5px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">Driggs → Jackson</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Town Square</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">48 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">about usual</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;gap:10px"><div><div style="font:700 16.5px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">Victor → Teton Village</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">JHMR</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">37 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">about usual</div></div></div>
+</div></div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Compact single-line rows — sublabel folds inline, equal 16px name / 17px numeral, tighter vertical rhythm</div>
+<div class="dv-card" style="width:390px;padding:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Drive times right now</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">10:50 PM · <span style="font-weight:700;color:oklch(0.75 0.11 60)">⇄ Flip</span></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;margin-top:8px">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #3a342b"><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Victor → Jackson <span style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#6e6553">Town Sq</span></div><div style="font:800 17px 'Bricolage Grotesque',sans-serif">38<span style="font-size:13px;color:#a39880"> min</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #3a342b"><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Driggs → Jackson <span style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#6e6553">Town Sq</span></div><div style="font:800 17px 'Bricolage Grotesque',sans-serif">48<span style="font-size:13px;color:#a39880"> min</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #3a342b"><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Victor → Teton Village <span style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#6e6553">JHMR</span></div><div style="font:800 17px 'Bricolage Grotesque',sans-serif">37<span style="font-size:13px;color:#a39880"> min</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px"><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Driggs → Teton Village <span style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#6e6553">JHMR</span></div><div style="font:800 17px 'Bricolage Grotesque',sans-serif">48<span style="font-size:13px;color:#a39880"> min</span></div></div>
+</div></div>
+</div>
+
+<div class="dv-grp">B · Chart with readable axes <span>— phone-sized viewBox so axis text renders at true 11px, not 5px</span></div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Home "When should you leave?" card, mobile — 360-unit viewBox at 1:1 scale, 3-hour ticks thinned to 4-hour, one-line legend</div>
+<div class="dv-card" style="width:390px;padding:14px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:16px;padding:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 15px 'Bricolage Grotesque',sans-serif">When should you leave?</div><div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Full history →</div></div>
+<div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Victor → Jackson</div>
+<div style="display:flex;gap:14px;align-items:center;margin:10px 0 4px;font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.75 0.11 60);border-radius:1px"></span>Today</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.45 0.11 150);border-radius:1px"></span>Typical</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:9px;background:oklch(0.45 0.11 150);opacity:.45;border-radius:1px"></span>Range</span>
+</div>
+<svg viewBox="0 0 360 200" style="display:block;width:100%;height:auto" role="img" aria-label="Travel time by hour, today against typical">
+<line x1="34" y1="10" x2="34" y2="174" stroke="#3a342b"></line>
+<line x1="34" y1="174" x2="352" y2="174" stroke="#3a342b"></line>
+<line x1="34" y1="87" x2="352" y2="87" stroke="#3a342b" stroke-opacity="0.5"></line>
+<line x1="34" y1="14" x2="352" y2="14" stroke="#3a342b" stroke-opacity="0.5"></line>
+<text x="28" y="178" text-anchor="end" font-size="11" fill="#a39880">32m</text>
+<text x="28" y="91" text-anchor="end" font-size="11" fill="#a39880">41m</text>
+<text x="28" y="18" text-anchor="end" font-size="11" fill="#a39880">49m</text>
+<text x="34" y="192" text-anchor="middle" font-size="11" fill="#a39880">5 AM</text>
+<text x="108.8" y="192" text-anchor="middle" font-size="11" fill="#a39880">9 AM</text>
+<text x="183.6" y="192" text-anchor="middle" font-size="11" fill="#a39880">1 PM</text>
+<text x="258.5" y="192" text-anchor="middle" font-size="11" fill="#a39880">5 PM</text>
+<text x="333.3" y="192" text-anchor="middle" font-size="11" fill="#a39880">9 PM</text>
+<polygon points="34,164 52.7,135 71.4,66 90.1,26 108.8,47 127.5,57 146.2,62 164.9,66 183.6,86 202.4,91 221.1,86 239.8,80 258.5,88 277.2,125 295.9,131 314.6,131 333.3,126 352,131 352,147 333.3,142 314.6,147 295.9,147 277.2,142 258.5,116 239.8,99 221.1,104 202.4,109 183.6,104 164.9,85 146.2,80 127.5,75 108.8,66 90.1,46 71.4,85 52.7,152 34,181" fill="oklch(0.45 0.11 150)" fill-opacity="0.16"></polygon>
+<polyline points="34,174 52.7,145 71.4,77.5 90.1,38.9 108.8,58.2 127.5,67.9 146.2,72.7 164.9,77.5 183.6,96.8 202.4,101.6 221.1,96.8 239.8,92 258.5,106.5 277.2,135.4 295.9,140.2 314.6,140.2 333.3,135.4 352,140.2" fill="none" stroke="oklch(0.45 0.11 150)" stroke-width="2"></polyline>
+<polyline points="34,164.4 52.7,135.4 71.4,58.2 90.1,29.3 108.8,48.6 127.5,63.1 146.2,67.9 164.9,72.7 183.6,87.2" fill="none" stroke="oklch(0.75 0.11 60)" stroke-width="3" stroke-linecap="round"></polyline>
+<circle cx="183.6" cy="87.2" r="4.5" fill="oklch(0.75 0.11 60)"></circle>
+<text x="183.6" y="74" text-anchor="middle" font-size="11" font-weight="700" fill="oklch(0.75 0.11 60)" stroke="#2b2620" stroke-width="4" paint-order="stroke">now · 41m</text>
+</svg>
+</div></div>
+</div>
+
+<div class="dv-grp">C · /history on mobile <span>— dropdown route picker, segmented direction, calmer type scale (H1 30px → 24px)</span></div>
+
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Stacked controls — native select + full-width segmented toggle, both 44px hit targets</div>
+<div class="dv-card" style="width:390px;padding:14px 14px 20px">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 12px"><div style="display:flex;align-items:baseline;gap:8px"><span style="font:800 17px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">Teton Pass Cam</span><span style="font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">History</span></div><div style="font:700 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;white-space:nowrap">← Live</div></div>
+<div style="font:800 24px/1.15 'Bricolage Grotesque',sans-serif;letter-spacing:-0.015em">When should you leave?</div>
+<div style="font:400 13px/1.45 'Atkinson Hyperlegible',sans-serif;color:#a39880;margin-top:4px">Today's line against the typical range for a summer Monday.</div>
+<select style="appearance:none;-webkit-appearance:none;box-sizing:border-box;width:100%;margin-top:12px;height:46px;padding:0 40px 0 14px;background:#2b2620 url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%3E%3Cpath%20d%3D%22M1%201l5%205%205-5%22%20stroke%3D%22%23a39880%22%20stroke-width%3D%222%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E') no-repeat right 14px center;border:1px solid #3a342b;border-radius:12px;color:#f0ebe1;font:700 15px 'Bricolage Grotesque',sans-serif">
+<option>Victor → Jackson</option><option>Driggs → Jackson</option><option>Victor → Teton Village</option><option>Driggs → Teton Village</option><option>Victor → Airport</option><option>Driggs → Airport</option>
+</select>
+<div style="display:flex;margin-top:8px;background:#2b2620;border:1px solid #3a342b;border-radius:999px;padding:3px;gap:3px">
+<div style="flex:1;text-align:center;padding:9px 0;border-radius:999px;background:#f0ebe1;color:#211d17;font:700 13px 'Atkinson Hyperlegible',sans-serif">To Jackson</div>
+<div style="flex:1;text-align:center;padding:9px 0;border-radius:999px;color:#a39880;font:700 13px 'Atkinson Hyperlegible',sans-serif">To Victor</div>
+</div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:16px;padding:14px;margin-top:12px">
+<div style="display:flex;gap:14px;align-items:center;margin-bottom:8px;font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.75 0.11 60);border-radius:1px"></span>Today</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.45 0.11 150);border-radius:1px"></span>Typical</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:9px;background:oklch(0.45 0.11 150);opacity:.45;border-radius:1px"></span>Range</span>
+</div>
+<svg viewBox="0 0 360 200" style="display:block;width:100%;height:auto" role="img" aria-label="Travel time by hour">
+<line x1="34" y1="10" x2="34" y2="174" stroke="#3a342b"></line>
+<line x1="34" y1="174" x2="352" y2="174" stroke="#3a342b"></line>
+<line x1="34" y1="87" x2="352" y2="87" stroke="#3a342b" stroke-opacity="0.5"></line>
+<line x1="34" y1="14" x2="352" y2="14" stroke="#3a342b" stroke-opacity="0.5"></line>
+<text x="28" y="178" text-anchor="end" font-size="11" fill="#a39880">32m</text>
+<text x="28" y="91" text-anchor="end" font-size="11" fill="#a39880">41m</text>
+<text x="28" y="18" text-anchor="end" font-size="11" fill="#a39880">49m</text>
+<text x="34" y="192" text-anchor="middle" font-size="11" fill="#a39880">5 AM</text>
+<text x="108.8" y="192" text-anchor="middle" font-size="11" fill="#a39880">9 AM</text>
+<text x="183.6" y="192" text-anchor="middle" font-size="11" fill="#a39880">1 PM</text>
+<text x="258.5" y="192" text-anchor="middle" font-size="11" fill="#a39880">5 PM</text>
+<text x="333.3" y="192" text-anchor="middle" font-size="11" fill="#a39880">9 PM</text>
+<polygon points="34,164 52.7,135 71.4,66 90.1,26 108.8,47 127.5,57 146.2,62 164.9,66 183.6,86 202.4,91 221.1,86 239.8,80 258.5,88 277.2,125 295.9,131 314.6,131 333.3,126 352,131 352,147 333.3,142 314.6,147 295.9,147 277.2,142 258.5,116 239.8,99 221.1,104 202.4,109 183.6,104 164.9,85 146.2,80 127.5,75 108.8,66 90.1,46 71.4,85 52.7,152 34,181" fill="oklch(0.45 0.11 150)" fill-opacity="0.16"></polygon>
+<polyline points="34,174 52.7,145 71.4,77.5 90.1,38.9 108.8,58.2 127.5,67.9 146.2,72.7 164.9,77.5 183.6,96.8 202.4,101.6 221.1,96.8 239.8,92 258.5,106.5 277.2,135.4 295.9,140.2 314.6,140.2 333.3,135.4 352,140.2" fill="none" stroke="oklch(0.45 0.11 150)" stroke-width="2"></polyline>
+<polyline points="34,164.4 52.7,135.4 71.4,58.2 90.1,29.3 108.8,48.6 127.5,63.1 146.2,67.9 164.9,72.7 183.6,87.2" fill="none" stroke="oklch(0.75 0.11 60)" stroke-width="3" stroke-linecap="round"></polyline>
+<circle cx="183.6" cy="87.2" r="4.5" fill="oklch(0.75 0.11 60)"></circle>
+<text x="183.6" y="74" text-anchor="middle" font-size="11" font-weight="700" fill="oklch(0.75 0.11 60)" stroke="#2b2620" stroke-width="4" paint-order="stroke">now · 41m</text>
+</svg>
+<div style="font:400 11px/1.5 'Atkinson Hyperlegible',sans-serif;color:#6e6553;margin-top:8px">Typical range = the middle half of recorded days.</div>
+</div></div>
+</div>
+
+<div class="dv-opt" id="1e">
+<div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>One-row controls — select and direction share a row; header collapses to a single line; chart gets more of the viewport</div>
+<div class="dv-card" style="width:390px;padding:14px 14px 20px">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 12px"><div style="display:flex;align-items:baseline;gap:8px"><span style="font:800 17px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">Teton Pass Cam</span><span style="font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">History</span></div><div style="font:700 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;white-space:nowrap">← Live</div></div>
+<div style="font:800 24px/1.15 'Bricolage Grotesque',sans-serif;letter-spacing:-0.015em">When should you leave?</div>
+<div style="display:flex;gap:8px;margin-top:12px">
+<select style="appearance:none;-webkit-appearance:none;box-sizing:border-box;flex:1;min-width:0;height:44px;padding:0 32px 0 12px;background:#2b2620 url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%3E%3Cpath%20d%3D%22M1%201l5%205%205-5%22%20stroke%3D%22%23a39880%22%20stroke-width%3D%222%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E') no-repeat right 12px center;border:1px solid #3a342b;border-radius:12px;color:#f0ebe1;font:700 14px 'Bricolage Grotesque',sans-serif">
+<option>Victor → Jackson</option><option>Driggs → Jackson</option><option>Victor → Teton Village</option><option>Driggs → Teton Village</option><option>Victor → Airport</option><option>Driggs → Airport</option>
+</select>
+<div style="display:flex;background:#2b2620;border:1px solid #3a342b;border-radius:999px;padding:3px;gap:3px;flex:none">
+<div style="padding:8px 12px;border-radius:999px;background:#f0ebe1;color:#211d17;font:700 12px 'Atkinson Hyperlegible',sans-serif;display:flex;align-items:center">→ JXN</div>
+<div style="padding:8px 12px;border-radius:999px;color:#a39880;font:700 12px 'Atkinson Hyperlegible',sans-serif;display:flex;align-items:center">→ VIC</div>
+</div>
+</div>
+<div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;margin-top:8px">Typical range for a summer Monday · Town Square</div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:16px;padding:14px;margin-top:8px">
+<svg viewBox="0 0 360 200" style="display:block;width:100%;height:auto" role="img" aria-label="Travel time by hour">
+<line x1="34" y1="10" x2="34" y2="174" stroke="#3a342b"></line>
+<line x1="34" y1="174" x2="352" y2="174" stroke="#3a342b"></line>
+<line x1="34" y1="87" x2="352" y2="87" stroke="#3a342b" stroke-opacity="0.5"></line>
+<line x1="34" y1="14" x2="352" y2="14" stroke="#3a342b" stroke-opacity="0.5"></line>
+<text x="28" y="178" text-anchor="end" font-size="11" fill="#a39880">32m</text>
+<text x="28" y="91" text-anchor="end" font-size="11" fill="#a39880">41m</text>
+<text x="28" y="18" text-anchor="end" font-size="11" fill="#a39880">49m</text>
+<text x="34" y="192" text-anchor="middle" font-size="11" fill="#a39880">5 AM</text>
+<text x="108.8" y="192" text-anchor="middle" font-size="11" fill="#a39880">9 AM</text>
+<text x="183.6" y="192" text-anchor="middle" font-size="11" fill="#a39880">1 PM</text>
+<text x="258.5" y="192" text-anchor="middle" font-size="11" fill="#a39880">5 PM</text>
+<text x="333.3" y="192" text-anchor="middle" font-size="11" fill="#a39880">9 PM</text>
+<polygon points="34,164 52.7,135 71.4,66 90.1,26 108.8,47 127.5,57 146.2,62 164.9,66 183.6,86 202.4,91 221.1,86 239.8,80 258.5,88 277.2,125 295.9,131 314.6,131 333.3,126 352,131 352,147 333.3,142 314.6,147 295.9,147 277.2,142 258.5,116 239.8,99 221.1,104 202.4,109 183.6,104 164.9,85 146.2,80 127.5,75 108.8,66 90.1,46 71.4,85 52.7,152 34,181" fill="oklch(0.45 0.11 150)" fill-opacity="0.16"></polygon>
+<polyline points="34,174 52.7,145 71.4,77.5 90.1,38.9 108.8,58.2 127.5,67.9 146.2,72.7 164.9,77.5 183.6,96.8 202.4,101.6 221.1,96.8 239.8,92 258.5,106.5 277.2,135.4 295.9,140.2 314.6,140.2 333.3,135.4 352,140.2" fill="none" stroke="oklch(0.45 0.11 150)" stroke-width="2"></polyline>
+<polyline points="34,164.4 52.7,135.4 71.4,58.2 90.1,29.3 108.8,48.6 127.5,63.1 146.2,67.9 164.9,72.7 183.6,87.2" fill="none" stroke="oklch(0.75 0.11 60)" stroke-width="3" stroke-linecap="round"></polyline>
+<circle cx="183.6" cy="87.2" r="4.5" fill="oklch(0.75 0.11 60)"></circle>
+<text x="183.6" y="74" text-anchor="middle" font-size="11" font-weight="700" fill="oklch(0.75 0.11 60)" stroke="#2b2620" stroke-width="4" paint-order="stroke">now · 41m</text>
+</svg>
+<div style="display:flex;gap:14px;align-items:center;margin-top:10px;font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.75 0.11 60);border-radius:1px"></span>Today</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.45 0.11 150);border-radius:1px"></span>Typical</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:9px;background:oklch(0.45 0.11 150);opacity:.45;border-radius:1px"></span>Range</span>
+</div>
+</div>
+<div style="font:800 20px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em;margin-top:20px">Summit temperature</div>
+<div style="font:400 12px/1.45 'Atkinson Hyperlegible',sans-serif;color:#a39880;margin-top:2px">Section headings drop from 30px to 20px on phones — subordinate to the page H1 instead of competing with it.</div>
+</div>
+</div>
+
+<div class="dv-grp">D · Weather on mobile <span>— fixed-height tiles, no wrapping; forecast values that fit their columns</span></div>
+
+<div class="dv-opt" id="cur-wx" style="opacity:.75">
+<div class="dv-olabel"><span class="dv-oid" style="background:rgba(0,0,0,.04);color:rgba(0,0,0,.45)">current</span>Recreated from WeatherStrip/ForecastStrip — "11.2 mph E" wraps to 3 lines and stretches the whole row; "68°F / 50°F" breaks across lines</div>
+<div class="dv-card" style="width:390px;padding:14px">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px;text-align:center"><div style="font:800 18px 'Bricolage Grotesque',sans-serif">50°F</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase">Air</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px;text-align:center"><div style="font:800 18px 'Bricolage Grotesque',sans-serif">51°F</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase">Road</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px;text-align:center"><div style="font:800 18px 'Bricolage Grotesque',sans-serif">11.2 mph E</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase">Gust</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px;text-align:center"><div style="font:800 18px 'Bricolage Grotesque',sans-serif">1.2 mi</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase">Visibility</div></div>
+<div style="grid-column:span 2;background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:12px;text-align:center"><div style="font:800 18px 'Bricolage Grotesque',sans-serif">Wet with Rain</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase">Surface</div></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 4px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">TODAY</div><div style="font-size:20px;margin:4px 0">🌦</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif">68°F / 50°F</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">21%</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 4px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">TUE</div><div style="font-size:20px;margin:4px 0">⛈</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif">66°F / 51°F</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">22%</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 4px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">WED</div><div style="font-size:20px;margin:4px 0">☀️</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif">66°F / 51°F</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">3%</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 4px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">THU</div><div style="font-size:20px;margin:4px 0">☀️</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif">71°F / 52°F</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">5%</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 4px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">FRI</div><div style="font-size:20px;margin:4px 0">⛈</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif">73°F / 57°F</div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">15%</div></div>
+</div></div>
+</div>
+
+<div class="dv-opt" id="1f">
+<div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>2-up stat tiles — label above value, uniform 64px height, gust rounded to "11 mph E", forecast shows "68° / 50°" (units in the heading)</div>
+<div class="dv-card" style="width:390px;padding:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Summit conditions</div><div style="font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">WY-22 · 8,431 ft</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Air</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif;white-space:nowrap">50°F</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Road</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif;white-space:nowrap">51°F</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Gust</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif;white-space:nowrap">11 mph E</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Visibility</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif;white-space:nowrap">1.2 mi</div></div>
+<div style="grid-column:span 2;background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:10px 14px;height:64px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Surface</div><div style="font:800 19px 'Bricolage Grotesque',sans-serif">Wet with rain</div></div>
+</div>
+<div style="font:700 15px 'Bricolage Grotesque',sans-serif;margin-top:16px">5-day forecast <span style="font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">high / low °F</span></div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 2px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">TODAY</div><div style="font-size:18px;margin:4px 0">🌦</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif;white-space:nowrap">68° <span style="color:#a39880;font-weight:400">50°</span></div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">21%</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 2px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">TUE</div><div style="font-size:18px;margin:4px 0">⛈</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif;white-space:nowrap">66° <span style="color:#a39880;font-weight:400">51°</span></div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">22%</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 2px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">WED</div><div style="font-size:18px;margin:4px 0">☀️</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif;white-space:nowrap">66° <span style="color:#a39880;font-weight:400">51°</span></div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">3%</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 2px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">THU</div><div style="font-size:18px;margin:4px 0">☀️</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif;white-space:nowrap">71° <span style="color:#a39880;font-weight:400">52°</span></div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">5%</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;padding:8px 2px;text-align:center"><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">FRI</div><div style="font-size:18px;margin:4px 0">⛈</div><div style="font:800 13px 'Bricolage Grotesque',sans-serif;white-space:nowrap">73° <span style="color:#a39880;font-weight:400">57°</span></div><div style="font:400 10.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">15%</div></div>
+</div></div>
+</div>
+
+<div class="dv-opt" id="1g">
+<div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>List rows — one compact card, label left / value right, 44px rows; densest option, nothing can ever wrap</div>
+<div class="dv-card" style="width:390px;padding:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Summit conditions</div><div style="font:400 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">WY-22 · 8,431 ft</div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;margin-top:8px">
+<div style="display:flex;justify-content:space-between;align-items:center;height:44px;padding:0 14px;border-bottom:1px solid #3a342b"><div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Surface</div><div style="font:800 16px 'Bricolage Grotesque',sans-serif">Wet with rain</div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;height:44px;padding:0 14px;border-bottom:1px solid #3a342b"><div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Air / Road</div><div style="font:800 16px 'Bricolage Grotesque',sans-serif">50°F <span style="color:#a39880;font-weight:400">/</span> 51°F</div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;height:44px;padding:0 14px;border-bottom:1px solid #3a342b"><div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Gust</div><div style="font:800 16px 'Bricolage Grotesque',sans-serif">11 mph E</div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;height:44px;padding:0 14px"><div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;text-transform:uppercase;letter-spacing:.04em">Visibility</div><div style="font:800 16px 'Bricolage Grotesque',sans-serif">1.2 mi</div></div>
+</div>
+<div style="font:400 11px/1.5 'Atkinson Hyperlegible',sans-serif;color:#6e6553;margin-top:8px">Surface leads the list — it's the go / no-go reading. Winter ordering puts Road temp second.</div>
+</div>
+</div>
+
+<div class="dv-grp">E · Report-conditions sheet <span>— pinned to the viewport so the top is always visible, no matter where you scrolled</span></div>
+
+<div class="dv-opt" id="1h">
+<div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Viewport-pinned bottom sheet — position:fixed, max-height 85dvh, body scroll locked, type grid scrolls inside, Send stays pinned at the sheet's foot</div>
+<div class="dv-card" style="width:390px;height:720px;position:relative;background:#211d17">
+<div style="position:absolute;inset:0;padding:14px;filter:blur(1px);opacity:.35">
+<div style="font:800 17px 'Bricolage Grotesque',sans-serif">Teton Pass Cam</div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;height:72px;margin-top:12px"></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;height:72px;margin-top:8px"></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;height:120px;margin-top:8px"></div>
+</div>
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;max-height:85%;background:#2b2620;border-radius:18px 18px 0 0;display:flex;flex-direction:column">
+<div style="padding:10px 16px 0;flex:none"><div style="width:36px;height:4px;border-radius:999px;background:#3a342b;margin:0 auto"></div>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:12px"><div><div style="font:800 20px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">What are you seeing?</div><div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;margin-top:2px">No account needed. Reports expire on their own.</div></div><div style="color:#a39880;font-size:14px;padding:2px 4px">✕</div></div></div>
+<div style="padding:12px 16px 4px;overflow:hidden;flex:1;position:relative">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="border:2px solid #f0ebe1;border-radius:14px;padding:11px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">💥</span><span style="font:700 13px 'Atkinson Hyperlegible',sans-serif">Crash</span></div>
+<div style="border:1px solid #3a342b;border-radius:14px;padding:12px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">🛞</span><span style="font:700 13px 'Atkinson Hyperlegible',sans-serif">Slide-off</span></div>
+<div style="border:1px solid #3a342b;border-radius:14px;padding:12px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">❄️</span><span style="font:700 13px 'Atkinson Hyperlegible',sans-serif">Slick/Ice</span></div>
+<div style="border:1px solid #3a342b;border-radius:14px;padding:12px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">🦌</span><span style="font:700 13px 'Atkinson Hyperlegible',sans-serif">Wildlife</span></div>
+<div style="border:1px solid #3a342b;border-radius:14px;padding:12px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">🚗</span><span style="font:700 13px 'Atkinson Hyperlegible',sans-serif">Stopped traffic</span></div>
+<div style="border:1px solid #3a342b;border-radius:14px;padding:12px;display:flex;align-items:center;gap:8px"><span style="font-size:16px">🚧</span><span style="font:700 13px 'Atkinson Hyperlegible',sans-serif">Closure</span></div>
+<div style="grid-column:span 2;border:1px solid #3a342b;border-radius:14px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:16px">⚠️</span><span style="font:700 13px 'Atkinson Hyperlegible',sans-serif">Other</span></div>
+</div>
+<div style="display:flex;gap:8px;margin-top:10px">
+<div style="flex:1;border:1px solid #3a342b;border-radius:999px;padding:10px 0;text-align:center;font:700 13px 'Atkinson Hyperlegible',sans-serif;color:#a39880">WB → Victor</div>
+<div style="flex:1;border:1px solid #3a342b;border-radius:999px;padding:10px 0;text-align:center;font:700 13px 'Atkinson Hyperlegible',sans-serif;color:#a39880">EB → Jackson</div>
+</div>
+<div style="border:1px solid #3a342b;border-radius:14px;padding:12px;margin-top:10px;font:400 13px 'Atkinson Hyperlegible',sans-serif;color:#6e6553">Add a note (optional)…</div>
+<div style="position:absolute;right:4px;top:12px;width:4px;height:60px;background:#3a342b;border-radius:2px"></div>
+</div>
+<div style="padding:8px 16px 16px;flex:none;border-top:1px solid #3a342b">
+<div style="height:46px;border-radius:999px;background:#f0ebe1;color:#211d17;display:flex;align-items:center;justify-content:center;font:700 15px 'Bricolage Grotesque',sans-serif">Send report</div>
+<div style="font:400 10.5px/1.5 'Atkinson Hyperlegible',sans-serif;color:#6e6553;text-align:center;margin-top:8px">Doesn't change official status — only WYDOT does. Limit 2 per 30 min.</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1i">
+<div class="dv-olabel"><a class="dv-oid" href="#1i">1i</a>Compact sheet, no internal scroll — tighter tiles and a one-line note field make the whole flow fit a 720px viewport at once</div>
+<div class="dv-card" style="width:390px;height:720px;position:relative;background:#211d17">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#2b2620;border-radius:18px 18px 0 0;padding:10px 16px 16px">
+<div style="width:36px;height:4px;border-radius:999px;background:#3a342b;margin:0 auto"></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><div style="font:800 19px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">What are you seeing?</div><div style="color:#a39880;font-size:14px">✕</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">
+<div style="border:2px solid #f0ebe1;border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:7px"><span style="font-size:14px">💥</span><span style="font:700 12.5px 'Atkinson Hyperlegible',sans-serif">Crash</span></div>
+<div style="border:1px solid #3a342b;border-radius:12px;padding:9px 10px;display:flex;align-items:center;gap:7px"><span style="font-size:14px">🛞</span><span style="font:700 12.5px 'Atkinson Hyperlegible',sans-serif">Slide-off</span></div>
+<div style="border:1px solid #3a342b;border-radius:12px;padding:9px 10px;display:flex;align-items:center;gap:7px"><span style="font-size:14px">❄️</span><span style="font:700 12.5px 'Atkinson Hyperlegible',sans-serif">Slick/Ice</span></div>
+<div style="border:1px solid #3a342b;border-radius:12px;padding:9px 10px;display:flex;align-items:center;gap:7px"><span style="font-size:14px">🦌</span><span style="font:700 12.5px 'Atkinson Hyperlegible',sans-serif">Wildlife</span></div>
+<div style="border:1px solid #3a342b;border-radius:12px;padding:9px 10px;display:flex;align-items:center;gap:7px"><span style="font-size:14px">🚗</span><span style="font:700 12.5px 'Atkinson Hyperlegible',sans-serif">Stopped traffic</span></div>
+<div style="border:1px solid #3a342b;border-radius:12px;padding:9px 10px;display:flex;align-items:center;gap:7px"><span style="font-size:14px">🚧</span><span style="font:700 12.5px 'Atkinson Hyperlegible',sans-serif">Closure</span></div>
+<div style="grid-column:span 2;border:1px solid #3a342b;border-radius:12px;padding:9px;display:flex;align-items:center;justify-content:center;gap:7px"><span style="font-size:14px">⚠️</span><span style="font:700 12.5px 'Atkinson Hyperlegible',sans-serif">Other</span></div>
+</div>
+<div style="display:flex;gap:6px;margin-top:8px">
+<div style="flex:1;border:1px solid #3a342b;border-radius:999px;padding:9px 0;text-align:center;font:700 12.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">WB → Victor</div>
+<div style="flex:1;border:1px solid #3a342b;border-radius:999px;padding:9px 0;text-align:center;font:700 12.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">EB → Jackson</div>
+</div>
+<div style="border:1px solid #3a342b;border-radius:12px;padding:11px 12px;margin-top:8px;font:400 12.5px 'Atkinson Hyperlegible',sans-serif;color:#6e6553">Add a note (optional)…</div>
+<div style="height:46px;border-radius:999px;background:#f0ebe1;color:#211d17;display:flex;align-items:center;justify-content:center;font:700 15px 'Bricolage Grotesque',sans-serif;margin-top:10px">Send report</div>
+<div style="font:400 10.5px/1.5 'Atkinson Hyperlegible',sans-serif;color:#6e6553;text-align:center;margin-top:8px">Doesn't change official status — only WYDOT does. Limit 2 per 30 min.</div>
+</div>
+</div>
+</div>
+
+<div class="dv-grp">F · Desktop width <span>— column widened 720px → 960px; drive times go 2-up so the extra width carries information, not just longer cards</span></div>
+
+<div class="dv-opt" id="1j">
+<div class="dv-olabel"><a class="dv-oid" href="#1j">1j</a>960px column — 2-up drive-time grid with the <a class="dv-oid" href="#1a">1a</a> hierarchy; chart drawn in a wide viewBox so axis text holds ~13px on screen</div>
+<div class="dv-card" style="width:1000px;padding:20px 28px 28px">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 16px"><div style="display:flex;align-items:center;gap:10px"><img src="icons/icon-192-dark.png" width="36" height="36" alt="" style="border-radius:8px"><span style="font:800 21px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">Teton Pass Cam</span></div><div style="display:flex;align-items:center;gap:14px"><span style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Live cams &amp; conditions · Mon 10:50 PM</span><span style="background:#f0ebe1;color:#211d17;border-radius:999px;padding:9px 18px;font:700 13px 'Bricolage Grotesque',sans-serif">⚠ Report conditions</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 17px 'Bricolage Grotesque',sans-serif">Drive times right now</div><div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Updated 10:50 PM · <span style="font-weight:700;color:oklch(0.75 0.11 60)">⇄ Flip direction</span></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px"><div><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Victor → Jackson</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Town Square</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">38 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:oklch(0.72 0.12 150)">2 min faster than usual</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px"><div><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Driggs → Jackson</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Town Square</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">48 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">about usual</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px"><div><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Victor → Teton Village</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">JHMR</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">37 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">about usual</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px"><div><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Driggs → Teton Village</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">JHMR</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">48 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:#a39880">about usual</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px"><div><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Victor → Airport</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Airport</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">52 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:oklch(0.72 0.14 30)">6 min slower than usual</div></div></div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:14px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px"><div><div style="font:700 16px 'Bricolage Grotesque',sans-serif">Driggs → Airport</div><div style="font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">Airport</div></div><div style="text-align:right"><div style="font:800 19px 'Bricolage Grotesque',sans-serif">63 min</div><div style="font:700 11px 'Atkinson Hyperlegible',sans-serif;color:oklch(0.72 0.14 30)">10 min slower than usual</div></div></div>
+</div>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:16px;padding:18px 20px;margin-top:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div><span style="font:700 16px 'Bricolage Grotesque',sans-serif">When should you leave?</span><span style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880;margin-left:10px">Victor → Jackson</span></div><div style="font:400 12px 'Atkinson Hyperlegible',sans-serif;color:#a39880">See full history →</div></div>
+<div style="display:flex;gap:16px;align-items:center;margin:10px 0 4px;font:400 11.5px 'Atkinson Hyperlegible',sans-serif;color:#a39880">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.75 0.11 60);border-radius:1px"></span>Today</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.45 0.11 150);border-radius:1px"></span>Typical day</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:9px;background:oklch(0.45 0.11 150);opacity:.45;border-radius:1px"></span>Typical range</span>
+</div>
+<svg viewBox="0 0 900 220" style="display:block;width:100%;height:auto" role="img" aria-label="Travel time by hour of day">
+<line x1="40" y1="10" x2="40" y2="194" stroke="#3a342b"></line>
+<line x1="40" y1="194" x2="890" y2="194" stroke="#3a342b"></line>
+<line x1="40" y1="96.6" x2="890" y2="96.6" stroke="#3a342b" stroke-opacity="0.5"></line>
+<line x1="40" y1="14" x2="890" y2="14" stroke="#3a342b" stroke-opacity="0.5"></line>
+<text x="34" y="198" text-anchor="end" font-size="13" fill="#a39880">32m</text>
+<text x="34" y="101" text-anchor="end" font-size="13" fill="#a39880">41m</text>
+<text x="34" y="18" text-anchor="end" font-size="13" fill="#a39880">49m</text>
+<text x="40" y="214" text-anchor="middle" font-size="13" fill="#a39880">5 AM</text>
+<text x="190" y="214" text-anchor="middle" font-size="13" fill="#a39880">8 AM</text>
+<text x="340" y="214" text-anchor="middle" font-size="13" fill="#a39880">11 AM</text>
+<text x="490" y="214" text-anchor="middle" font-size="13" fill="#a39880">2 PM</text>
+<text x="640" y="214" text-anchor="middle" font-size="13" fill="#a39880">5 PM</text>
+<text x="790" y="214" text-anchor="middle" font-size="13" fill="#a39880">8 PM</text>
+<polygon points="40,181 90,148.5 140,72.8 190,29.5 240,51.1 290,61.9 340,67.4 390,72.8 440,94.4 490,99.8 540,94.4 590,89 640,105.2 690,137.7 740,143.1 790,143.1 840,137.7 890,143.1 890,165.1 840,159.7 790,165.1 740,165.1 690,159.7 640,127.2 590,111 540,116.4 490,121.8 440,116.4 390,94.8 340,89.4 290,83.9 240,73.1 190,51.5 140,94.8 90,170.5 40,203" fill="oklch(0.45 0.11 150)" fill-opacity="0.16"></polygon>
+<polyline points="40,194 90,161.5 140,85.8 190,42.5 240,64.1 290,74.9 340,80.4 390,85.8 440,107.4 490,112.8 540,107.4 590,102 640,118.2 690,150.7 740,156.1 790,156.1 840,150.7 890,156.1" fill="none" stroke="oklch(0.45 0.11 150)" stroke-width="2"></polyline>
+<polyline points="40,183.2 90,150.7 140,64.1 190,31.6 240,53.3 290,69.5 340,74.9 390,80.4 440,96.6" fill="none" stroke="oklch(0.75 0.11 60)" stroke-width="3" stroke-linecap="round"></polyline>
+<circle cx="440" cy="96.6" r="5" fill="oklch(0.75 0.11 60)"></circle>
+<text x="440" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="oklch(0.75 0.11 60)" stroke="#2b2620" stroke-width="4" paint-order="stroke">now · 41m</text>
+</svg>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "apply <a class="dv-oid" href="#1a">1a</a> + <a class="dv-oid" href="#1d">1d</a> + <a class="dv-oid" href="#1f">1f</a> + <a class="dv-oid" href="#1h">1h</a> as one full prototype" · "make the history dropdown include direction" · "show the desktop /history page too"</p>
+</section>
+</x-dc>
+</body>
+</html>

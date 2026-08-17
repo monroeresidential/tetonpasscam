@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<style>
+@font-face{font-family:'Bricolage Grotesque';src:url('fonts/bricolage-latin-wght.woff2') format('woff2-variations');font-weight:200 800;font-display:swap}
+@font-face{font-family:'Atkinson Hyperlegible';src:url('fonts/atkinson-latin-400.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Atkinson Hyperlegible';src:url('fonts/atkinson-latin-700.woff2') format('woff2');font-weight:700;font-display:swap}
+body{margin:0;background:#211d17;color:#f0ebe1;font-family:'Atkinson Hyperlegible',ui-sans-serif,sans-serif}
+a{color:oklch(0.75 0.11 60)}a:hover{color:oklch(0.82 0.11 60)}
+</style>
+</helmet>
+<div style="min-height:100vh;padding-bottom:40px">
+<div style="max-width:960px;margin:0 auto;padding:0 14px">
+
+<header style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 0 12px">
+<div style="display:flex;align-items:baseline;gap:8px;min-width:0"><a href="Teton Pass Home v2.dc.html" style="font:800 17px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em;color:#f0ebe1;text-decoration:none;white-space:nowrap">Teton Pass Cam</a><span style="font-size:11px;color:#a39880">History</span></div>
+<a href="Teton Pass Home v2.dc.html" style="font-weight:700;font-size:12px;color:#a39880;text-decoration:none;white-space:nowrap">← Live</a>
+</header>
+
+<h1 style="margin:0;font:800 24px/1.15 'Bricolage Grotesque',sans-serif;letter-spacing:-0.015em">When should you leave?</h1>
+
+<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+<select value="{{ selectedSlug }}" onChange="{{ pickRoute }}" style="appearance:none;-webkit-appearance:none;box-sizing:border-box;flex:1;min-width:200px;height:44px;padding:0 32px 0 12px;background:#2b2620 url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%3E%3Cpath%20d%3D%22M1%201l5%205%205-5%22%20stroke%3D%22%23a39880%22%20stroke-width%3D%222%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E') no-repeat right 12px center;border:1px solid #3a342b;border-radius:12px;color:#f0ebe1;font:700 14px 'Bricolage Grotesque',sans-serif;cursor:pointer">
+<sc-for list="{{ sideRoutes }}" as="r" hint-placeholder-count="6">
+<option value="{{ r.slug }}">{{ r.name }}</option>
+</sc-for>
+</select>
+<div style="display:flex;background:#2b2620;border:1px solid #3a342b;border-radius:999px;padding:3px;gap:3px;flex:none">
+<button type="button" onClick="{{ pickWy }}" style="{{ wyStyle }}">→ WY</button>
+<button type="button" onClick="{{ pickId }}" style="{{ idStyle }}">→ ID</button>
+</div>
+</div>
+<div style="font-size:12px;color:#a39880;margin-top:8px">{{ subline }}</div>
+
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:16px;padding:16px;margin-top:8px">
+<svg viewBox="0 0 {{ chart.w }} {{ chart.h }}" style="display:block;width:100%;height:auto" role="img" aria-label="Travel time by hour of day, today against the typical range">
+<line x1="{{ chart.padL }}" y1="{{ chart.padT }}" x2="{{ chart.padL }}" y2="{{ chart.plotB }}" stroke="#3a342b"></line>
+<line x1="{{ chart.padL }}" y1="{{ chart.plotB }}" x2="{{ chart.plotR }}" y2="{{ chart.plotB }}" stroke="#3a342b"></line>
+{{ chart.ticks }}
+<polygon points="{{ chart.band }}" fill="oklch(0.45 0.11 150)" fill-opacity="0.16"></polygon>
+<polyline points="{{ chart.med }}" fill="none" stroke="oklch(0.45 0.11 150)" stroke-width="2"></polyline>
+<polyline points="{{ chart.today }}" fill="none" stroke="oklch(0.75 0.11 60)" stroke-width="3" stroke-linecap="round"></polyline>
+<circle cx="{{ chart.nowX }}" cy="{{ chart.nowY }}" r="4.5" fill="oklch(0.75 0.11 60)"></circle>
+<text x="{{ chart.nowX }}" y="{{ chart.nowLabelY }}" text-anchor="middle" font-size="11" font-weight="700" fill="oklch(0.75 0.11 60)" stroke="#2b2620" stroke-width="4" paint-order="stroke">{{ chart.nowLabel }}</text>
+<text x="{{ chart.xTitleX }}" y="{{ chart.xTitleY }}" text-anchor="middle" font-size="11" font-weight="700" fill="#6e6553" letter-spacing="0.04em">{{ chart.xTitle }}</text>
+<text x="12" y="{{ chart.yTitleY }}" transform="{{ chart.yTitleTransform }}" text-anchor="middle" font-size="11" font-weight="700" fill="#6e6553" letter-spacing="0.04em">{{ chart.yTitle }}</text>
+</svg>
+<div style="display:flex;gap:14px;align-items:center;margin-top:10px;font-size:11px;color:#a39880;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.75 0.11 60);border-radius:1px"></span>Today</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.45 0.11 150);border-radius:1px"></span>Typical day</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:9px;background:oklch(0.45 0.11 150);opacity:.45;border-radius:1px"></span>Typical range</span>
+</div>
+</div>
+
+<section style="margin-top:24px">
+<h2 style="margin:0;font:800 20px 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">Summit temperature</h2>
+<div style="background:#2b2620;border:1px solid #3a342b;border-radius:16px;padding:16px;margin-top:10px">
+<svg viewBox="0 0 {{ tchart.w }} {{ tchart.h }}" style="display:block;width:100%;height:auto" role="img" aria-label="Summit temperature by hour of day, today's air reading against the typical range">
+<line x1="{{ tchart.padL }}" y1="{{ tchart.padT }}" x2="{{ tchart.padL }}" y2="{{ tchart.plotB }}" stroke="#3a342b"></line>
+<line x1="{{ tchart.padL }}" y1="{{ tchart.plotB }}" x2="{{ tchart.plotR }}" y2="{{ tchart.plotB }}" stroke="#3a342b"></line>
+{{ tchart.ticks }}
+<polygon points="{{ tchart.band }}" fill="oklch(0.45 0.11 150)" fill-opacity="0.16"></polygon>
+<polyline points="{{ tchart.med }}" fill="none" stroke="oklch(0.45 0.11 150)" stroke-width="2"></polyline>
+<polyline points="{{ tchart.secondary }}" fill="none" stroke="#a39880" stroke-width="2" stroke-dasharray="4 3"></polyline>
+<polyline points="{{ tchart.today }}" fill="none" stroke="oklch(0.75 0.11 60)" stroke-width="3" stroke-linecap="round"></polyline>
+<circle cx="{{ tchart.nowX }}" cy="{{ tchart.nowY }}" r="4.5" fill="oklch(0.75 0.11 60)"></circle>
+<text x="{{ tchart.nowX }}" y="{{ tchart.nowLabelY }}" text-anchor="middle" font-size="11" font-weight="700" fill="oklch(0.75 0.11 60)" stroke="#2b2620" stroke-width="4" paint-order="stroke">{{ tchart.nowLabel }}</text>
+<text x="{{ tchart.xTitleX }}" y="{{ tchart.xTitleY }}" text-anchor="middle" font-size="11" font-weight="700" fill="#6e6553" letter-spacing="0.04em">{{ tchart.xTitle }}</text>
+<text x="12" y="{{ tchart.yTitleY }}" transform="{{ tchart.yTitleTransform }}" text-anchor="middle" font-size="11" font-weight="700" fill="#6e6553" letter-spacing="0.04em">{{ tchart.yTitle }}</text>
+</svg>
+<div style="display:flex;gap:14px;align-items:center;margin-top:10px;font-size:11px;color:#a39880;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.75 0.11 60);border-radius:1px"></span>Today (air)</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:oklch(0.45 0.11 150);border-radius:1px"></span>Air, typical</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:9px;background:oklch(0.45 0.11 150);opacity:.45;border-radius:1px"></span>Typical range</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:repeating-linear-gradient(to right,#a39880 0 4px,transparent 4px 7px)"></span>Road surface, typical</span>
+</div>
+</div>
+</section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const HOURS = Array.from({length: 18}, (_, i) => i + 5);
+const SHAPE38 = [32, 35, 42, 46, 44, 43, 42.5, 42, 40, 39.5, 40, 40.5, 39, 36, 35.5, 35.5, 36, 35.5];
+const AIR = [50, 50, 51, 53, 56, 59, 62, 64, 66, 67, 68, 67, 66, 64, 60, 56, 53, 51];
+
+function hourLabel(h) {
+  const suffix = h < 12 ? 'AM' : 'PM';
+  const d = h % 12 === 0 ? 12 : h % 12;
+  return d + ' ' + suffix;
+}
+
+function makeChart(values, todayVals, isDesktop, fmt, bandDelta, secondaryVals, titles) {
+  const W = isDesktop ? 900 : 360, H = isDesktop ? 236 : 216;
+  const padL = isDesktop ? 60 : 50, padR = 10, padT = 14, padB = isDesktop ? 46 : 42;
+  const plotR = W - padR, plotB = H - padB;
+  const sec = secondaryVals || [];
+  const all = values.concat(todayVals.map(t => t.v), sec, values.map(v => v + bandDelta), values.map(v => v - bandDelta * 0.7));
+  const vMin = Math.min(...all), vMax = Math.max(...all);
+  const span = vMax > vMin ? vMax - vMin : 1;
+  const x = h => padL + (h - 5) / 17 * (plotR - padL);
+  const y = v => padT + (1 - (v - vMin) / span) * (plotB - padT);
+  const pts = arr => arr.map(p => x(p.h).toFixed(1) + ',' + y(p.v).toFixed(1)).join(' ');
+  const series = values.map((v, i) => ({h: HOURS[i], v}));
+  const top = series.map(p => ({h: p.h, v: p.v + bandDelta}));
+  const bot = series.map(p => ({h: p.h, v: p.v - bandDelta * 0.7})).reverse();
+  const last = todayVals[todayVals.length - 1];
+  const yTickVals = [vMin, vMin + span / 2, vMax];
+  const fs = isDesktop ? 13 : 11;
+  const labelY = plotB + (isDesktop ? 19 : 17);
+  // Tick lines/labels built as React elements: <sc-for> inside <svg> does not
+  // survive SVG foreign-content parsing, so loops can't live in the template.
+  const ticks = [
+    ...yTickVals.map(v => React.createElement('g', {key: 'y' + v},
+      React.createElement('line', {x1: padL, y1: y(v), x2: plotR, y2: y(v), stroke: '#3a342b', strokeOpacity: 0.5}),
+      React.createElement('text', {x: padL - 8, y: y(v) + 4, textAnchor: 'end', fontSize: fs, fill: '#a39880'}, fmt(v)))),
+    ...HOURS.filter(h => (h - 5) % (isDesktop ? 3 : 4) === 0).map(h =>
+      React.createElement('text', {key: 'x' + h, x: x(h), y: labelY, textAnchor: 'middle', fontSize: fs, fill: '#a39880'}, hourLabel(h))),
+  ];
+  return {
+    ticks,
+    w: W, h: H, padL, padT, plotR, plotB, fs: isDesktop ? 13 : 11,
+    yLabelX: padL - 8, labelY: plotB + (isDesktop ? 19 : 17),
+    xTitle: titles.x, yTitle: titles.y,
+    xTitleX: padL + (plotR - padL) / 2, xTitleY: plotB + (isDesktop ? 40 : 36),
+    yTitleTransform: 'rotate(-90 12 ' + ((padT + plotB) / 2).toFixed(0) + ')',
+    yTitleY: (padT + plotB) / 2,
+    med: pts(series), band: pts(top) + ' ' + pts(bot), today: pts(todayVals),
+    secondary: sec.length ? pts(sec.map((v, i) => ({h: HOURS[i], v}))) : '',
+    nowX: x(last.h).toFixed(1), nowY: y(last.v).toFixed(1), nowLabelY: (y(last.v) - 13).toFixed(1),
+    nowLabel: 'now · ' + fmt(last.v),
+    yTicks: yTickVals.map(v => ({y: y(v).toFixed(1), ty: (y(v) + 4).toFixed(1), label: fmt(v)})),
+    xTicks: HOURS.filter(h => (h - 5) % (isDesktop ? 3 : 4) === 0).map(h => ({x: x(h).toFixed(1), label: hourLabel(h)})),
+  };
+}
+
+// Toward WY (Jackson side) vs toward ID (Victor/Driggs side) — the user's
+// note: from Jackson there are TWO Idaho destinations, so direction alone
+// can't name one town; the segmented control picks the side, the dropdown
+// picks the exact pair.
+const WY_ROUTES = [
+  {slug: 'vj', name: 'Victor → Jackson', sub: 'Town Square', mins: 38},
+  {slug: 'dj', name: 'Driggs → Jackson', sub: 'Town Square', mins: 48},
+  {slug: 'vt', name: 'Victor → Teton Village', sub: 'JHMR', mins: 37},
+  {slug: 'dt', name: 'Driggs → Teton Village', sub: 'JHMR', mins: 48},
+  {slug: 'va', name: 'Victor → Airport', sub: 'Airport', mins: 52},
+  {slug: 'da', name: 'Driggs → Airport', sub: 'Airport', mins: 63},
+];
+const ID_ROUTES = [
+  {slug: 'jv', name: 'Jackson → Victor', sub: 'Town Square', mins: 36},
+  {slug: 'jd', name: 'Jackson → Driggs', sub: 'Town Square', mins: 46},
+  {slug: 'tv', name: 'Teton Village → Victor', sub: 'JHMR', mins: 35},
+  {slug: 'td', name: 'Teton Village → Driggs', sub: 'JHMR', mins: 47},
+  {slug: 'av', name: 'Airport → Victor', sub: 'Airport', mins: 50},
+  {slug: 'ad', name: 'Airport → Driggs', sub: 'Airport', mins: 61},
+];
+
+const DESKTOP_Q = '(min-width: 860px)';
+const SEG_ON = 'border:none;cursor:pointer;padding:8px 14px;border-radius:999px;background:#f0ebe1;color:#211d17;font:700 12px Atkinson Hyperlegible,sans-serif;';
+const SEG_OFF = 'border:none;cursor:pointer;padding:8px 14px;border-radius:999px;background:none;color:#a39880;font:700 12px Atkinson Hyperlegible,sans-serif;';
+
+class Component extends DCLogic {
+  state = {
+    side: 'wy', slug: 'vj',
+    isDesktop: typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(DESKTOP_Q).matches : false,
+  };
+
+  componentDidMount() {
+    this.mql = window.matchMedia(DESKTOP_Q);
+    this.onMql = () => this.setState({isDesktop: this.mql.matches});
+    this.mql.addEventListener('change', this.onMql);
+  }
+  componentWillUnmount() {
+    if (this.mql) this.mql.removeEventListener('change', this.onMql);
+  }
+
+  renderVals() {
+    const {side, slug, isDesktop} = this.state;
+    const sideRoutes = side === 'wy' ? WY_ROUTES : ID_ROUTES;
+    const route = sideRoutes.find(r => r.slug === slug) || sideRoutes[0];
+    const vals = SHAPE38.map(v => v * route.mins / 38);
+    const todayVals = vals.slice(0, 9).map((v, i) => ({h: HOURS[i], v: v + 1}));
+    todayVals[8] = {h: HOURS[8], v: route.mins};
+    const chart = makeChart(vals, todayVals, isDesktop, v => Math.round(v) + 'm', 2.4 * route.mins / 38, null, {x: 'Time of day (MT)', y: 'Travel time (min)'});
+
+    const surface = AIR.map(v => v + 3);
+    const tToday = AIR.slice(0, 9).map((v, i) => ({h: HOURS[i], v: v - 1}));
+    const tchart = makeChart(AIR, tToday, isDesktop, v => Math.round(v) + '°F', 3, surface, {x: 'Time of day (MT)', y: 'Temperature (°F)'});
+
+    return {
+      isDesktop, sideRoutes, selectedSlug: route.slug,
+      subline: 'Typical range for a summer Monday · ' + route.sub,
+      pickRoute: e => this.setState({slug: e.target.value}),
+      pickWy: () => this.setState({side: 'wy', slug: 'vj'}),
+      pickId: () => this.setState({side: 'id', slug: 'jv'}),
+      wyStyle: side === 'wy' ? SEG_ON : SEG_OFF,
+      idStyle: side === 'id' ? SEG_ON : SEG_OFF,
+      chart, tchart,
+    };
+  }
+}
+</script>
+</body>
+</html>
