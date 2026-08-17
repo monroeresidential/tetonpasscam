@@ -227,3 +227,152 @@ describe('HistoryPage temp chart', () => {
     expect(within(tempCard).getByTestId('median')).toBeTruthy();
   });
 });
+
+/**
+ * Stubs `/api/status` with several routes split across both eb/wb directions
+ * (so the select has real choices and the WY/ID toggle has somewhere to
+ * reset to), and `/api/history` + `/api/weather-history` with typicals in
+ * the SAME weekend/summer population `denverNow()` reports for the pinned
+ * time below -- an empty/mismatched population makes both charts render
+ * their "no history" message instead of a plotted SVG, and the axis-title
+ * assertions below would find nothing to match against.
+ */
+function renderHistory() {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date('2026-08-15T18:00:00.000Z')); // Sat, noon MDT -> weekend/summer
+
+  // MemoryStorage (test/app/setup.ts) is a module-level singleton shared by
+  // every test in this file, not reset between them -- the Celsius test
+  // above leaves 'C' behind, which would silently flip the
+  // "Temperature (°F)" assertion below.
+  localStorage.setItem('temp-unit', 'F');
+
+  const EB_ROUTES = [
+    { slug: 'victor-jackson-eb', name: 'Victor → Jackson' },
+    { slug: 'driggs-jackson-eb', name: 'Driggs → Jackson' },
+    { slug: 'victor-airport-eb', name: 'Victor → Airport' },
+  ];
+  const WB_ROUTES = [
+    { slug: 'jackson-victor-wb', name: 'Jackson → Victor' },
+    { slug: 'jackson-driggs-wb', name: 'Jackson → Driggs' },
+  ];
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) => {
+      const u = String(url);
+      if (u.startsWith('/api/status')) {
+        return { ok: true, json: async () => ({ travelTimes: [...EB_ROUTES, ...WB_ROUTES] }) };
+      }
+      if (u.startsWith('/api/weather-history')) {
+        return {
+          ok: true,
+          json: async () => ({
+            typicals: [
+              {
+                metric: 'air_f',
+                weekdayClass: 'weekend',
+                season: 'summer',
+                hour: 8,
+                median: 50,
+                p25: 45,
+                p75: 55,
+                sampleCount: 30,
+                distinctDays: 9,
+              },
+              {
+                metric: 'air_f',
+                weekdayClass: 'weekend',
+                season: 'summer',
+                hour: 9,
+                median: 55,
+                p25: 50,
+                p75: 60,
+                sampleCount: 30,
+                distinctDays: 9,
+              },
+            ],
+            today: [],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          route: { slug: 'victor-jackson-eb', name: 'Victor → Jackson' },
+          typicals: [
+            {
+              weekdayClass: 'weekend',
+              season: 'summer',
+              hour: 7,
+              medianSec: 600,
+              p25Sec: 500,
+              p75Sec: 700,
+              sampleCount: 30,
+              distinctDays: 9,
+            },
+            {
+              weekdayClass: 'weekend',
+              season: 'summer',
+              hour: 8,
+              medianSec: 650,
+              p25Sec: 550,
+              p75Sec: 750,
+              sampleCount: 30,
+              distinctDays: 9,
+            },
+          ],
+          today: [],
+          summary: { worstDays: null, seasonMedians: null, closureDays: null },
+        }),
+      };
+    }),
+  );
+
+  return render(<HistoryPage />);
+}
+
+describe('HistoryPage controls (native select + segmented, tighter type scale)', () => {
+  it('picks the route with a select rather than pills, at every width', () => {
+    renderHistory();
+    expect(screen.getByRole('combobox', { name: /route/i })).toBeInTheDocument();
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+  });
+
+  it("resets the selection to the side's first route when the side flips", async () => {
+    renderHistory();
+    const select = screen.getByRole('combobox', { name: /route/i });
+    // /api/status resolves asynchronously -- the select has no options on
+    // the first render, so selecting one has to wait for that fetch first.
+    const airport = await screen.findByRole('option', { name: /Airport/ });
+    await userEvent.selectOptions(select, airport);
+    await userEvent.click(screen.getByRole('button', { name: '→ ID' }));
+    // Side switch re-populates the options; selection returns to the first.
+    expect((select as HTMLSelectElement).selectedIndex).toBe(0);
+  });
+
+  it('passes unit-aware axis titles to both charts', async () => {
+    renderHistory();
+    expect(await screen.findByText('Travel time (min)')).toBeInTheDocument();
+    expect(await screen.findByText('Temperature (°F)')).toBeInTheDocument();
+  });
+
+  it('drops the removed copy', async () => {
+    renderHistory();
+    // Waiting for the chart to render first rules out a false pass -- an
+    // empty/loading chart has neither string either.
+    await screen.findByText('Travel time (min)');
+    // Scoped to the two specific removed strings, not a page-wide
+    // /typical range/i query: the chart legend's "Typical range" band
+    // swatch (ChartLegend, unchanged by this task and present in the
+    // prototype's own legend row) legitimately keeps that wording, and a
+    // broader match would flag it as a false regression.
+    expect(screen.queryByText(/middle half of recorded days/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/today's air reading against/i)).not.toBeInTheDocument();
+  });
+
+  it('shortens the back link so it cannot wrap', () => {
+    renderHistory();
+    expect(screen.getByRole('link', { name: '← Live' })).toBeInTheDocument();
+  });
+});

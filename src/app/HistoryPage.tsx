@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import ChartLegend, { type LegendItem } from './components/ChartLegend';
+import Segmented from './components/Segmented';
 import SeasonCompare from './components/SeasonCompare';
 import TempUnitToggle from './components/TempUnitToggle';
 import TypicalChart, { type ChartPoint } from './components/TypicalChart';
@@ -41,12 +42,13 @@ const TEMP_LEGEND: LegendItem[] = [
   { label: 'Road surface, typical', kind: 'dashed', color: 'var(--color-muted)' },
 ];
 
-// Says what the shaded range IS, not merely when it appears. The previous
-// caption explained only the withholding rule, leaving "p25-p75" in the
-// legend as the sole (and unreadable) definition.
-const TYPICAL_RANGE_CAPTION =
-  'The typical range covers the middle half of recorded days — a quarter came in faster, a quarter slower. ' +
-  "It's shown only for hours with enough separate days behind them.";
+// → WY tracks eb (Idaho -> Jackson side); → ID tracks wb (Jackson -> Idaho
+// side). Two Idaho destinations exist from Jackson (Victor, Driggs), so this
+// toggle picks the side and the route select below it picks the exact pair.
+const DIRECTION_OPTIONS = [
+  { value: 'eb', label: '→ WY' },
+  { value: 'wb', label: '→ ID' },
+] as const;
 
 /** Filters `/api/weather-history`'s `typicals` -- every (metric,
  *  weekday-class, hour, season) bucket, station-wide -- down to the ONE
@@ -133,76 +135,80 @@ export default function HistoryPage() {
 
   return (
     <main className="bg-page min-h-screen pb-10">
-      <div className="mx-auto max-w-[30rem] px-3.5 lg:max-w-[1080px] lg:px-7">
+      <div className="mx-auto max-w-[30rem] px-3.5 lg:max-w-[960px] lg:px-7">
         <header className="flex items-center justify-between py-4">
           <div className="flex items-baseline gap-3.5">
             <span className="font-display text-[21px] font-extrabold tracking-tight">Teton Pass Cam</span>
             <span className="text-muted text-xs">History</span>
           </div>
-          <a href="/" className="text-muted text-[13px] font-bold">
-            ← Back to live conditions
+          <a href="/" className="text-muted text-[13px] font-bold whitespace-nowrap">
+            ← Live
           </a>
         </header>
 
-        <h1 className="font-display text-[30px] font-extrabold tracking-tight">When should you leave?</h1>
+        <h1 className="font-display text-[24px] font-extrabold tracking-tight">When should you leave?</h1>
         <p className="text-muted mt-1 text-sm">
           {`Travel time by hour of day — today's line against the typical range for a ${season} ${weekday}.`}
         </p>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {visible.map((r) => (
-            <button
-              key={r.slug}
-              type="button"
-              onClick={() => setSlug(r.slug)}
-              className={
-                r.slug === active
-                  ? 'bg-btn-bg text-btn-ink rounded-full px-4 py-1.5 text-[13px] font-bold'
-                  : 'bg-card border-card-border text-muted rounded-full border px-4 py-1.5 text-[13px]'
-              }
+        <div className="mt-4 flex gap-2">
+          <div className="relative min-w-[200px] flex-1">
+            <select
+              aria-label="Route"
+              value={active ?? ''}
+              onChange={(e) => setSlug(e.target.value)}
+              className="bg-card border-card-border box-border h-11 w-full appearance-none rounded-[12px] border py-0 pr-8 pl-3 font-display text-sm font-bold"
             >
-              {r.name}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
-            className="text-muted ml-auto text-[13px] font-bold"
-          >
-            Flip
-          </button>
+              {visible.map((r) => (
+                <option key={r.slug} value={r.slug}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+            {/* Drawn as an inline SVG rather than baked into a data-URI
+                background image the way the prototype does it: a data URI's
+                stroke colour is fixed at author time, and the prototype's
+                #a39880 is only the DARK-mode value of `--color-muted` (see
+                index.css) -- hardcoding it would go low-contrast the moment
+                a reader is in light mode. An SVG element's stroke can
+                reference the token directly and follow the theme like every
+                other colour on this page. */}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 12 8"
+              className="pointer-events-none absolute top-1/2 right-3 h-2 w-3 -translate-y-1/2"
+            >
+              <path d="M1 1l5 5 5-5" stroke="var(--color-muted)" strokeWidth="2" fill="none" />
+            </svg>
+          </div>
+          <Segmented options={DIRECTION_OPTIONS} value={direction} onChange={setDirection} ariaLabel="Direction" />
         </div>
 
         <section className="bg-card border-card-border mt-4 rounded-2xl border p-5">
-          <div className="mb-2.5">
+          <TypicalChart points={points} today={today} yAxisTitle="Travel time (min)" />
+          <div className="mt-2.5">
             <ChartLegend items={DRIVE_TIME_LEGEND} />
           </div>
-          <TypicalChart points={points} today={today} />
-          <p className="text-muted mt-2 text-[11.5px]">{TYPICAL_RANGE_CAPTION}</p>
         </section>
 
         <section data-testid="temp-card" className="bg-card border-card-border mt-4 rounded-2xl border p-5">
-          <h2 className="font-display text-[30px] font-extrabold tracking-tight">Summit temperature</h2>
-          <p className="text-muted mt-1 text-sm">
-            {`Summit temperature by hour of day — today's air reading against the typical range for a ${season} ${weekday}.`}
-          </p>
-
-          <div className="mt-4 mb-2.5 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-[20px] font-extrabold tracking-tight">Summit temperature</h2>
+          <div className="mt-4">
+            <TypicalChart
+              points={airPoints}
+              today={tempToday}
+              secondary={surfacePoints}
+              formatValue={(v) => formatTemp(v, unit)}
+              referenceValue={{ value: 32, label: 'Freezing' }}
+              ariaLabel="Summit temperature by hour of day, today's air reading against the typical range"
+              emptyMessage="Temperature history is still being collected for this station."
+              yAxisTitle={`Temperature (°${unit})`}
+            />
+          </div>
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
             <ChartLegend items={TEMP_LEGEND} />
             <TempUnitToggle unit={unit} onChange={setUnit} />
           </div>
-          <TypicalChart
-            points={airPoints}
-            today={tempToday}
-            secondary={surfacePoints}
-            formatValue={(v) => formatTemp(v, unit)}
-            referenceValue={{ value: 32, label: 'Freezing' }}
-            ariaLabel="Summit temperature by hour of day, today's air reading against the typical range"
-            emptyMessage="Temperature history is still being collected for this station."
-          />
-          <p className="text-muted mt-2 text-[11.5px]">
-            {TYPICAL_RANGE_CAPTION}
-          </p>
         </section>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
