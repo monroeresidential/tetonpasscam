@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import StatusBanner from './components/StatusBanner';
-import DriveTimes from './components/DriveTimes';
+import DriveTimes, { idahoTownOf, type Town } from './components/DriveTimes';
 import WeatherStrip from './components/WeatherStrip';
 import ForecastStrip from './components/ForecastStrip';
 import HourlyStrip from './components/HourlyStrip';
@@ -63,6 +63,7 @@ function App() {
   const isDesktop = useIsDesktop();
   const [reportOpen, setReportOpen] = useState(false);
   const [direction, setDirection] = useState<'eb' | 'wb'>('eb');
+  const [town, setTown] = useState<Town>('victor');
   const { unit, setUnit } = useTempUnit();
 
   if (!data) {
@@ -101,11 +102,22 @@ function App() {
             <DriveTimes
               travelTimes={data.travelTimes}
               direction={direction}
+              town={town}
+              onTownChange={setTown}
               onFlip={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
+              variant={isDesktop ? 'desktop' : 'phone'}
             />
           </div>
           {(() => {
-            const historyRoute = data.travelTimes.find((t) => t.slug.endsWith(`-${direction}`));
+            // The home history teaser follows the first VISIBLE route
+            // (handoff Interactions note): on desktop that's simply the
+            // first route for this direction (DriveTimes shows both towns
+            // unfiltered there, README §2); on phone it's the first route
+            // matching both the direction and the Victor/Driggs picker,
+            // since that's the town filter Home is actually applying.
+            const historyRoute = data.travelTimes
+              .filter((t) => t.slug.endsWith(`-${direction}`))
+              .find((t) => isDesktop || idahoTownOf(t.slug) === town);
             return historyRoute ? (
               <div>
                 <HomeHistoryCard slug={historyRoute.slug} routeName={historyRoute.name} />

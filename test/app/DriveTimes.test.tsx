@@ -20,7 +20,56 @@ function row(overrides: Partial<ApiStatus['travelTimes'][number]>): ApiStatus['t
 // Direction is now controlled from App (share-3a: lifted so StatusBanner's
 // share pill and DriveTimes's flip agree on the same direction) -- every
 // render below passes it explicitly rather than relying on internal state.
+// Task 4 adds `town`/`onTownChange` as required props alongside it -- every
+// call below now passes `town="victor"` (matching the default `row()` slug)
+// plus a no-op `onTownChange` so the town filter never excludes the fixture
+// rows these older tests were written against.
 const noop = () => {};
+
+// All twelve seeded route-directions. The filter test asserts 3 of 6 per
+// direction, so a shorter fixture would pass for the wrong reason.
+//
+// durationSec is staggered per prefix (2280s + 60s per pair-index) rather
+// than a single shared value: the typography test below targets "38 min" via
+// `getByText` (a *single*-match query), and with the Victor-only filter
+// active, all 3 of Victor's eb routes would otherwise share one duration and
+// render identical "38 min" text, making that query ambiguous regardless of
+// how DriveTimes is implemented. Victor -> Jackson (index 0) keeps 2280s/38min
+// -- the value the assertion targets -- and every other prefix gets a
+// distinct value so nothing else collides with it. wb mirrors the same
+// stagger 120s lower so it stays distinct too, though no current test reads
+// wb durations from this fixture.
+const PREFIXES = [
+  ['victor-jackson', 'Victor → Jackson', 'Jackson → Victor'],
+  ['driggs-jackson', 'Driggs → Jackson', 'Jackson → Driggs'],
+  ['victor-tetonvillage', 'Victor → Teton Village', 'Teton Village → Victor'],
+  ['driggs-tetonvillage', 'Driggs → Teton Village', 'Teton Village → Driggs'],
+  ['victor-airport', 'Victor → Airport', 'Airport → Victor'],
+  ['driggs-airport', 'Driggs → Airport', 'Airport → Driggs'],
+] as const;
+
+const ALL_TWELVE: ApiStatus['travelTimes'] = PREFIXES.flatMap(([prefix, ebName, wbName], index) => {
+  const ebDurationSec = 2280 + index * 60;
+  const wbDurationSec = 2160 + index * 60;
+  return [
+    {
+      slug: `${prefix}-eb`,
+      name: ebName,
+      durationSec: ebDurationSec,
+      typicalSec: ebDurationSec,
+      capturedAt: '2026-08-16T22:50:00.000Z',
+      stale: false,
+    },
+    {
+      slug: `${prefix}-wb`,
+      name: wbName,
+      durationSec: wbDurationSec,
+      typicalSec: wbDurationSec,
+      capturedAt: '2026-08-16T22:50:00.000Z',
+      stale: false,
+    },
+  ];
+});
 
 // Verbal delta mapping (spec, verbatim): diffSec = durationSec - typicalSec.
 // The threshold comparison happens on the un-rounded SECOND value, and only
@@ -34,6 +83,8 @@ describe('DriveTimes verbal delta mapping', () => {
       <DriveTimes
         travelTimes={[row({ durationSec: 900, typicalSec: 1200 })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -46,6 +97,8 @@ describe('DriveTimes verbal delta mapping', () => {
       <DriveTimes
         travelTimes={[row({ durationSec: 901, typicalSec: 1200 })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -58,6 +111,8 @@ describe('DriveTimes verbal delta mapping', () => {
       <DriveTimes
         travelTimes={[row({ durationSec: 1499, typicalSec: 1200 })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -70,6 +125,8 @@ describe('DriveTimes verbal delta mapping', () => {
       <DriveTimes
         travelTimes={[row({ durationSec: 1500, typicalSec: 1200 })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -82,6 +139,8 @@ describe('DriveTimes verbal delta mapping', () => {
       <DriveTimes
         travelTimes={[row({ durationSec: 1680, typicalSec: 1200 })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -94,6 +153,8 @@ describe('DriveTimes verbal delta mapping', () => {
       <DriveTimes
         travelTimes={[row({ durationSec: 1500, typicalSec: null })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -105,6 +166,8 @@ describe('DriveTimes verbal delta mapping', () => {
       <DriveTimes
         travelTimes={[row({ durationSec: 1200, typicalSec: 1200 })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -115,7 +178,9 @@ describe('DriveTimes verbal delta mapping', () => {
 
 describe('DriveTimes layout', () => {
   it('renders the section heading and flip control copy', () => {
-    render(<DriveTimes travelTimes={[row({})]} direction="eb" onFlip={noop} />);
+    render(
+      <DriveTimes travelTimes={[row({})]} direction="eb" town="victor" onTownChange={noop} onFlip={noop} />,
+    );
     expect(screen.getByText('Drive times right now')).toBeInTheDocument();
     expect(screen.getByText('⇄ Flip direction')).toBeInTheDocument();
   });
@@ -125,6 +190,8 @@ describe('DriveTimes layout', () => {
       <DriveTimes
         travelTimes={[row({ slug: 'victor-tetonvillage-eb', name: 'Victor → Teton Village' })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -141,6 +208,8 @@ describe('DriveTimes layout', () => {
           row({ slug: 'victor-airport-eb', name: 'Victor → Airport' }),
         ]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -148,7 +217,12 @@ describe('DriveTimes layout', () => {
     expect(screen.getByText('Airport')).toBeInTheDocument();
   });
 
-  it('renders all 6 routes for a direction as cards', () => {
+  // Desktop (variant="desktop") is the one context where all 6 routes -- both
+  // Idaho towns -- render for a single direction at once (README §2: the 2-up
+  // grid shows both towns, only the phone segmented picker filters to one).
+  // Without `variant="desktop"` here, the `town="victor"` default would only
+  // surface half of these fixture routes.
+  it('renders all 6 routes for a direction as cards on desktop (town filter bypassed)', () => {
     const slugPrefixes = [
       'victor-jackson',
       'driggs-jackson',
@@ -161,12 +235,62 @@ describe('DriveTimes layout', () => {
       <DriveTimes
         travelTimes={slugPrefixes.map((prefix) => row({ slug: `${prefix}-eb`, name: prefix }))}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
+        variant="desktop"
       />,
     );
     for (const prefix of slugPrefixes) {
       expect(screen.getByText(prefix)).toBeInTheDocument();
     }
+  });
+});
+
+// Task 4: hierarchy (name promoted/numeral demoted), freshness stated once in
+// the header instead of per row, and the Victor/Driggs town filter (Ruling
+// R3: the Idaho town is the slug's first segment, direction-independent).
+describe('DriveTimes hierarchy, header freshness, and town filter (Task 4)', () => {
+  it('filters to the chosen Idaho town in BOTH directions', () => {
+    // Ruling R3: the Idaho town is the slug's first segment regardless of
+    // direction, so the same filter works eastbound and westbound.
+    //
+    // Scoped to each drive-row's own text (rather than a bare
+    // `screen.queryByText(/Driggs/)`) because the phone-only Victor/Driggs
+    // Segmented picker mounted below the header legitimately renders the
+    // literal word "Driggs" as its other toggle option -- a global query
+    // would false-fail on the picker itself, not on a filtered-in route.
+    const { rerender } = render(
+      <DriveTimes travelTimes={ALL_TWELVE} direction="eb" town="victor" onTownChange={() => {}} onFlip={() => {}} />,
+    );
+    const ebRows = screen.getAllByTestId('drive-row');
+    expect(ebRows).toHaveLength(3);
+    expect(ebRows.some((row) => row.textContent?.includes('Driggs'))).toBe(false);
+
+    rerender(
+      <DriveTimes travelTimes={ALL_TWELVE} direction="wb" town="victor" onTownChange={() => {}} onFlip={() => {}} />,
+    );
+    const wbRows = screen.getAllByTestId('drive-row');
+    expect(wbRows).toHaveLength(3);
+    expect(wbRows.some((row) => row.textContent?.includes('Driggs'))).toBe(false);
+  });
+
+  it('states freshness once in the header, never per row', () => {
+    render(<DriveTimes travelTimes={ALL_TWELVE} direction="eb" town="victor" onTownChange={() => {}} onFlip={() => {}} />);
+    expect(screen.getAllByText(/^Updated /)).toHaveLength(1);
+    expect(screen.queryByText(/as of /)).not.toBeInTheDocument();
+  });
+
+  it('shows no delta for a stale row', () => {
+    const stale = [{ ...ALL_TWELVE[0], stale: true }];
+    render(<DriveTimes travelTimes={stale} direction="eb" town="victor" onTownChange={() => {}} onFlip={() => {}} />);
+    expect(screen.queryByText(/than usual|about usual/)).not.toBeInTheDocument();
+  });
+
+  it('promotes the route name to the display face and demotes the numeral', () => {
+    render(<DriveTimes travelTimes={ALL_TWELVE} direction="eb" town="victor" onTownChange={() => {}} onFlip={() => {}} />);
+    expect(screen.getByText('Victor → Jackson')).toHaveClass('font-display');
+    expect(screen.getByText(/^38 min$/)).toHaveClass('text-[19px]');
   });
 });
 
@@ -184,6 +308,8 @@ describe('DriveTimes controlled direction', () => {
           row({ slug: 'victor-jackson-wb', name: 'Jackson to Victor (WB)' }),
         ]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -198,6 +324,8 @@ describe('DriveTimes controlled direction', () => {
           row({ slug: 'victor-jackson-wb', name: 'Jackson to Victor (WB)' }),
         ]}
         direction="wb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -209,7 +337,15 @@ describe('DriveTimes controlled direction', () => {
   it('the flip button reflects the direction prop via aria-pressed and calls onFlip when clicked', async () => {
     const user = userEvent.setup();
     const onFlip = vi.fn();
-    render(<DriveTimes travelTimes={[row({})]} direction="eb" onFlip={onFlip} />);
+    render(
+      <DriveTimes
+        travelTimes={[row({})]}
+        direction="eb"
+        town="victor"
+        onTownChange={noop}
+        onFlip={onFlip}
+      />,
+    );
 
     const flipButton = screen.getByRole('button', { name: /flip direction/i });
     expect(flipButton).toHaveAttribute('aria-pressed', 'false');
@@ -219,7 +355,9 @@ describe('DriveTimes controlled direction', () => {
   });
 
   it('aria-pressed reads true when direction="wb" is passed in', () => {
-    render(<DriveTimes travelTimes={[row({})]} direction="wb" onFlip={noop} />);
+    render(
+      <DriveTimes travelTimes={[row({})]} direction="wb" town="victor" onTownChange={noop} onFlip={noop} />,
+    );
     expect(screen.getByRole('button', { name: /flip direction/i })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -230,7 +368,13 @@ describe('DriveTimes controlled direction', () => {
 describe('DriveTimes routes-omitted contract', () => {
   it('shows nothing extra when a direction has no travel-time rows', () => {
     render(
-      <DriveTimes travelTimes={[row({ slug: 'victor-jackson-wb' })]} direction="eb" onFlip={noop} />,
+      <DriveTimes
+        travelTimes={[row({ slug: 'victor-jackson-wb' })]}
+        direction="eb"
+        town="victor"
+        onTownChange={noop}
+        onFlip={noop}
+      />,
     );
     expect(screen.queryByText(/min/)).not.toBeInTheDocument();
   });
@@ -238,21 +382,26 @@ describe('DriveTimes routes-omitted contract', () => {
 
 // Overnight gap (stale-drive-times): the server keeps a route's last reading
 // up to TRAVEL_TIME_MAX_AGE_HOURS and flags it `stale` once past the live
-// freshness window, instead of omitting it -- these assert the muted/"as of"
-// treatment that replaces the normal duration + delta chip.
+// freshness window, instead of omitting it -- these assert the muted
+// treatment that replaces the normal duration + delta chip. Task 4 moves
+// freshness ("as of"/"Updated") out of the per-row card into the section
+// header, so a stale row now shows the muted numeral and NOTHING beneath it
+// (no delta, no per-row timestamp) rather than the old "as of" line.
 describe('DriveTimes stale rows', () => {
-  it('a stale row shows the duration muted, an "as of" label, and no delta chip', () => {
+  it('a stale row shows the duration muted and no delta chip beneath it', () => {
     render(
       <DriveTimes
         travelTimes={[
           row({
             durationSec: 2100,
             typicalSec: null,
-            capturedAt: '2026-08-10T04:50:00.000Z', // 10:50 PM America/Denver
+            capturedAt: '2026-08-10T04:50:00.000Z',
             stale: true,
           }),
         ]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -260,10 +409,7 @@ describe('DriveTimes stale rows', () => {
     const duration = screen.getByText('35 min');
     expect(duration.className).toMatch(/text-muted/);
 
-    const asOf = screen.getByText('as of 10:50 PM');
-    expect(asOf).toBeInTheDocument();
-    expect(asOf.className).toMatch(/text-muted/);
-
+    expect(screen.queryByText(/^as of /)).not.toBeInTheDocument();
     expect(screen.queryByText(/usual/)).not.toBeInTheDocument();
   });
 
@@ -272,6 +418,8 @@ describe('DriveTimes stale rows', () => {
       <DriveTimes
         travelTimes={[row({ durationSec: 1500, typicalSec: 1200, stale: false })]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -301,6 +449,8 @@ describe('DriveTimes delta visibility on rerender', () => {
           },
         ]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
@@ -319,6 +469,8 @@ describe('DriveTimes delta visibility on rerender', () => {
           },
         ]}
         direction="eb"
+        town="victor"
+        onTownChange={noop}
         onFlip={noop}
       />,
     );
