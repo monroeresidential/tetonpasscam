@@ -89,4 +89,20 @@ describe('HourlyStrip', () => {
     );
     expect(screen.getByText('fog')).toBeInTheDocument();
   });
+
+  it('grows to fill the row but never shrinks below its basis', () => {
+    render(<HourlyStrip hourly={TWELVE} />);
+    // `flex-shrink: 0` is the load-bearing half: grow-to-fill on desktop,
+    // overflow-then-scroll on phone. A plain `flex-1` would shrink the
+    // cards to unreadable slivers instead of scrolling.
+    const card = screen.getAllByTestId('hour-card')[0];
+    expect(card).toHaveClass('grow');
+    expect(card).toHaveClass('shrink-0');
+    expect(card).toHaveClass('basis-[62px]');
+  });
+
+  it('prefixes precip with a snowflake for a snow hour', () => {
+    render(<HourlyStrip hourly={[hour({ startTime: '2026-08-16T13:00:00-06:00', category: 'snow', precipPct: 80 })]} />);
+    expect(screen.getByText('❄️ 80%')).toBeInTheDocument();
+  });
 });

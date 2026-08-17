@@ -371,7 +371,7 @@ describe('App', () => {
       // rather than just "exists", so this fails if the caption were re-nested
       // below either strip instead of hoisted above them.
       const hourlyHeading = screen.getByRole('heading', { name: 'Next 12 hours' });
-      const forecastHeading = screen.getByRole('heading', { name: '5-day forecast' });
+      const forecastHeading = screen.getByRole('heading', { name: /^5-day forecast/ });
       const position = captions[0].compareDocumentPosition(hourlyHeading);
       expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       const positionVsForecast = captions[0].compareDocumentPosition(forecastHeading);

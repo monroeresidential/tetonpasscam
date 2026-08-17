@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import ForecastStrip from '../../src/app/components/ForecastStrip';
 import { WEATHER_GLYPH } from '../../src/app/weatherGlyphs';
 import type { ForecastDay } from '../../src/shared/types';
+import { setMatchMedia } from './matchMedia';
 
 const NOON_MDT = new Date('2026-08-16T18:00:00.000Z'); // Sunday Aug 16, noon Denver
 
@@ -13,7 +14,7 @@ function day(over: Partial<ForecastDay> & { date: string }): ForecastDay {
     lowF: 38,
     category: 'clear',
     shortForecast: 'Sunny',
-    precipPct: 10,
+    precipPct: 20,
     ...over,
   };
 }
@@ -29,18 +30,25 @@ const FIVE: ForecastDay[] = [
 describe('ForecastStrip', () => {
   it('renders one card per day, labelling the first as Today', () => {
     render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
-    expect(screen.getByRole('heading', { name: '5-day forecast' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '5-day forecast · high / low °F' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('Mon')).toBeInTheDocument();
     expect(screen.getByText('Thu')).toBeInTheDocument();
   });
 
   it('renders temperatures in the selected unit', () => {
+    // High/low render as separate elements (bold high, muted low) rather
+    // than one combined string -- see the "drops the unit" test below for
+    // why a single joined string can't carry two different styles.
     const { rerender } = render(<ForecastStrip forecast={FIVE} now={NOON_MDT} unit="F" />);
-    expect(screen.getAllByText('62°F / 38°F').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('62°').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('38°').length).toBeGreaterThan(0);
 
     rerender(<ForecastStrip forecast={FIVE} now={NOON_MDT} unit="C" />);
-    expect(screen.getAllByText('17°C / 3°C').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('17°').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('3°').length).toBeGreaterThan(0);
   });
 
   it('shows an em-dash for a null precip chance, never 0%', () => {
@@ -102,5 +110,41 @@ describe('ForecastStrip', () => {
       />,
     );
     expect(screen.getByText('partly-cloudy')).toBeInTheDocument();
+  });
+
+  it('states the unit once in the heading, and follows the toggle', () => {
+    const { rerender } = render(<ForecastStrip forecast={FIVE} now={NOON_MDT} unit="F" />);
+    expect(screen.getByRole('heading', { name: '5-day forecast · high / low °F' })).toBeInTheDocument();
+    rerender(<ForecastStrip forecast={FIVE} now={NOON_MDT} unit="C" />);
+    // The handoff hardcodes °F; the site has a toggle, so the heading takes
+    // the unit or it contradicts its own values.
+    expect(screen.getByRole('heading', { name: '5-day forecast · high / low °C' })).toBeInTheDocument();
+  });
+
+  it('drops the unit from the card values', () => {
+    // getAllByText, not getByText: FIVE has four identical non-snow days,
+    // all rendering "62°" -- see the file-level pitfall note about
+    // page-wide text queries colliding on repeated fixture values.
+    render(<ForecastStrip forecast={FIVE} now={NOON_MDT} unit="F" />);
+    expect(screen.queryByText(/62°F/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/62°/).length).toBeGreaterThan(0);
+  });
+
+  it('uses a snowflake precip glyph on snow days and a droplet otherwise', () => {
+    // Same collision as above: four of the five FIVE days share the
+    // default precipPct, so the droplet line is asserted with
+    // getAllByText rather than getByText.
+    render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
+    expect(screen.getByText('❄️ 70%')).toBeInTheDocument();
+    expect(screen.getAllByText('💧 20%').length).toBeGreaterThan(0);
+  });
+
+  it('keeps the sr-only condition text in both layouts', () => {
+    setMatchMedia(true);
+    render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
+    expect(screen.getByText('Snow')).toBeInTheDocument();
+    setMatchMedia(false);
+    render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
+    expect(screen.getAllByText('Snow').length).toBeGreaterThan(0);
   });
 });

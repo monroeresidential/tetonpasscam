@@ -1,6 +1,6 @@
 import type { ForecastHour } from '../../shared/types';
 import { formatTemp, type TempUnit } from '../units';
-import { glyphFor } from '../weatherGlyphs';
+import { glyphFor, precipGlyphFor } from '../weatherGlyphs';
 
 /** Hour-of-day in America/Denver, so every viewer sees pass-local time
  *  rather than their own. `1 PM`, not `13:00` -- this sits beside `54°F`
@@ -39,7 +39,11 @@ export default function HourlyStrip({
           <div
             key={h.startTime}
             data-testid="hour-card"
-            className="bg-card border-card-border rounded-card flex w-[62px] flex-none flex-col items-center gap-1 border px-1 py-2 text-center"
+            // `grow shrink-0 basis-[62px]` (not `flex-1`, which is
+            // `1 1 0%`): grows to fill the 960px desktop row, but never
+            // shrinks below 62px on phone -- it overflows into the
+            // existing horizontal scroll instead.
+            className="bg-card border-card-border rounded-card flex grow shrink-0 basis-[62px] flex-col items-center gap-1 border px-1 py-2 text-center"
           >
             <p className="text-muted text-[10.5px] uppercase">
               {HOUR_FORMAT.format(new Date(h.startTime))}
@@ -57,8 +61,8 @@ export default function HourlyStrip({
             <p className="font-display text-[13px] font-extrabold">
               {h.tempF !== null ? formatTemp(h.tempF, unit) : '—'}
             </p>
-            <p className="text-muted text-[10.5px]">
-              {h.precipPct !== null ? `${h.precipPct}%` : '—'}
+            <p className="text-muted text-[10.5px] whitespace-nowrap">
+              {h.precipPct !== null ? `${precipGlyphFor(h.category)} ${h.precipPct}%` : '—'}
             </p>
           </div>
         ))}
