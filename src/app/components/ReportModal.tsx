@@ -86,6 +86,23 @@ export default function ReportModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
+  // Lock body scroll while the sheet is open. The cleanup runs both on
+  // close (isOpen -> false) AND on unmount -- React runs effect cleanups on
+  // unmount too -- which matters because App.tsx mounts this component's
+  // phone-only trigger conditionally on the desktop breakpoint, so a resize
+  // can unmount ReportModal while it's still open. Without restoring on
+  // unmount, the body would be left `overflow: hidden` with no visible
+  // cause and no way to undo it. Restoring the *previous* value (not '')
+  // in case anything else ever locks scroll too.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   function openModal() {
     setOpen(true);
   }
@@ -173,132 +190,145 @@ export default function ReportModal({
       <Toast show={showToast}>Thanks — report submitted.</Toast>
 
       {isOpen && (
+        // Overlay: no padding, no flex centering -- those made the sheet
+        // below a padded flex child, which is why a tall sheet used to run
+        // past the viewport top and get clipped. The sheet now positions
+        // and sizes itself independently via `fixed inset-x-0 bottom-0`.
         <div
           role="dialog"
           aria-modal="true"
           aria-label="What are you seeing?"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
+          className="fixed inset-0 z-50 bg-black/50"
         >
-          {/* Bottom sheet on phone (card 2d): fixed to the viewport bottom,
-              rounded top corners, drag-handle bar. The mockup is phone-only
-              -- desktop falls back to a centered dialog capped at max-w-sm
-              (documented deviation; no desktop version of this card exists
-              in the design handoff). */}
-          <div className="bg-card w-full max-w-md rounded-t-2xl p-4 pb-5 sm:max-w-sm sm:rounded-2xl">
-            <div className="bg-card-border mx-auto h-1 w-9 rounded-full" />
+          {/* Bottom sheet, pinned to the viewport (card 2d): fixed to the
+              viewport bottom and capped at 85dvh so it can never exceed the
+              viewport, rounded top corners only, drag-handle bar. Centered
+              via mx-auto + max-w-[480px] on screens wide enough that it
+              isn't edge-to-edge. A flex column with a flex-none header,
+              flex-1 min-h-0 scrolling middle, and flex-none footer keeps
+              Send and the fine print always visible even when the type
+              grid + note push the middle past 85dvh. */}
+          <div className="bg-card fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[85dvh] w-full max-w-[480px] flex-col rounded-t-[16px]">
+            <div className="flex-none px-4 pt-4">
+              <div className="bg-card-border mx-auto h-1 w-9 rounded-full" />
 
-            <div className="mt-3.5 flex items-start justify-between gap-2">
-              <div>
-                <h2 className="font-display text-[22px] font-extrabold tracking-tight text-ink">
-                  What are you seeing?
-                </h2>
-                <p className="text-muted mt-0.5 text-[12.5px]">
-                  No account needed. Reports show as unverified and expire on their own.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                aria-label="Close"
-                className="text-muted flex-none"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Honeypot field: empty, off-screen, hidden from assistive
-                tech, and never focusable via Tab -- real users never
-                interact with it, so the POST body's `website` stays empty. */}
-            <input
-              ref={honeypotRef}
-              type="text"
-              name="website"
-              tabIndex={-1}
-              autoComplete="off"
-              aria-hidden="true"
-              defaultValue=""
-              style={{
-                position: 'absolute',
-                left: '-9999px',
-                width: '1px',
-                height: '1px',
-                opacity: 0,
-                overflow: 'hidden',
-              }}
-            />
-
-            <div className="mt-3.5 grid grid-cols-2 gap-2">
-              {TYPE_OPTIONS.map((opt) => {
-                const selected = type === opt.type;
-                return (
-                  <button
-                    key={opt.type}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setType(opt.type)}
-                    className={`rounded-card border-card-border flex items-center gap-2.5 border p-3.5 text-left ${
-                      opt.type === 'other' ? 'col-span-2 justify-center text-center' : ''
-                    } ${selected ? 'border-ink border-2' : ''}`}
-                  >
-                    <span className="text-lg">{opt.icon}</span> <span className="text-sm font-bold">{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div role="group" aria-label="Direction" className="mt-3.5 flex gap-2">
-              {(['wb', 'eb'] as const).map((d) => (
+              <div className="mt-3.5 flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="font-display text-[22px] font-extrabold tracking-tight text-ink">
+                    What are you seeing?
+                  </h2>
+                  <p className="text-muted mt-0.5 text-[12.5px]">
+                    No account needed. Reports show as unverified and expire on their own.
+                  </p>
+                </div>
                 <button
-                  key={d}
                   type="button"
-                  aria-pressed={direction === d}
-                  onClick={() => setDirection(direction === d ? '' : d)}
-                  className={`border-card-border text-muted flex-1 rounded-full border px-3 py-2.5 text-center text-[13px] font-bold aria-pressed:border-2 aria-pressed:border-ink aria-pressed:text-ink`}
+                  onClick={closeModal}
+                  aria-label="Close"
+                  className="text-muted flex-none"
                 >
-                  {d === 'wb' ? 'WB → Victor' : 'EB → Jackson'}
+                  ✕
                 </button>
-              ))}
-            </div>
+              </div>
 
-            <div className="mt-3.5">
-              <label htmlFor="report-note" className="sr-only">
-                Note (optional)
-              </label>
-              <textarea
-                id="report-note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={140}
-                rows={2}
-                placeholder="Add a note (optional, 140 chars)…"
-                className="rounded-card border-card-border bg-card text-ink placeholder:text-faint mt-1 w-full border p-3 text-[13.5px]"
+              {/* Honeypot field: empty, off-screen, hidden from assistive
+                  tech, and never focusable via Tab -- real users never
+                  interact with it, so the POST body's `website` stays empty. */}
+              <input
+                ref={honeypotRef}
+                type="text"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                defaultValue=""
+                style={{
+                  position: 'absolute',
+                  left: '-9999px',
+                  width: '1px',
+                  height: '1px',
+                  opacity: 0,
+                  overflow: 'hidden',
+                }}
               />
             </div>
 
-            {submitState === 'rate-limited' && (
-              <p className="mt-2.5 text-sm font-semibold text-danger">
-                You&apos;re reporting too often
-              </p>
-            )}
-            {submitState === 'error' && (
-              <p className="mt-2.5 text-sm font-semibold text-danger">
-                Something went wrong. Try again.
-              </p>
-            )}
+            <div data-testid="sheet-scroll" className="min-h-0 flex-1 overflow-y-auto px-4">
+              <div className="mt-3.5 grid grid-cols-2 gap-2">
+                {TYPE_OPTIONS.map((opt) => {
+                  const selected = type === opt.type;
+                  return (
+                    <button
+                      key={opt.type}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setType(opt.type)}
+                      className={`rounded-card border-card-border flex items-center gap-2.5 border p-3.5 text-left ${
+                        opt.type === 'other' ? 'col-span-2 justify-center text-center' : ''
+                      } ${selected ? 'border-ink border-2' : ''}`}
+                    >
+                      <span className="text-lg">{opt.icon}</span> <span className="text-sm font-bold">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!type || submitState === 'submitting'}
-              className="mt-3.5 h-12 w-full rounded-full bg-btn-bg font-display font-bold text-btn-ink disabled:opacity-50"
-            >
-              Send report
-            </button>
+              <div role="group" aria-label="Direction" className="mt-3.5 flex gap-2">
+                {(['wb', 'eb'] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={direction === d}
+                    onClick={() => setDirection(direction === d ? '' : d)}
+                    className={`border-card-border text-muted flex-1 rounded-full border px-3 py-2.5 text-center text-[13px] font-bold aria-pressed:border-2 aria-pressed:border-ink aria-pressed:text-ink`}
+                  >
+                    {d === 'wb' ? 'WB → Victor' : 'EB → Jackson'}
+                  </button>
+                ))}
+              </div>
 
-            <p className="text-faint mt-2.5 text-center text-[10.5px] leading-relaxed">
-              This report does not change the official status — only WYDOT does. Limit 2 reports
-              per 30 min.
-            </p>
+              <div className="mt-3.5 pb-3.5">
+                <label htmlFor="report-note" className="sr-only">
+                  Note (optional)
+                </label>
+                <textarea
+                  id="report-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  maxLength={140}
+                  rows={2}
+                  placeholder="Add a note (optional, 140 chars)…"
+                  className="rounded-card border-card-border bg-card text-ink placeholder:text-faint mt-1 w-full border p-3 text-[13.5px]"
+                />
+              </div>
+            </div>
+
+            <div className="border-card-border flex-none border-t px-4 pb-5 pt-3.5">
+              {submitState === 'rate-limited' && (
+                <p className="mb-2.5 text-sm font-semibold text-danger">
+                  You&apos;re reporting too often
+                </p>
+              )}
+              {submitState === 'error' && (
+                <p className="mb-2.5 text-sm font-semibold text-danger">
+                  Something went wrong. Try again.
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={submit}
+                disabled={!type || submitState === 'submitting'}
+                className="h-12 w-full rounded-full bg-btn-bg font-display font-bold text-btn-ink disabled:opacity-50"
+              >
+                Send report
+              </button>
+
+              <p className="text-faint mt-2.5 text-center text-[10.5px] leading-relaxed">
+                This report does not change the official status — only WYDOT does. Limit 2 reports
+                per 30 min.
+              </p>
+            </div>
           </div>
         </div>
       )}

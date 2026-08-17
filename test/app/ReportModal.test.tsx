@@ -156,4 +156,34 @@ describe('ReportModal', () => {
     );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
+
+  it('locks body scroll while open and restores it on close', async () => {
+    const { rerender } = render(<ReportModal open={false} onOpenChange={() => {}} onSuccess={() => {}} />);
+    expect(document.body.style.overflow).toBe('');
+
+    rerender(<ReportModal open onOpenChange={() => {}} onSuccess={() => {}} />);
+    expect(document.body.style.overflow).toBe('hidden');
+
+    rerender(<ReportModal open={false} onOpenChange={() => {}} onSuccess={() => {}} />);
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('restores body scroll on UNMOUNT, not only on close', () => {
+    // App.tsx mounts this component's trigger conditionally on the desktop
+    // breakpoint, so a resize can unmount it while open. A body left
+    // `overflow: hidden` freezes the page with no visible cause.
+    const { unmount } = render(<ReportModal open onOpenChange={() => {}} onSuccess={() => {}} />);
+    expect(document.body.style.overflow).toBe('hidden');
+    unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('keeps the footer reachable by scrolling only the middle section', () => {
+    render(<ReportModal open onOpenChange={() => {}} onSuccess={() => {}} />);
+    const scroller = screen.getByTestId('sheet-scroll');
+    expect(scroller).toHaveClass('overflow-y-auto');
+    expect(scroller).toHaveClass('min-h-0');
+    // The Send button lives outside the scroller, so it is always visible.
+    expect(scroller).not.toContainElement(screen.getByRole('button', { name: /send/i }));
+  });
 });
