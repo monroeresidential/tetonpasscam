@@ -42,3 +42,16 @@ export function glyphFor(category: ForecastCategory, isDaytime: boolean): string
   }
   return WEATHER_GLYPH[category];
 }
+
+/**
+ * The glyph prefixing a precipitation percentage. Distinct from
+ * `WEATHER_GLYPH`: that answers "what is the weather", this answers "what
+ * would fall", so it collapses eight categories to two.
+ *
+ * `mixed` takes the snowflake rather than the droplet -- it is rain AND
+ * snow, and on a pass the frozen half is the one a driver needs to see.
+ * That is the same severity bias `rollupDaily`'s tie-break already applies.
+ */
+export function precipGlyphFor(category: ForecastCategory): string {
+  return category === 'snow' || category === 'mixed' ? '❄️' : '💧';
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { WEATHER_GLYPH, WEATHER_GLYPH_NIGHT, glyphFor } from '../../src/app/weatherGlyphs';
+import { WEATHER_GLYPH, WEATHER_GLYPH_NIGHT, glyphFor, precipGlyphFor } from '../../src/app/weatherGlyphs';
 import type { ForecastCategory } from '../../src/shared/types';
 
 const ALL: ForecastCategory[] = [
@@ -40,6 +40,29 @@ describe('weatherGlyphs', () => {
     for (const g of Object.values(WEATHER_GLYPH_NIGHT)) {
       const base = String.fromCodePoint(g!.codePointAt(0)!);
       expect(g!.includes('️')).toBe(!/\p{Emoji_Presentation}/u.test(base));
+    }
+  });
+});
+
+describe('precipGlyphFor', () => {
+  it('uses a snowflake for snow and a droplet for everything else', () => {
+    expect(precipGlyphFor('snow')).toBe('❄️');
+    expect(precipGlyphFor('rain')).toBe('💧');
+    expect(precipGlyphFor('clear')).toBe('💧');
+    expect(precipGlyphFor('thunderstorm')).toBe('💧');
+  });
+
+  it('treats mixed precipitation as snow -- the hazard, not the average', () => {
+    // `mixed` is rain AND snow. On a mountain pass the snowflake is the
+    // half a driver needs to see, matching the severity bias the daily
+    // rollup's tie-break already applies.
+    expect(precipGlyphFor('mixed')).toBe('❄️');
+  });
+
+  it('carries emoji presentation on both glyphs', () => {
+    for (const g of [precipGlyphFor('snow'), precipGlyphFor('rain')]) {
+      const base = String.fromCodePoint(g.codePointAt(0)!);
+      expect(g.includes('️')).toBe(!/\p{Emoji_Presentation}/u.test(base));
     }
   });
 });

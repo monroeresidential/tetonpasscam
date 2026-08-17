@@ -88,10 +88,10 @@ function App() {
           visual order on phone and desktop alike: header/banner/
           drive-times/alerts/cameras/weather/sponsor/footer. Desktop no
           longer splits into a two-column grid; it's the same flex-column
-          stack as phone, just capped to a wider `lg:max-w-[720px]` reading
+          stack as phone, just capped to a wider `lg:max-w-[960px]` reading
           width. Header/banner/footer stay full-width inside this
           capped-width wrapper, same as the mockup. */}
-      <div className="mx-auto max-w-[30rem] px-3.5 lg:max-w-[720px] lg:px-7">
+      <div className="mx-auto max-w-[30rem] px-3.5 lg:max-w-[960px] lg:px-7">
         <Header onReport={() => setReportOpen(true)} variant={isDesktop ? 'desktop' : 'phone'} />
 
         <StatusBanner data={data} direction={direction} />

@@ -148,14 +148,14 @@ describe('App', () => {
       expect(screen.getByText('Teton Pass Cam')).toBeInTheDocument();
     });
 
-    it('caps the desktop content wrapper at 720px instead of leaving it unbounded', async () => {
+    it('caps the desktop content wrapper at 960px instead of leaving it unbounded', async () => {
       mockStatusOnlyFetch();
       const { container } = render(<App />);
       await screen.findByText('The pass is OPEN');
 
       const wrapper = container.querySelector('.mx-auto');
       expect(wrapper).not.toBeNull();
-      expect(wrapper?.className).toContain('lg:max-w-[720px]');
+      expect(wrapper?.className).toContain('lg:max-w-[960px]');
       expect(wrapper?.className).not.toContain('lg:max-w-none');
     });
   });
