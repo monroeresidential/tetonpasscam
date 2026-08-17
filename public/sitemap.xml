@@ -5,6 +5,18 @@
     <changefreq>always</changefreq>
     <priority>1.0</priority>
   </url>
+  <!-- The site's second real page: drive-time and summit-temperature history
+       with its own H1, canonical and charts. It was omitted here while
+       /privacy and /embed were listed, so the one page most likely to earn
+       long-tail traffic ("teton pass drive time history") was the only one
+       Google had to discover by crawling a link. daily/0.8 reflects that its
+       charts gain a day of data every night and that it ranks second only to
+       the live status page. -->
+  <url>
+    <loc>https://tetonpasscam.com/history</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
   <url>
     <loc>https://tetonpasscam.com/privacy</loc>
     <changefreq>yearly</changefreq>

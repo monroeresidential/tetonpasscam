@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Privacy Policy — Teton Pass Cam</title>
+    <!-- Points at the PRETTY url, not this file's own /privacy.html: that
+         path 307s here, the sitemap lists /privacy, and Footer.tsx links to
+         /privacy. Without this, the two paths are indistinguishable to a
+         crawler, which is what "Alternate page with proper canonical tag"
+         in Search Console is reporting. index.html and history.html already
+         self-canonicalise; this page and embed.html were the two that did
+         not. -->
+    <link rel="canonical" href="https://tetonpasscam.com/privacy" />
     <meta
       name="description"
       content="What Teton Pass Cam stores and why: hashed identifiers for community reports, an optional email for feedback, and aggregate GA4 analytics. No accounts."
