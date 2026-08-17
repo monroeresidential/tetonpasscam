@@ -29,9 +29,10 @@ const noop = () => {};
 // All twelve seeded route-directions. The filter test asserts 3 of 6 per
 // direction, so a shorter fixture would pass for the wrong reason.
 //
-// durationSec is staggered per prefix (2280s + 60s per pair-index) rather
-// than a single shared value: the typography test below targets "38 min" via
-// `getByText` (a *single*-match query), and with the Victor-only filter
+// durationSec is DELIBERATELY staggered per prefix (2280s + 60s per
+// pair-index) rather than a single shared value -- do not "simplify" this
+// back to one uniform duration. The typography test below targets "38 min"
+// via `getByText` (a *single*-match query), and with the Victor-only filter
 // active, all 3 of Victor's eb routes would otherwise share one duration and
 // render identical "38 min" text, making that query ambiguous regardless of
 // how DriveTimes is implemented. Victor -> Jackson (index 0) keeps 2280s/38min
@@ -39,6 +40,13 @@ const noop = () => {};
 // distinct value so nothing else collides with it. wb mirrors the same
 // stagger 120s lower so it stays distinct too, though no current test reads
 // wb durations from this fixture.
+//
+// typicalSec is kept EQUAL to durationSec on every row (not staggered
+// independently): diffSec = durationSec - typicalSec = 0 puts every row in
+// the "about usual" band, so varying only the duration can't accidentally
+// generate "faster/slower than usual" text as a side effect of this fixture
+// fix -- no test reading ALL_TWELVE depends on delta copy, and this keeps it
+// that way.
 const PREFIXES = [
   ['victor-jackson', 'Victor → Jackson', 'Jackson → Victor'],
   ['driggs-jackson', 'Driggs → Jackson', 'Jackson → Driggs'],
@@ -255,11 +263,14 @@ describe('DriveTimes hierarchy, header freshness, and town filter (Task 4)', () 
     // Ruling R3: the Idaho town is the slug's first segment regardless of
     // direction, so the same filter works eastbound and westbound.
     //
-    // Scoped to each drive-row's own text (rather than a bare
-    // `screen.queryByText(/Driggs/)`) because the phone-only Victor/Driggs
-    // Segmented picker mounted below the header legitimately renders the
-    // literal word "Driggs" as its other toggle option -- a global query
-    // would false-fail on the picker itself, not on a filtered-in route.
+    // Reads each drive-row's own `textContent` rather than a page-wide
+    // `screen.queryByText(/Driggs/)`: the phone-only Victor/Driggs Segmented
+    // picker mounted below the header is always in the DOM (jsdom ignores
+    // its `lg:hidden` CSS class) and legitimately renders the literal word
+    // "Driggs" as its OTHER toggle option, so a page-wide query would
+    // false-fail on the picker's own label, not on a filtered-in route. Scope
+    // to the element you mean, not the whole document -- this is the same
+    // fix as the "38 min" collision two tests down.
     const { rerender } = render(
       <DriveTimes travelTimes={ALL_TWELVE} direction="eb" town="victor" onTownChange={() => {}} onFlip={() => {}} />,
     );
@@ -288,6 +299,10 @@ describe('DriveTimes hierarchy, header freshness, and town filter (Task 4)', () 
   });
 
   it('promotes the route name to the display face and demotes the numeral', () => {
+    // `getByText(/^38 min$/)` is a singular-match query -- it only stays
+    // unambiguous because ALL_TWELVE staggers each prefix's durationSec (see
+    // the fixture comment above); "38 min" is unique to Victor -> Jackson
+    // among the 3 rows this town+direction filter leaves visible.
     render(<DriveTimes travelTimes={ALL_TWELVE} direction="eb" town="victor" onTownChange={() => {}} onFlip={() => {}} />);
     expect(screen.getByText('Victor → Jackson')).toHaveClass('font-display');
     expect(screen.getByText(/^38 min$/)).toHaveClass('text-[19px]');
