@@ -185,7 +185,12 @@ export default function HistoryPage() {
         </div>
 
         <section className="bg-card border-card-border mt-4 rounded-2xl border p-5">
-          <TypicalChart points={points} today={today} yAxisTitle="Travel time (min)" />
+          <TypicalChart
+            points={points}
+            today={today}
+            ariaLabel="Travel time by hour of day, today against the typical range"
+            yAxisTitle="Travel time (min)"
+          />
           <div className="mt-2.5">
             <ChartLegend items={DRIVE_TIME_LEGEND} />
           </div>

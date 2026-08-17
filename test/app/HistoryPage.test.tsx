@@ -357,6 +357,16 @@ describe('HistoryPage controls (native select + segmented, tighter type scale)',
     expect(await screen.findByText('Temperature (°F)')).toBeInTheDocument();
   });
 
+  it('gives both charts a descriptive accessible name (R4)', async () => {
+    renderHistory();
+    // Role+name, not a text query: TypicalChart renders role="img" with
+    // ariaLabel as the accessible name, so this is the query shape that
+    // actually exercises the aria-label wiring rather than any visible
+    // caption text that happens to say something similar.
+    expect(await screen.findByRole('img', { name: /Travel time by hour of day/ })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: /Summit temperature by hour of day/ })).toBeInTheDocument();
+  });
+
   it('drops the removed copy', async () => {
     renderHistory();
     // Waiting for the chart to render first rules out a false pass -- an
