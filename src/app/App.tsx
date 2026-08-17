@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import StatusBanner from './components/StatusBanner';
 import DriveTimes, { idahoTownOf, type Town } from './components/DriveTimes';
@@ -16,6 +16,7 @@ import Footer from './components/Footer';
 import TempUnitToggle from './components/TempUnitToggle';
 import { useStatus } from './useStatus';
 import { useTempUnit } from './units';
+import { useIsDesktop } from './useIsDesktop';
 
 const OFFLINE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/Denver',
@@ -23,40 +24,6 @@ const OFFLINE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
   minute: '2-digit',
   hour12: true,
 });
-
-const DESKTOP_QUERY = '(min-width: 1024px)';
-
-/**
- * Live `matchMedia`-backed breakpoint check, used solely to decide which of
- * the two "⚠ Report conditions" trigger buttons is mounted (Header's inline
- * desktop button vs. ReportModal's own fixed phone pill) -- never both at
- * once. Everything else about the phone/desktop layout (the grid, the
- * camera rail) is plain responsive `lg:` Tailwind classes on a single set of
- * DOM nodes and needs no JS at all; the trigger button is the one exception
- * because the two variants are genuinely different elements per the design
- * (not the same node repositioned), and jsdom loads no stylesheet, so
- * `hidden`/`lg:inline-flex`-style classes alone would leave both
- * simultaneously present and accessible in tests -- ambiguous for any
- * `getByRole('button', { name: /report conditions/i })` query. Defaults to
- * `false` when `matchMedia` isn't available (jsdom), which is also why the
- * frozen submit-refetch test below still finds exactly one such button.
- */
-function useIsDesktop(): boolean {
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-    return window.matchMedia(DESKTOP_QUERY).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
-    const mql = window.matchMedia(DESKTOP_QUERY);
-    const handler = () => setIsDesktop(mql.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
-
-  return isDesktop;
-}
 
 function App() {
   const { data, error, refreshedAt, refresh, offline, offlineSince } = useStatus();

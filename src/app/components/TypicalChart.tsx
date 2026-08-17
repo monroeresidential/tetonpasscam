@@ -1,4 +1,5 @@
 import { bandRuns } from '../../shared/history';
+import { useIsDesktop } from '../useIsDesktop';
 
 export interface ChartPoint {
   hour: number;
@@ -33,27 +34,53 @@ export interface TypicalChartProps {
    *  temperature chart) MUST override this, or a "for this route" message
    *  is shown for data that has no route at all. */
   emptyMessage?: string;
+  /** Axis title below the x-axis tick labels. Defaults to the shared
+   *  time-of-day wording, since every chart on this component plots against
+   *  the same 24-hour Denver-local axis regardless of what's on the y-axis. */
+  xAxisTitle?: string;
+  /** Axis title beside the y-axis, rotated -90deg. Defaults to the original
+   *  travel-time wording so existing (drive-time) callers are unaffected --
+   *  any non-travel-time chart (e.g. temperature) MUST override this. */
+  yAxisTitle?: string;
 }
 
-const VB_W = 940;
-const VB_H = 260;
-const PAD = { left: 40, right: 10, top: 20, bottom: 40 };
+interface ChartProfile {
+  w: number;
+  h: number;
+  padL: number;
+  padR: number;
+  padT: number;
+  padB: number;
+  tickFont: number;
+  xTickHours: number;
+}
+
+/**
+ * Two complete geometry profiles rather than one scaled viewBox. The old
+ * single 940x260 box scaled to any container, so 13-unit tick text rendered
+ * around 5px at phone width -- the root cause this replaces, and the one the
+ * file's previous comment declined to take on.
+ *
+ * Switched on a real 1024px media query (the `useIsDesktop` pattern from
+ * App.tsx), not on CSS, because the tick COUNT changes too and that is a
+ * render decision, not a style.
+ */
+const CHART_PROFILE: { desktop: ChartProfile; phone: ChartProfile } = {
+  desktop: { w: 900, h: 236, padL: 60, padR: 10, padT: 14, padB: 46, tickFont: 13, xTickHours: 3 },
+  phone: { w: 360, h: 216, padL: 50, padR: 10, padT: 14, padB: 42, tickFont: 11, xTickHours: 4 },
+};
 
 const DEFAULT_FORMAT = (v: number) => `${Math.round(v / 60)}m`;
 const DEFAULT_ARIA_LABEL = 'Travel time by hour of day, today against the typical range';
 const DEFAULT_EMPTY_MESSAGE = 'No history for this route yet.';
+const DEFAULT_X_AXIS_TITLE = 'Time of day (MT)';
+const DEFAULT_Y_AXIS_TITLE = 'Travel time (min)';
 
-/** Font size for axis tick text, in viewBox units. Mock 2c used 10; this is
- *  deliberately larger. The viewBox is a fixed 940 units wide and scales to
- *  its container, so every `<text>` inside shrinks with it -- at a 390px
- *  phone, 10 units renders around 4px and is unreadable. 13 is a partial
- *  mitigation, not a fix; making axis text genuinely legible at phone width
- *  needs responsive font sizing or a different scaling strategy than one
- *  fixed viewBox, which is a larger change than adding the axes. */
-const AXIS_FONT_SIZE = 13;
-
-/** Hours between x-axis labels, matching mock 2c's cadence (4 AM, 7 AM, ...). */
-const X_LABEL_STEP_HOURS = 3;
+/** Size, weight and tracking for both axis titles. Fixed regardless of
+ *  profile -- unlike tick text, the titles are short, fixed strings, so
+ *  there's no phone-width truncation risk to size down for. */
+const AXIS_TITLE_FONT_SIZE = 11;
+const AXIS_TITLE_STYLE: React.CSSProperties = { letterSpacing: '0.04em' };
 
 /** Roughly half the width of the widest now-label ("now · 100°F"), in
  *  viewBox units. Estimated rather than measured: SVG text has no width
@@ -70,10 +97,13 @@ const NOW_LABEL_HALF_WIDTH = 45;
  * "now · 3" instead of "now · 37m" whenever the latest reading was the
  * rightmost point, which is the normal case for a chart of today so far.
  * Anchoring to the near end makes the text grow inward instead.
+ *
+ * Takes the active profile because the plot's right/left edges (VB width and
+ * padding) now vary between the desktop and phone geometries.
  */
-function nowLabelAnchor(px: number): 'start' | 'middle' | 'end' {
-  if (px + NOW_LABEL_HALF_WIDTH > VB_W - PAD.right) return 'end';
-  if (px - NOW_LABEL_HALF_WIDTH < PAD.left) return 'start';
+function nowLabelAnchor(px: number, profile: ChartProfile): 'start' | 'middle' | 'end' {
+  if (px + NOW_LABEL_HALF_WIDTH > profile.w - profile.padR) return 'end';
+  if (px - NOW_LABEL_HALF_WIDTH < profile.padL) return 'start';
   return 'middle';
 }
 
@@ -102,13 +132,16 @@ const NOW_LABEL_HALO_WIDTH = 4;
  * Clamped into the plot area so a reading at either extreme cannot push its
  * label out of frame. At the very edges the label may still sit near the
  * dot; the halo is what keeps it legible there.
+ *
+ * Takes the active profile because the plot's top/bottom clamp (VB height
+ * and padding) now varies between the desktop and phone geometries.
  */
-function nowLabelY(dotY: number, rising: boolean): number {
+function nowLabelY(dotY: number, rising: boolean, profile: ChartProfile): number {
   const raw = rising
     ? dotY - NOW_LABEL_OFFSET
     : dotY + NOW_LABEL_OFFSET + NOW_LABEL_FONT_SIZE * 0.8;
-  const top = PAD.top + NOW_LABEL_FONT_SIZE;
-  const bottom = VB_H - PAD.bottom;
+  const top = profile.padT + NOW_LABEL_FONT_SIZE;
+  const bottom = profile.h - profile.padB;
   return Math.min(Math.max(raw, top), bottom);
 }
 
@@ -129,7 +162,14 @@ export default function TypicalChart({
   referenceValue,
   ariaLabel = DEFAULT_ARIA_LABEL,
   emptyMessage = DEFAULT_EMPTY_MESSAGE,
+  xAxisTitle = DEFAULT_X_AXIS_TITLE,
+  yAxisTitle = DEFAULT_Y_AXIS_TITLE,
 }: TypicalChartProps) {
+  // Read before any early return -- Rules of Hooks -- even though the empty
+  // states below never reach the JSX that uses it.
+  const isDesktop = useIsDesktop();
+  const profile = isDesktop ? CHART_PROFILE.desktop : CHART_PROFILE.phone;
+
   const noHistory = <p className="text-muted text-sm">{emptyMessage}</p>;
 
   if (points.length === 0) return noHistory;
@@ -198,8 +238,10 @@ export default function TypicalChart({
   const span = vMax > vMin ? vMax - vMin : 1;
   const hSpan = hMax > hMin ? hMax - hMin : 1;
 
-  const x = (hour: number) => PAD.left + ((hour - hMin) / hSpan) * (VB_W - PAD.left - PAD.right);
-  const y = (v: number) => PAD.top + (1 - (v - vMin) / span) * (VB_H - PAD.top - PAD.bottom);
+  const x = (hour: number) =>
+    profile.padL + ((hour - hMin) / hSpan) * (profile.w - profile.padL - profile.padR);
+  const y = (v: number) =>
+    profile.padT + (1 - (v - vMin) / span) * (profile.h - profile.padT - profile.padB);
 
   const medianPts = points
     .filter((p) => p.median !== null)
@@ -226,15 +268,17 @@ export default function TypicalChart({
   // states the real domain without extra machinery to get wrong.
   const yTicks = [vMin, vMin + span / 2, vMax];
 
-  // X labels every three hours across the plotted range. Starts at the first
-  // whole hour at or after hMin so a fractional domain edge can't produce a
-  // label sitting outside the plot area.
+  // X labels every profile.xTickHours across the plotted range (3h desktop,
+  // 4h phone -- phone gets fewer, wider-spaced labels because its viewBox is
+  // narrower). Starts at the first whole hour at or after hMin so a
+  // fractional domain edge can't produce a label sitting outside the plot
+  // area.
   const xTicks: number[] = [];
-  for (let h = Math.ceil(hMin); h <= hMax; h += X_LABEL_STEP_HOURS) xTicks.push(h);
+  for (let h = Math.ceil(hMin); h <= hMax; h += profile.xTickHours) xTicks.push(h);
 
   return (
     <svg
-      viewBox={`0 0 ${VB_W} ${VB_H}`}
+      viewBox={`0 0 ${profile.w} ${profile.h}`}
       className="block h-auto w-full"
       role="img"
       aria-label={ariaLabel}
@@ -249,35 +293,35 @@ export default function TypicalChart({
       <>
           <line
             data-testid="axis-y"
-            x1={PAD.left}
-            y1={PAD.top}
-            x2={PAD.left}
-            y2={VB_H - PAD.bottom}
+            x1={profile.padL}
+            y1={profile.padT}
+            x2={profile.padL}
+            y2={profile.h - profile.padB}
             stroke="var(--color-card-border)"
           />
           <line
             data-testid="axis-x"
-            x1={PAD.left}
-            y1={VB_H - PAD.bottom}
-            x2={VB_W - PAD.right}
-            y2={VB_H - PAD.bottom}
+            x1={profile.padL}
+            y1={profile.h - profile.padB}
+            x2={profile.w - profile.padR}
+            y2={profile.h - profile.padB}
             stroke="var(--color-card-border)"
           />
           {yTicks.map((tick) => (
             <g key={`y-${tick}`}>
               <line
-                x1={PAD.left}
+                x1={profile.padL}
                 y1={y(tick)}
-                x2={VB_W - PAD.right}
+                x2={profile.w - profile.padR}
                 y2={y(tick)}
                 stroke="var(--color-card-border)"
                 strokeOpacity="0.5"
               />
               <text
-                x={PAD.left - 6}
+                x={profile.padL - 6}
                 y={y(tick) + 4}
                 textAnchor="end"
-                fontSize={AXIS_FONT_SIZE}
+                fontSize={profile.tickFont}
                 fill="var(--color-faint)"
               >
                 {formatValue(tick)}
@@ -287,31 +331,61 @@ export default function TypicalChart({
           {xTicks.map((hour) => (
             <text
               key={`x-${hour}`}
+              data-testid="x-tick"
               x={x(hour)}
-              y={VB_H - PAD.bottom + AXIS_FONT_SIZE + 6}
+              y={profile.h - profile.padB + profile.tickFont + 6}
               textAnchor="middle"
-              fontSize={AXIS_FONT_SIZE}
+              fontSize={profile.tickFont}
               fill="var(--color-faint)"
             >
               {hourLabel(hour)}
             </text>
           ))}
+          {/* Axis titles. X is centred below the tick labels; Y is rotated
+              -90deg and anchored near the left edge (x=12), roughly centred
+              on the plot's vertical span. Fixed size regardless of profile --
+              see AXIS_TITLE_FONT_SIZE. */}
+          <text
+            data-testid="x-axis-title"
+            x={profile.padL + (profile.w - profile.padL - profile.padR) / 2}
+            y={profile.h - 4}
+            textAnchor="middle"
+            fontSize={AXIS_TITLE_FONT_SIZE}
+            fontWeight="700"
+            fill="var(--color-faint)"
+            style={AXIS_TITLE_STYLE}
+          >
+            {xAxisTitle}
+          </text>
+          <text
+            data-testid="y-axis-title"
+            x={12}
+            y={profile.padT + (profile.h - profile.padT - profile.padB) / 2}
+            textAnchor="middle"
+            fontSize={AXIS_TITLE_FONT_SIZE}
+            fontWeight="700"
+            fill="var(--color-faint)"
+            style={AXIS_TITLE_STYLE}
+            transform={`rotate(-90 12 ${profile.padT + (profile.h - profile.padT - profile.padB) / 2})`}
+          >
+            {yAxisTitle}
+          </text>
       </>
 
       {showReference && referenceValue && (
         <>
           <line
             data-testid="reference-line"
-            x1={PAD.left}
+            x1={profile.padL}
             y1={y(referenceValue.value)}
-            x2={VB_W - PAD.right}
+            x2={profile.w - profile.padR}
             y2={y(referenceValue.value)}
             stroke="var(--color-faint)"
             strokeWidth="1"
             strokeDasharray="5 4"
           />
           <text
-            x={PAD.left + 4}
+            x={profile.padL + 4}
             y={y(referenceValue.value) - 4}
             fontSize="10"
             fill="var(--color-faint)"
@@ -382,8 +456,8 @@ export default function TypicalChart({
           {!compact && (
             <text
               x={x(last.hour)}
-              y={nowLabelY(y(last.value), nowLabelRising)}
-              textAnchor={nowLabelAnchor(x(last.hour))}
+              y={nowLabelY(y(last.value), nowLabelRising, profile)}
+              textAnchor={nowLabelAnchor(x(last.hour), profile)}
               fontSize={NOW_LABEL_FONT_SIZE}
               fontWeight="700"
               fill="var(--color-accent)"

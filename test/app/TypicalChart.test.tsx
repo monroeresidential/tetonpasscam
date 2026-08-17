@@ -1,14 +1,23 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import TypicalChart, { type ChartPoint } from '../../src/app/components/TypicalChart';
 import { MIN_DISTINCT_DAYS_FOR_BAND } from '../../src/shared/history';
+import { setMatchMedia } from './matchMedia';
 
 function pt(hour: number, distinctDays: number | null): ChartPoint {
   return { hour, median: 1800, p25: 1700, p75: 1900, distinctDays };
 }
 
 const OK = MIN_DISTINCT_DAYS_FOR_BAND;
+
+// Spans the full day so the desktop (every 3h) and phone (every 4h) x-tick
+// cadences actually produce different tick counts, not just different
+// viewBoxes -- see the "responsive geometry" suite below.
+const BASE_PROPS = {
+  points: [pt(0, OK), pt(6, OK), pt(12, OK), pt(18, OK), pt(23, OK)],
+  today: [],
+};
 
 describe('TypicalChart', () => {
   it('draws a band where the bucket has enough distinct days', () => {
@@ -133,6 +142,14 @@ describe('TypicalChart', () => {
 // data -- you could see the shape of the day without being able to read a
 // single value off it except "now".
 describe('TypicalChart — axes', () => {
+  // These tests hand-pick hours that land exactly on a 3-hour cadence (e.g.
+  // 4/7/10, 10/13/16) -- the desktop profile's x-tick step. Without pinning
+  // desktop here, they'd silently run against the phone default (4-hour
+  // step, per the "responsive geometry" suite below) and those hours no
+  // longer all fall on a tick, which is a geometry-profile question this
+  // suite isn't about.
+  beforeEach(() => setMatchMedia(true));
+
   function pts(): ChartPoint[] {
     return [
       { hour: 4, median: 1800, p25: 1700, p75: 1900, distinctDays: 9 },
@@ -416,5 +433,43 @@ describe('TypicalChart — now-label legibility and placement', () => {
     render(<TypicalChart points={points} today={[{ hour: 6, value: 2000 }]} />);
     const dotY = Number(screen.getByTestId('now-dot').getAttribute('cy'));
     expect(Number(label().getAttribute('y'))).toBeLessThan(dotY);
+  });
+});
+
+// The root cause this task fixes: one fixed 940x260 viewBox scaled to any
+// container, so 13-unit tick text rendered around 5px at phone width. Two
+// complete geometry profiles, switched on a real matchMedia breakpoint
+// (not CSS), replace it.
+describe('TypicalChart — responsive geometry', () => {
+  it('uses a taller, wider viewBox with larger ticks on desktop', () => {
+    setMatchMedia(true); // (min-width: 1024px) matches
+    const { container } = render(<TypicalChart {...BASE_PROPS} />);
+    expect(container.querySelector('svg')).toHaveAttribute('viewBox', '0 0 900 236');
+  });
+
+  it('uses the phone viewBox below the breakpoint', () => {
+    setMatchMedia(false);
+    const { container } = render(<TypicalChart {...BASE_PROPS} />);
+    expect(container.querySelector('svg')).toHaveAttribute('viewBox', '0 0 360 216');
+  });
+
+  it('labels fewer x ticks on phone than on desktop', () => {
+    setMatchMedia(true);
+    const { container: desktop } = render(<TypicalChart {...BASE_PROPS} />);
+    setMatchMedia(false);
+    const { container: phone } = render(<TypicalChart {...BASE_PROPS} />);
+    const count = (c: HTMLElement) => c.querySelectorAll('[data-testid="x-tick"]').length;
+    expect(count(desktop)).toBeGreaterThan(count(phone));
+  });
+
+  it('renders the axis titles it is given', () => {
+    setMatchMedia(true);
+    const { container } = render(<TypicalChart {...BASE_PROPS} yAxisTitle="Temperature (°C)" />);
+    expect(container.querySelector('text[data-testid="x-axis-title"]')?.textContent).toBe(
+      'Time of day (MT)',
+    );
+    expect(container.querySelector('text[data-testid="y-axis-title"]')?.textContent).toBe(
+      'Temperature (°C)',
+    );
   });
 });
