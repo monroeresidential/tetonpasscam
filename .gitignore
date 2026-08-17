@@ -4,3 +4,8 @@ dist/
 .dev.vars
 .worktrees/
 .superpowers/
+
+# macOS Finder metadata. `design/.DS_Store` was committed in fac3a08 and
+# a stray root one was swept into a later commit by a careless `git add -A`;
+# ignoring the pattern outright so neither can recur.
+.DS_Store
