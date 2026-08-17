@@ -185,6 +185,30 @@ describe('DriveTimes verbal delta mapping', () => {
 });
 
 describe('DriveTimes layout', () => {
+  // Drew reported the two phone controls stacked, with dead space beside each.
+  // They were content-width in a `flex flex-wrap` row, so the direction
+  // control wrapped onto its own line the moment the pair stopped fitting --
+  // measured as <=320px at default text, but reachable on any phone once the
+  // reader raises their text size. Two halves cannot wrap. jsdom has no CSS,
+  // so the grid and the fullWidth hand-off are what's pinned here; the widths
+  // themselves were verified in a real browser at 320-430px and 1-1.5x zoom.
+  it('puts the phone town and direction controls side by side, each half-width', () => {
+    render(
+      <DriveTimes travelTimes={[row({})]} direction="eb" town="victor" onTownChange={noop} onFlip={noop} />,
+    );
+    const town = screen.getByRole('group', { name: 'Idaho town' });
+    const dir = screen.getByRole('group', { name: 'Direction' });
+    // Same row, and that row splits into two fixed columns.
+    expect(town.parentElement).toBe(dir.parentElement);
+    expect(town.parentElement).toHaveClass('grid', 'grid-cols-2');
+    expect(town.parentElement).not.toHaveClass('flex-wrap');
+    // Each control fills its column rather than hugging its label.
+    for (const group of [town, dir]) {
+      expect(group).toHaveClass('w-full');
+      expect(group).not.toHaveClass('inline-flex');
+    }
+  });
+
   it('renders the section heading and flip control copy', () => {
     render(
       <DriveTimes travelTimes={[row({})]} direction="eb" town="victor" onTownChange={noop} onFlip={noop} />,

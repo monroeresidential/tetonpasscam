@@ -185,7 +185,14 @@ export default function DriveTimes({
           the desktop flip link as a segmented control instead of a text
           link, since there's no room for the header's inline copy on a
           narrow screen. */}
-      <div className="mt-2 flex flex-wrap justify-between gap-2 lg:hidden">
+      {/* `grid-cols-2`, not `flex flex-wrap`: the two controls each take half
+          the row and stay side by side. Flex-wrap sized them to their labels
+          and wrapped the direction control onto its own line as soon as the
+          pair no longer fit -- which at default text needs a <=320px screen,
+          but happens on ordinary phones once the reader has bumped their text
+          size up. Halves cannot wrap, and they also fill the dead space that
+          content-width pills left to the right of the row. */}
+      <div className="mt-2 grid grid-cols-2 gap-2 lg:hidden">
         <Segmented
           options={
             [
@@ -196,6 +203,7 @@ export default function DriveTimes({
           value={town}
           onChange={onTownChange}
           ariaLabel="Idaho town"
+          fullWidth
         />
         <Segmented
           options={
@@ -207,6 +215,7 @@ export default function DriveTimes({
           value={direction}
           onChange={onFlip}
           ariaLabel="Direction"
+          fullWidth
         />
       </div>
 
