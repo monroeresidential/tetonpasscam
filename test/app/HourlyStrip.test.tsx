@@ -101,6 +101,24 @@ describe('HourlyStrip', () => {
     expect(card).toHaveClass('basis-[62px]');
   });
 
+  it('makes each card a containing block so the page cannot pan sideways', () => {
+    render(<HourlyStrip hourly={TWELVE} />);
+    // Regression guard for a live bug: Tailwind's `sr-only` is
+    // `position: absolute`, so without a positioned ancestor the off-screen
+    // cards' sr-only spans laid out against the DOCUMENT, escaped this
+    // strip's `overflow-x-auto` clipping, and pushed
+    // documentElement.scrollWidth to 816px on a 360px phone -- the whole
+    // page panned. `relative` on the card confines them.
+    //
+    // jsdom does no layout, so this asserts the class rather than the
+    // geometry; the geometry was verified in a real browser
+    // (docScrollWidth 816 -> 360). Removing `relative` reintroduces a
+    // page-wide horizontal scroll that no other test can see.
+    for (const card of screen.getAllByTestId('hour-card')) {
+      expect(card).toHaveClass('relative');
+    }
+  });
+
   it('prefixes precip with a snowflake for a snow hour', () => {
     render(<HourlyStrip hourly={[hour({ startTime: '2026-08-16T13:00:00-06:00', category: 'snow', precipPct: 80 })]} />);
     expect(screen.getByText('❄️ 80%')).toBeInTheDocument();

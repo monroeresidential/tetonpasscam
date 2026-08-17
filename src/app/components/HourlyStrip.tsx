@@ -43,7 +43,19 @@ export default function HourlyStrip({
             // `1 1 0%`): grows to fill the 960px desktop row, but never
             // shrinks below 62px on phone -- it overflows into the
             // existing horizontal scroll instead.
-            className="bg-card border-card-border rounded-card flex grow shrink-0 basis-[62px] flex-col items-center gap-1 border px-1 py-2 text-center"
+            //
+            // `relative` is load-bearing, not decoration. Tailwind's
+            // `sr-only` is `position: absolute`, and an absolutely
+            // positioned box resolves against its nearest positioned
+            // ancestor -- with none, that is the page. The off-screen cards'
+            // sr-only spans were therefore laid out against the document,
+            // escaping this strip's `overflow-x-auto` clipping and
+            // extending `documentElement.scrollWidth` to 816px on a 360px
+            // phone, so the WHOLE PAGE panned sideways. Making the card a
+            // containing block confines them. Measured before/after:
+            // docScrollWidth 816 -> 360, page pan yes -> no, strip scroll
+            // yes -> yes.
+            className="bg-card border-card-border rounded-card relative flex grow shrink-0 basis-[62px] flex-col items-center gap-1 border px-1 py-2 text-center"
           >
             <p className="text-muted text-[10.5px] uppercase">
               {HOUR_FORMAT.format(new Date(h.startTime))}
