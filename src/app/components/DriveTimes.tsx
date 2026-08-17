@@ -104,6 +104,13 @@ function DriveTimeCard({ travelTime }: { travelTime: TravelTime }) {
           {minutes} min
         </div>
         {delta && <div className={`text-[11.5px] font-bold ${DELTA_TONE_CLASS[delta.tone]}`}>{delta.text}</div>}
+        {/* Rule 8: staleness must be surfaced independently of the visual
+         *  (a muted numeral is colour alone, WCAG 1.4.1). The header's
+         *  "Updated ..." states the OLDEST visible row's time (see
+         *  `oldestCapturedAt` below), but a driver on THIS row still
+         *  benefits from its own timestamp -- sr-only rather than visible
+         *  so the muted-numeral treatment stays visually unchanged. */}
+        {travelTime.stale && <span className="sr-only">as of {formatAsOf(travelTime.capturedAt)}</span>}
       </div>
     </li>
   );
@@ -137,9 +144,17 @@ export default function DriveTimes({
   const byDirection = travelTimes.filter((t) => directionOf(t.slug) === direction);
   const rows = variant === 'desktop' ? byDirection : byDirection.filter((t) => idahoTownOf(t.slug) === town);
 
-  const newestCapturedAt = rows.reduce<string | null>((latest, t) => {
-    if (!latest) return t.capturedAt;
-    return new Date(t.capturedAt) > new Date(latest) ? t.capturedAt : latest;
+  // OLDEST of the visible rows, not newest -- same rule as `olderReportTime`
+  // in src/worker/poller/run.ts (a reader should never see a freshness
+  // timestamp fresher than the least-current contributor). It matters here
+  // specifically because a row goes `stale` precisely when ITS OWN
+  // capturedAt lags while its siblings are current: taking the max would
+  // print "Updated <fresh time>" directly above a stale, colour-only-muted
+  // numeral, overstating the freshness of the one row that most needs its
+  // staleness surfaced.
+  const oldestCapturedAt = rows.reduce<string | null>((oldest, t) => {
+    if (!oldest) return t.capturedAt;
+    return new Date(t.capturedAt) < new Date(oldest) ? t.capturedAt : oldest;
   }, null);
 
   return (
@@ -149,7 +164,7 @@ export default function DriveTimes({
           Drive times right now
         </h2>
         <div className="text-muted flex items-baseline gap-3 text-[11.5px]">
-          {newestCapturedAt && <span>Updated {formatAsOf(newestCapturedAt)}</span>}
+          {oldestCapturedAt && <span>Updated {formatAsOf(oldestCapturedAt)}</span>}
           {/* Desktop keeps the "⇄ Flip direction" text link next to "Updated
               ..."; phone drops it in favor of the → WY/→ ID segmented control
               below. Plain CSS visibility (not gated on `variant`) -- unlike

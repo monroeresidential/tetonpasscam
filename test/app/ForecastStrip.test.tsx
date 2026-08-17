@@ -140,9 +140,18 @@ describe('ForecastStrip', () => {
   });
 
   it('keeps the sr-only condition text in both layouts', () => {
+    // Must unmount between renders: RTL only auto-cleans up BETWEEN tests,
+    // not between render() calls within one. Without the unmount, the
+    // second assertion queries a document that still contains the FIRST
+    // (desktop) tree too, so if the phone branch dropped its sr-only span
+    // entirely, the desktop tree's own copy of "Snow" would still satisfy
+    // `length > 0` and this test would pass regardless -- a false pass that
+    // already shipped once (see WeatherStrip.test.tsx's matching pattern).
     setMatchMedia(true);
-    render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
+    const { unmount } = render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
     expect(screen.getByText('Snow')).toBeInTheDocument();
+    unmount();
+
     setMatchMedia(false);
     render(<ForecastStrip forecast={FIVE} now={NOON_MDT} />);
     expect(screen.getAllByText('Snow').length).toBeGreaterThan(0);

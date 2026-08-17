@@ -23,6 +23,11 @@ function SummitHeading() {
 interface Tile {
   label: string;
   value: ReactNode;
+  /** Surface-tile-only: the value truncates visually (see the tile
+   *  definition below), so `title` carries the untruncated string for
+   *  hover and assistive tech even though the tail is clipped on screen. */
+  title?: string;
+  truncate?: boolean;
 }
 
 const REPORTED_AT_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -96,7 +101,19 @@ export default function WeatherStrip({
         </>
       ),
     },
-    { label: 'Surface', value: surfaceCondition ?? 'No report' },
+    // WYDOT's condition strings run multi-word ("Snow packed, slick in
+    // spots") -- long enough to overrun this tile's ~149px inner width at
+    // this type size (about 13 characters). Rather than widen the tile
+    // (breaks the fixed 2x2 grid) or wrap it (breaks the fixed h-16 tile
+    // height), the value truncates visually with an ellipsis and the full
+    // string moves to `title` -- available on hover and to assistive tech,
+    // never silently dropped.
+    {
+      label: 'Surface',
+      value: surfaceCondition ?? 'No report',
+      title: surfaceCondition ?? undefined,
+      truncate: true,
+    },
     { label: 'Gust', value: gustValue(weather) },
     { label: 'Visibility', value: visibilityValue(weather.visibilityFt) },
   ];
@@ -123,7 +140,16 @@ export default function WeatherStrip({
             className="bg-card border-card-border rounded-card flex h-16 flex-col justify-center border px-3.5 py-2.5 text-left"
           >
             <p className="text-muted text-[10.5px] uppercase tracking-[0.04em]">{tile.label}</p>
-            <p className="font-display text-[19px] font-extrabold whitespace-nowrap">{tile.value}</p>
+            <p
+              className={
+                tile.truncate
+                  ? 'font-display truncate text-[19px] font-extrabold'
+                  : 'font-display text-[19px] font-extrabold whitespace-nowrap'
+              }
+              title={tile.title}
+            >
+              {tile.value}
+            </p>
           </div>
         ))}
       </div>

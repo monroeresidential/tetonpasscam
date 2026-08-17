@@ -298,6 +298,36 @@ describe('DriveTimes hierarchy, header freshness, and town filter (Task 4)', () 
     expect(screen.queryByText(/than usual|about usual/)).not.toBeInTheDocument();
   });
 
+  // Fix 4 (final review): a row is `stale` precisely when ITS OWN
+  // capturedAt lags behind its siblings, so the header must never pick the
+  // newest of the visible rows -- that would print a fresh "Updated" time
+  // directly above the one row whose whole point is being stale. Mirrors
+  // `olderReportTime` in src/worker/poller/run.ts.
+  it('states the header freshness from the OLDEST visible row, not the newest', () => {
+    const mixed = [
+      row({ slug: 'victor-jackson-eb', capturedAt: '2026-08-16T22:50:00.000Z' }),
+      row({ slug: 'victor-airport-eb', capturedAt: '2026-08-16T18:00:00.000Z', stale: true }),
+    ];
+    render(<DriveTimes travelTimes={mixed} direction="eb" town="victor" onTownChange={() => {}} onFlip={() => {}} />);
+    // 18:00 UTC = 12:00 PM America/Denver (MDT, UTC-6) -- the older of the
+    // two, not 22:50 UTC's 4:50 PM.
+    expect(screen.getByText(/^Updated /).textContent).toBe('Updated 12:00 PM');
+  });
+
+  // Fix 4 (final review): staleness must reach assistive tech independently
+  // of colour (rule 8 / WCAG 1.4.1) even though the header now states only
+  // one, non-row-specific timestamp.
+  it('gives a stale row its own sr-only "as of" text, distinct from the header timestamp', () => {
+    const mixed = [
+      row({ slug: 'victor-jackson-eb', capturedAt: '2026-08-16T22:50:00.000Z' }),
+      row({ slug: 'victor-airport-eb', capturedAt: '2026-08-16T18:00:00.000Z', stale: true }),
+    ];
+    render(<DriveTimes travelTimes={mixed} direction="eb" town="victor" onTownChange={() => {}} onFlip={() => {}} />);
+    const staleAsOf = screen.getByText(/^as of /);
+    expect(staleAsOf).toHaveClass('sr-only');
+    expect(staleAsOf.textContent).toBe('as of 12:00 PM');
+  });
+
   it('promotes the route name to the display face and demotes the numeral', () => {
     // `getByText(/^38 min$/)` is a singular-match query -- it only stays
     // unambiguous because ALL_TWELVE staggers each prefix's durationSec (see
@@ -403,7 +433,7 @@ describe('DriveTimes routes-omitted contract', () => {
 // header, so a stale row now shows the muted numeral and NOTHING beneath it
 // (no delta, no per-row timestamp) rather than the old "as of" line.
 describe('DriveTimes stale rows', () => {
-  it('a stale row shows the duration muted and no delta chip beneath it', () => {
+  it('a stale row shows the duration muted and no VISIBLE delta chip or "as of" text beneath it', () => {
     render(
       <DriveTimes
         travelTimes={[
@@ -424,8 +454,12 @@ describe('DriveTimes stale rows', () => {
     const duration = screen.getByText('35 min');
     expect(duration.className).toMatch(/text-muted/);
 
-    expect(screen.queryByText(/^as of /)).not.toBeInTheDocument();
     expect(screen.queryByText(/usual/)).not.toBeInTheDocument();
+    // The row DOES carry an "as of" string now (Fix 4, sr-only -- staleness
+    // must reach assistive tech, not just colour per WCAG 1.4.1), but it
+    // must stay visually hidden so the row's on-screen appearance is
+    // unchanged. See the sr-only-specific test below for the positive case.
+    expect(screen.getByText(/^as of /)).toHaveClass('sr-only');
   });
 
   it('a fresh row renders exactly as before: emphasized duration, no "as of" label', () => {

@@ -152,7 +152,7 @@ export default function HistoryPage() {
 
         <h1 className="font-display text-[24px] font-extrabold tracking-tight">When should you leave?</h1>
 
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           <div className="relative min-w-[200px] flex-1">
             <select
               aria-label="Route"

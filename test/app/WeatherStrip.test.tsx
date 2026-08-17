@@ -135,10 +135,22 @@ describe('WeatherStrip — surface condition tile', () => {
     expect(screen.getByText('No report')).toBeInTheDocument();
   });
 
-  it('renders a long WYDOT condition string in full, without truncating it', () => {
-    // WYDOT emits multi-word strings; the tile has to hold them.
+  it('truncates a long WYDOT condition string visually, but keeps it in full via title', () => {
+    // WYDOT emits multi-word strings ("Snow packed, slick in spots") that
+    // run about twice this tile's ~149px inner width at this type size --
+    // jsdom does no layout, so a plain getByText assertion here would pass
+    // regardless of whether the tile can actually hold the string (this is
+    // exactly what happened: the old version of this test asserted the
+    // string rendered "in full, without truncating it", which was true in
+    // jsdom and false on screen). The value element now carries `truncate`
+    // deliberately -- don't revert it to `whitespace-nowrap` because this
+    // test looks green; the CSS is doing real work the DOM query can't see.
     render(<WeatherStrip weather={reading} surfaceCondition="Snow packed, slick in spots" />);
-    expect(screen.getByText('Snow packed, slick in spots')).toBeInTheDocument();
+    const value = screen.getByText('Snow packed, slick in spots');
+    expect(value).toHaveClass('truncate');
+    // The full string still reaches hover and assistive tech via `title`,
+    // even though the tail is visually clipped.
+    expect(value).toHaveAttribute('title', 'Snow packed, slick in spots');
   });
 
   it('renders "No report" for the Surface tile when no condition is supplied at all', () => {
