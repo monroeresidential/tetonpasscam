@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import WeatherStrip from '../../src/app/components/WeatherStrip';
@@ -32,7 +32,20 @@ describe('WeatherStrip', () => {
   it('combines air and road into one tile', () => {
     render(<WeatherStrip weather={reading} />);
     expect(screen.getByText('Air / Road')).toBeInTheDocument();
-    expect(screen.getByText(/28°F\s*\/\s*22°F/)).toBeInTheDocument();
+    // The separator is a muted <span> (see the test below), so getByText's
+    // regex form can't traverse it -- getNodeText only joins an element's
+    // own direct text-node children, not nested elements. Read the whole
+    // tile's textContent instead, which does recurse.
+    const tile = screen.getAllByTestId('weather-tile')[0];
+    expect(tile.textContent).toMatch(/28°F\s*\/\s*22°F/);
+  });
+
+  it('renders the Air/Road separator as muted', () => {
+    render(<WeatherStrip weather={reading} />);
+    const tile = screen.getAllByTestId('weather-tile')[0];
+    const separator = within(tile).getByText('/');
+    expect(separator.tagName).toBe('SPAN');
+    expect(separator).toHaveClass('text-muted');
   });
 
   it('says "No report" rather than an em-dash when there is no surface reading', () => {
@@ -140,8 +153,11 @@ describe('WeatherStrip — surface condition tile', () => {
 describe('WeatherStrip — temperature unit', () => {
   it('renders temperatures in Celsius when the unit is C', () => {
     render(<WeatherStrip weather={reading} unit="C" />);
-    // reading.airF is 28 -> -2°C, surfaceF is 22 -> -6°C
-    expect(screen.getByText(/-2°C\s*\/\s*-6°C/)).toBeInTheDocument();
+    // reading.airF is 28 -> -2°C, surfaceF is 22 -> -6°C. Read via
+    // textContent, not getByText, since the separator span breaks up the
+    // tile's direct text-node children (see the combined-tile test above).
+    const tile = screen.getAllByTestId('weather-tile')[0];
+    expect(tile.textContent).toMatch(/-2°C\s*\/\s*-6°C/);
   });
 
   it('defaults to Fahrenheit when no unit is supplied', () => {

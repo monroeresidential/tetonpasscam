@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { WeatherReading } from '../../worker/poller/wydot-weather';
 import { formatTemp, type TempUnit } from '../units';
 
@@ -20,7 +22,7 @@ function SummitHeading() {
 
 interface Tile {
   label: string;
-  value: string;
+  value: ReactNode;
 }
 
 const REPORTED_AT_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -86,7 +88,14 @@ export default function WeatherStrip({
   const airValue = weather.airF !== null ? formatTemp(weather.airF, unit) : '—';
   const roadValue = weather.surfaceF !== null ? formatTemp(weather.surfaceF, unit) : '—';
   const tiles: Tile[] = [
-    { label: 'Air / Road', value: `${airValue} / ${roadValue}` },
+    {
+      label: 'Air / Road',
+      value: (
+        <>
+          {airValue} <span className="text-muted">/</span> {roadValue}
+        </>
+      ),
+    },
     { label: 'Surface', value: surfaceCondition ?? 'No report' },
     { label: 'Gust', value: gustValue(weather) },
     { label: 'Visibility', value: visibilityValue(weather.visibilityFt) },
