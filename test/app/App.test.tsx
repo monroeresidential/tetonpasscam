@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,6 +48,7 @@ function mockStatusOnlyFetch(): void {
 }
 
 describe('App', () => {
+
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -385,6 +389,86 @@ describe('App', () => {
 
       expect(screen.queryByText(/may be outdated/i)).not.toBeInTheDocument();
     });
+  });
+
+  // The page's h1 moved out of <About /> (where it sat at the bottom, above
+  // the FAQ) and became an sr-only heading at the top of the document. It is
+  // deliberately invisible: the visible page title is the header wordmark,
+  // which is a logo lockup rather than text. Keeping a real h1 means the
+  // rendered DOM -- what a screen reader walks and what Google indexes after
+  // JS -- still has exactly one, matching the H1 crawlers get from
+  // index.html's #seo-shell before React hides it.
+  it('has exactly one h1, sr-only, matching the static shell H1', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url === '/api/status') {
+        return new Response(JSON.stringify(makeStatus()), { status: 200 });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<App />);
+    await screen.findByText('OPEN');
+    const h1s = document.querySelectorAll('h1');
+    expect(h1s).toHaveLength(1);
+    expect(h1s[0]).toHaveClass('sr-only');
+
+    const shellHtml = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
+    const shellH1 = shellHtml
+      .match(/<h1 class="text-2xl font-bold tracking-tight">([^<]*)<\/h1>/)![1]
+      .replace(/\s+/g, ' ')
+      .trim();
+    expect(h1s[0].textContent?.replace(/\s+/g, ' ').trim()).toBe(shellH1);
+  });
+
+  describe('drive-time content is gated on the pass being usable', () => {
+    const TRAVEL = [
+      {
+        slug: 'victor-jackson-eb',
+        name: 'Victor to Jackson (EB)',
+        durationSec: 1500,
+        typicalSec: 1200,
+        capturedAt: '2026-08-09T23:48:00.000Z',
+      },
+    ];
+
+    function mockWith(status: 'open' | 'closed' | 'unknown') {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : (input as Request).url;
+        if (url === '/api/status') {
+          return new Response(JSON.stringify(makeStatus({ status, travelTimes: TRAVEL })), {
+            status: 200,
+          });
+        }
+        return new Response(JSON.stringify({ points: [], today: [] }), { status: 200 });
+      });
+    }
+
+    // CONTROL. makeStatus()'s travelTimes default is [], so a "teaser is
+    // absent" assertion passes for free unless routes are actually supplied
+    // -- the first version of this test did exactly that and proved nothing.
+    // This case fails if the fixture ever stops producing a teaser, which is
+    // what gives the two below their meaning.
+    it('shows the history teaser when the pass is open', async () => {
+      mockWith('open');
+      render(<App />);
+      expect(await screen.findByText(/when should you leave/i)).toBeInTheDocument();
+    });
+
+    it.each(['closed', 'unknown'] as const)(
+      'hides the drive-time history teaser when the pass is %s',
+      async (status) => {
+        // The teaser is "When should you leave?" -- a drive-time chart.
+        // Leaving it directly beneath a section that just said times over the
+        // pass do not apply is the app contradicting itself in consecutive
+        // elements. Same gate as DriveTimes: no drive-time content while we
+        // cannot say the road is drivable.
+        mockWith(status);
+        render(<App />);
+        await screen.findByRole('heading', { name: 'Drive times' });
+        expect(screen.queryByText(/when should you leave/i)).not.toBeInTheDocument();
+      },
+    );
   });
 
   describe('explainer relocation (scope addition)', () => {

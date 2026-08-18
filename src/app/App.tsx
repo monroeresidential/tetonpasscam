@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import StatusBanner from './components/StatusBanner';
 import DriveTimes, { idahoTownOf, type Town } from './components/DriveTimes';
+import { effectivePassStatus } from './effectiveStatus';
 import WeatherStrip from './components/WeatherStrip';
 import ForecastStrip from './components/ForecastStrip';
 import HourlyStrip from './components/HourlyStrip';
@@ -43,6 +44,8 @@ function App() {
     );
   }
 
+  const passStatus = effectivePassStatus(data);
+
   return (
     <main className="min-h-screen bg-page pb-28 lg:pb-10">
       {offline && (
@@ -60,6 +63,14 @@ function App() {
           width. Header/banner/footer stay full-width inside this
           capped-width wrapper, same as the mockup. */}
       <div className="mx-auto max-w-[30rem] px-3.5 lg:max-w-[960px] lg:px-7">
+        {/* The page's only h1, deliberately invisible. The visible title at
+            the top of the screen is the header's logo-plus-wordmark lockup,
+            not a heading, and the shell's real H1 in index.html is hidden the
+            moment React mounts -- so without this the rendered DOM would have
+            no h1 at all for screen readers or for Google's post-JS snapshot.
+            Text is kept identical to that shell H1; App.test.tsx pins it. */}
+        <h1 className="sr-only">Teton Pass — live cams &amp; conditions</h1>
+
         <Header onReport={() => setReportOpen(true)} variant={isDesktop ? 'desktop' : 'phone'} />
 
         <StatusBanner data={data} direction={direction} />
@@ -70,6 +81,7 @@ function App() {
               travelTimes={data.travelTimes}
               direction={direction}
               town={town}
+              status={passStatus}
               onTownChange={setTown}
               onFlip={() => setDirection((d) => (d === 'eb' ? 'wb' : 'eb'))}
               variant={isDesktop ? 'desktop' : 'phone'}
@@ -82,6 +94,13 @@ function App() {
             // unfiltered there, README §2); on phone it's the first route
             // matching both the direction and the Victor/Driggs picker,
             // since that's the town filter Home is actually applying.
+            // Gated on the same status as DriveTimes above: this teaser is
+            // "When should you leave?" over a drive-time chart, and rendering
+            // it directly beneath a section that just explained why times
+            // over the pass do not apply is the page contradicting itself in
+            // consecutive elements. One concept -- no drive-time content
+            // while we cannot say the road is drivable.
+            if (passStatus === 'closed' || passStatus === 'unknown') return null;
             const historyRoute = data.travelTimes
               .filter((t) => t.slug.endsWith(`-${direction}`))
               .find((t) => isDesktop || idahoTownOf(t.slug) === town);

@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, ne, or } from 'drizzle-orm';
 
 import type { Env } from '../env';
+import type { PassStatus } from '../../shared/types';
 import {
   db,
   detourSnapshots,
@@ -191,13 +192,18 @@ function mergeAgreeing(primary: StatusResult, fallback: StatusResult): StatusRes
  *  recognizable verdict, or any non-'closed' verdict) -- callers then report
  *  'unknown', which is the spec's answer for an unresolved conflict and
  *  whose UI withholds drive times and points at Wyoming 511. */
-async function consultStatewide(fetcher: typeof fetch): Promise<'closed' | null> {
+async function consultStatewide(
+  fetcher: typeof fetch,
+): Promise<{ escalates: 'closed' | null; verdict: PassStatus }> {
   try {
     const html = await wydotFetch(STATEWIDE_URL, fetcher);
     const statewideStatus = html === null ? 'unknown' : parseStatewide(html);
-    return statewideStatus === 'closed' ? 'closed' : null;
+    // The verdict is returned alongside the escalation decision purely so it
+    // can be RECORDED. It still may not license passage: only 'closed' ever
+    // becomes an escalation, exactly as before.
+    return { escalates: statewideStatus === 'closed' ? 'closed' : null, verdict: statewideStatus };
   } catch {
-    return null;
+    return { escalates: null, verdict: 'unknown' };
   }
 }
 
@@ -272,9 +278,18 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<ResolvedStat
   // there. `fallback.conditionText` is already null whenever the fallback
   // page failed to fetch or its segment row wasn't found, so no extra
   // guard is needed for those cases.
+  // `statewide` starts null and is filled in only if the crosscheck actually
+  // runs, so "not consulted" and "consulted, said nothing" stay distinct in
+  // the record.
+  let statewideVerdict: PassStatus | null = null;
   const withSurface = (result: StatusResult): ResolvedStatus => ({
     ...result,
     surfaceConditionText: fallback.conditionText,
+    sourceVerdicts: {
+      primary: primary.status,
+      fallback: fallback.status,
+      statewide: statewideVerdict,
+    },
   });
 
   const primaryAxis = passAxis(primary.status);
@@ -289,7 +304,9 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<ResolvedStat
     // Disagreement: one authoritative page says closed, the other says
     // open/restricted. Never resolve this as 'open' -- consult Statewide.
     const crosscheck = await consultStatewide(fetcher);
-    if (crosscheck) return withSurface({ ...unknownStatusResult('crosscheck'), status: crosscheck });
+    statewideVerdict = crosscheck.verdict;
+    if (crosscheck.escalates)
+      return withSurface({ ...unknownStatusResult('crosscheck'), status: crosscheck.escalates });
     return withSurface(unknownStatusResult('unresolved'));
   }
 
@@ -300,8 +317,9 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<ResolvedStat
   // 'crosscheck' and stays unbounded: there, an authoritative page did report
   // the closure itself.
   const crosscheck = await consultStatewide(fetcher);
-  if (crosscheck)
-    return withSurface({ ...unknownStatusResult(STATEWIDE_ONLY_SOURCE), status: crosscheck });
+  statewideVerdict = crosscheck.verdict;
+  if (crosscheck.escalates)
+    return withSurface({ ...unknownStatusResult(STATEWIDE_ONLY_SOURCE), status: crosscheck.escalates });
   return withSurface(unknownStatusResult('primary'));
 }
 
@@ -512,7 +530,11 @@ export async function runPollCycle(
     // surfaceConditionText null on this path for the same reason the whole
     // result is 'unknown': resolveStatus blew up, so there is no fallback
     // parse to describe the road surface from.
-    status = { ...unknownStatusResult('primary'), surfaceConditionText: null };
+    status = {
+      ...unknownStatusResult('primary'),
+      surfaceConditionText: null,
+      sourceVerdicts: { primary: 'unknown', fallback: 'unknown', statewide: null },
+    };
   }
 
   // Step 2: advisory diff vs the previous RELIABLE snapshot (log only for
@@ -576,6 +598,9 @@ export async function runPollCycle(
       restrictions: JSON.stringify(status.restrictions),
       wydotReportTime: status.wydotReportTime,
       source: status.source,
+      primaryStatus: status.sourceVerdicts.primary,
+      fallbackStatus: status.sourceVerdicts.fallback,
+      statewideStatus: status.sourceVerdicts.statewide,
     });
   } catch (err) {
     console.error('[poller] failed to write status snapshot', err);

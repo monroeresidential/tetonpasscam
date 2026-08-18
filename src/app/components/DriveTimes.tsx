@@ -1,4 +1,4 @@
-import type { ApiStatus } from '../../shared/types';
+import type { ApiStatus, PassStatus } from '../../shared/types';
 import Segmented from './Segmented';
 
 type Direction = 'eb' | 'wb';
@@ -120,6 +120,7 @@ export default function DriveTimes({
   travelTimes,
   direction,
   town,
+  status,
   onTownChange,
   onFlip,
   variant = 'phone',
@@ -127,6 +128,10 @@ export default function DriveTimes({
   travelTimes: ApiStatus['travelTimes'];
   direction: Direction;
   town: Town;
+  /** The EFFECTIVE status (pollerDead already folded in -- see
+   *  `effectivePassStatus`), because what may be shown here depends on
+   *  whether the pass can be driven at all. */
+  status: PassStatus;
   onTownChange: (town: Town) => void;
   onFlip: () => void;
   /**
@@ -141,6 +146,35 @@ export default function DriveTimes({
    */
   variant?: 'phone' | 'desktop';
 }) {
+  // CLOSED and UNKNOWN withhold route times entirely.
+  //
+  // The card renderer and the embed widget have always done this ("never
+  // imply currency for an unresolved status", hard rule 1), and
+  // resolveStatus's own doc comment calls UNKNOWN the state "whose UI
+  // withholds drive times" -- but the web app went on showing them, which is
+  // how a CLOSED banner ended up sitting directly above "Drive times right
+  // now / Updated 10:50 PM" at 4:44 AM (Drew's screenshot, 2026-08-18). The
+  // staleness was the lesser problem: those were times for a drive that was
+  // not legally possible.
+  //
+  // The whole header goes with them, not just the rows. "Drive times right
+  // now" above an explanation of why there are none reads as a contradiction,
+  // and the "Updated ..." stamp is the precise claim being withdrawn.
+  if (status === 'closed' || status === 'unknown') {
+    return (
+      <section aria-labelledby="drive-times-heading" className="mt-4">
+        <h2 id="drive-times-heading" className="font-display text-[15px] font-bold">
+          Drive times
+        </h2>
+        <p className="text-muted mt-1 text-[13px] leading-relaxed">
+          {status === 'closed'
+            ? 'The pass is closed, so times over it do not apply. The detour above is the way around: US-26/US-89 via Swan Valley–Alpine.'
+            : "We can't confirm the pass status right now, so drive times are withheld. Check Wyoming 511 before relying on one."}
+        </p>
+      </section>
+    );
+  }
+
   const byDirection = travelTimes.filter((t) => directionOf(t.slug) === direction);
   const rows = variant === 'desktop' ? byDirection : byDirection.filter((t) => idahoTownOf(t.slug) === town);
 

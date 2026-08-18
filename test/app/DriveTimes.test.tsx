@@ -550,3 +550,64 @@ describe('DriveTimes delta visibility on rerender', () => {
     expect(screen.getByText(/usual/)).toBeInTheDocument();
   });
 });
+
+describe('drive times are withheld when the pass is not passable', () => {
+  // The share card (card/render.ts) and the embed widget have always
+  // suppressed over-the-pass times for CLOSED and UNKNOWN -- "never imply
+  // currency for an unresolved status", hard rule 1 -- and resolveStatus's
+  // own doc comment describes UNKNOWN as the state "whose UI withholds drive
+  // times". The web app was the one surface that never did it.
+  //
+  // Drew's 4:44 AM screenshot is what that costs: a CLOSED banner with
+  // "Drive times right now / Updated 10:50 PM" directly beneath it, offering
+  // six-hour-old times for a drive that was not possible. Stale is the lesser
+  // problem; the times were for a road you could not legally be on.
+  const rows = [
+    { slug: 'victor-jackson-eb', name: 'Victor → Jackson', durationSec: 2280, typicalSec: 2100, capturedAt: new Date().toISOString(), stale: false },
+  ];
+
+  function renderWith(status: 'open' | 'restricted' | 'closed' | 'unknown') {
+    return render(
+      <DriveTimes
+        travelTimes={rows}
+        direction="eb"
+        town="victor"
+        status={status}
+        onTownChange={() => {}}
+        onFlip={() => {}}
+      />,
+    );
+  }
+
+  it.each(['closed', 'unknown'] as const)('renders no route times when the pass is %s', (status) => {
+    renderWith(status);
+    expect(screen.queryByText('Victor → Jackson')).not.toBeInTheDocument();
+    expect(screen.queryByText(/38 min/)).not.toBeInTheDocument();
+    // The misleading half is the claim of currency, so the "right now"
+    // heading and the "Updated ..." stamp go with the rows. Scoped to the
+    // HEADING rather than any text match -- the unknown-state copy legitimately
+    // contains the words "right now" in a sentence about the pass status.
+    expect(
+      screen.queryByRole('heading', { name: /drive times right now/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drive times' })).toBeInTheDocument();
+    expect(screen.queryByText(/^Updated/)).not.toBeInTheDocument();
+  });
+
+  it('points a closed-pass reader at the detour instead of a blank section', () => {
+    renderWith('closed');
+    expect(screen.getByText(/pass is closed/i)).toBeInTheDocument();
+    expect(screen.getByText(/detour/i)).toBeInTheDocument();
+  });
+
+  it('tells an unknown-status reader why there is nothing here', () => {
+    renderWith('unknown');
+    expect(screen.getByText(/can't confirm|cannot confirm|unconfirmed/i)).toBeInTheDocument();
+  });
+
+  it.each(['open', 'restricted'] as const)('still shows times when the pass is %s', (status) => {
+    renderWith(status);
+    expect(screen.getByText('Victor → Jackson')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /drive times right now/i })).toBeInTheDocument();
+  });
+});

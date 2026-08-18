@@ -1,4 +1,5 @@
 import { CLOSED_BANNER_WARNING } from '../../shared/legal';
+import { effectivePassStatus } from '../effectiveStatus';
 import type { ApiStatus, PassStatus } from '../../shared/types';
 import DetourBlock from './DetourBlock';
 import ShareButton from './ShareButton';
@@ -43,7 +44,7 @@ export default function StatusBanner({
   // current -- force the UNKNOWN presentation and never render those
   // fields as if they describe right now. They may only appear inside the
   // clearly-labeled last-confirmed line below.
-  const effectiveStatus: PassStatus = data.pollerDead ? 'unknown' : data.status;
+  const effectiveStatus: PassStatus = effectivePassStatus(data);
   const showCurrentDetail = !data.pollerDead;
 
   return (

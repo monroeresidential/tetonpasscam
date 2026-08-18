@@ -85,6 +85,16 @@ export interface StatusResult {
  */
 export interface ResolvedStatus extends StatusResult {
   surfaceConditionText: string | null;
+  /** What each source independently reported this cycle, BEFORE resolution
+   *  merged them -- persisted to status_snapshots so an incident can be
+   *  queried rather than inferred. `statewide` is null whenever the
+   *  crosscheck was not consulted at all, which is the common case and is
+   *  itself the signal that resolution never needed to go that far. */
+  sourceVerdicts: {
+    primary: PassStatus;
+    fallback: PassStatus;
+    statewide: PassStatus | null;
+  };
 }
 
 export const SEGMENT_TEXT = 'Between Wilson and the Idaho State Line';

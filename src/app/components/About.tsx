@@ -28,8 +28,6 @@
  */
 import { useState } from 'react';
 
-const ABOUT_H1 = 'Teton Pass — live cams & conditions';
-
 const ABOUT_PARAGRAPH =
   'Teton Pass Cam shows the current status of Wyoming Highway 22 over Teton Pass, between ' +
   'Wilson, Wyoming and Victor, Idaho, refreshed automatically about every 10 minutes. The ' +
@@ -168,12 +166,11 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 export default function About() {
   return (
     <section aria-label="About Teton Pass Cam" className="mt-4">
-      {/* Section-heading scale (matches Cameras'/etc. `<h2>` sizing), not
-          StatusBanner's giant top-of-page treatment -- this is the same H1
-          text relocated, not a second hero headline. */}
-      <h1 className="font-display text-[15px] font-bold">{ABOUT_H1}</h1>
-
-      <h2 className="font-display mt-4 text-[15px] font-bold">Frequently asked questions</h2>
+      {/* No heading of its own above the questions. The page h1 is the
+          sr-only one App renders at the top of the document -- a visible
+          "Teton Pass — live cams & conditions" sitting directly above the FAQ
+          list was a page title in the wrong place (Drew, 2026-08-18). */}
+      <h2 className="font-display text-[15px] font-bold">Frequently asked questions</h2>
       {FAQ_ITEMS.map((item) => (
         <FaqItem key={item.question} question={item.question} answer={item.answer} />
       ))}

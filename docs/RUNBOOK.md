@@ -322,6 +322,31 @@ rows it actually saw, and prints `NO closed rows present, merged-shape clause
 unexercised` when no Wyoming road is closed — a normal summer result, and a
 green tick that verified only half the contract.
 
+**Reading what the poller saw.** `status_snapshots` records each source's own
+verdict alongside the merged answer, so "which source failed, and when" is a
+query rather than a deduction:
+
+```
+npx wrangler d1 execute tetonpasscam --remote --command \
+  "SELECT captured_at, status, source, primary_status, fallback_status, statewide_status
+     FROM status_snapshots ORDER BY id DESC LIMIT 30"
+```
+
+Read it like this:
+
+- `primary_status` and `fallback_status` both `unknown` — neither authoritative
+  page yielded a row. Sustained, that is the 2026-08-18 signature, and what the
+  blind-cycle alert fires on.
+- `statewide_status` NULL — the crosscheck was never consulted, because the
+  first two settled it. That is the normal case, not a missing reading.
+- `source = 'statewide-only'` — the closure rests on MEDIA.Statewide alone, and
+  expires from the banner after `STATEWIDE_ONLY_MAX_MIN`.
+- `source = 'crosscheck'` — an authoritative page reported the closure itself
+  and the other disagreed. That one does not expire.
+
+Columns added 2026-08-18 (migration 0011). Rows written before then have them
+NULL, which is the absence of a record rather than a reading of "unknown".
+
 **If it fails:** capture the page *before* changing anything —
 `curl -s -A "tetonpasscam.com poller (drew@monroeresidential.com)" <url> > capture.html` —
 then compare against `test/fixtures/roadclosures-winter-2025-02-16.html`, which

@@ -600,6 +600,90 @@ describe('fetchDetours', () => {
   }, 10_000);
 });
 
+describe('per-source verdicts are recorded, not just the merged answer', () => {
+  // Establishing that BOTH authoritative pages had gone unknown during the
+  // 2026-08-18 incident took inferring it from surface_condition_text being
+  // NULL -- an accident of the schema rather than a record of what happened.
+  // These columns make the same question a query.
+  it('records what each source said when the crosscheck decides the outcome', async () => {
+    await runPollCycle(
+      env as any,
+      fakeFetch({
+        'RoadClosures.html': 500,
+        'SelectedRoute=WY22': 500,
+        'MEDIA.Statewide': statewideClosed,
+        'Sensors.StationResults': sensorsTetonpass,
+        'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+        '511.idaho.gov': '[]',
+      }),
+      IN_WINDOW_NOW_MS,
+    );
+    const row = await env.DB.prepare(
+      'SELECT status, source, primary_status, fallback_status, statewide_status FROM status_snapshots ORDER BY id DESC LIMIT 1',
+    ).first();
+    expect(row).toMatchObject({
+      status: 'closed',
+      source: 'statewide-only',
+      primary_status: 'unknown',
+      fallback_status: 'unknown',
+      statewide_status: 'closed',
+    });
+  }, 20_000);
+
+  it('leaves statewide_status null when the crosscheck was never consulted', async () => {
+    // The common case: primary is definite, so resolution stops there and
+    // MEDIA.Statewide is never even fetched. A null here is the record that
+    // resolution never needed to go that far -- not a missing reading.
+    await runPollCycle(
+      env as any,
+      fakeFetch({
+        'RoadClosures.html': roadclosuresOpen,
+        'SelectedRoute=WY22': routesresultsWy22Open,
+        'Sensors.StationResults': sensorsTetonpass,
+        'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+        '511.idaho.gov': '[]',
+      }),
+      IN_WINDOW_NOW_MS,
+    );
+    const row = await env.DB.prepare(
+      'SELECT status, source, primary_status, fallback_status, statewide_status FROM status_snapshots ORDER BY id DESC LIMIT 1',
+    ).first();
+    expect(row).toMatchObject({
+      status: 'open',
+      source: 'primary',
+      primary_status: 'open',
+      fallback_status: 'open',
+    });
+    expect((row as any).statewide_status).toBeNull();
+  }, 20_000);
+
+  it('records the disagreement that a crosscheck closure resolved', async () => {
+    await runPollCycle(
+      env as any,
+      fakeFetch({
+        'RoadClosures.html': roadclosuresOpen,
+        'SelectedRoute=WY22': routesresultsWy22Closed,
+        'MEDIA.Statewide': statewideClosed,
+        'Sensors.StationResults': sensorsTetonpass,
+        'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+        '511.idaho.gov': '[]',
+      }),
+      IN_WINDOW_NOW_MS,
+    );
+    const row = await env.DB.prepare(
+      'SELECT source, primary_status, fallback_status, statewide_status FROM status_snapshots ORDER BY id DESC LIMIT 1',
+    ).first();
+    // Exactly the shape that was invisible before: primary said one thing,
+    // fallback the other, and the statewide page broke the tie.
+    expect(row).toMatchObject({
+      source: 'crosscheck',
+      primary_status: 'open',
+      fallback_status: 'closed',
+      statewide_status: 'closed',
+    });
+  }, 20_000);
+});
+
 describe('blind-cycle alert', () => {
   // The 2026-08-18 incident's signature was BOTH authoritative pages failing
   // to yield a reading, cycle after cycle, with nothing telling anyone. A

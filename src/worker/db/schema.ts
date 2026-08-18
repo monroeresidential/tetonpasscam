@@ -118,6 +118,23 @@ export const statusSnapshots = sqliteTable(
     restrictions: text('restrictions'), // JSON array string
     wydotReportTime: text('wydot_report_time'),
     source: text('source'),
+    // WHAT EACH SOURCE INDEPENDENTLY SAID, before resolution merged them.
+    //
+    // `source` above records only which rule produced the final answer, so a
+    // cycle that resolved via the statewide crosscheck leaves no trace of
+    // what the two authoritative pages actually reported. Diagnosing the
+    // 2026-08-18 incident meant inferring "both pages went unknown" from
+    // `surface_condition_text` happening to be NULL -- a coincidence of the
+    // schema, not a record. These three columns make that a query.
+    //
+    // Nullable, and NOT written for pre-existing rows: `statewide_status` is
+    // additionally null whenever the crosscheck was never consulted (the
+    // common case -- it is only fetched when the first two disagree or both
+    // fail), which is itself the useful signal that resolution never got
+    // that far.
+    primaryStatus: text('primary_status'),
+    fallbackStatus: text('fallback_status'),
+    statewideStatus: text('statewide_status'),
   },
   (table) => [index('status_snapshots_captured_idx').on(table.capturedAt)],
 );

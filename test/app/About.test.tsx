@@ -63,10 +63,19 @@ function shellFaqAnswerText(question: string): string {
 }
 
 describe('About', () => {
-  it('renders an h1 whose text exactly matches the static shell H1 in index.html', () => {
-    render(<About />);
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(normalize(heading.textContent ?? '')).toBe(shellH1Text());
+  it('renders no heading above the questions -- the page h1 lives at the top now', () => {
+    // The visible "Teton Pass — live cams & conditions" heading sat directly
+    // above the FAQ list, which is an odd place for a page title and, once
+    // the explainer became a question, was the only thing left between the
+    // section's top and the questions. Removed (Drew, 2026-08-18); App now
+    // carries an sr-only h1 at the top of the document instead, so the page
+    // still has exactly one h1 for assistive tech and rendered-DOM SEO.
+    const { container } = render(<About />);
+    expect(container.querySelector('h1')).toBeNull();
+    // The section now opens directly on the FAQ heading: no page title, and
+    // no standalone explainer paragraph (it is the first question instead).
+    const section = container.querySelector('section')!;
+    expect(section.firstElementChild?.tagName).toBe('H2');
   });
 
   // The explainer is an FAQ ENTRY for users now (Drew, 2026-08-18), not a
@@ -83,20 +92,8 @@ describe('About', () => {
     expect(normalize(paragraph!.textContent ?? '')).toBe(shellParagraphText());
   });
 
-  it('no longer renders the explainer as a standalone paragraph above the questions', () => {
-    const { container } = render(<About />);
-    // The h1's next sibling used to be the explainer <p>. It should now be
-    // the "Frequently asked questions" h2 -- nothing between them.
-    const h1 = container.querySelector('h1')!;
-    expect(h1.nextElementSibling?.tagName).toBe('H2');
-  });
 
 
-  it('does not use the giant top-of-page headline treatment (section-heading scale instead)', () => {
-    render(<About />);
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading.className).not.toMatch(/text-\[40px\]|text-\[46px\]/);
-  });
 
   it('renders an h2 "Frequently asked questions" matching the static shell', () => {
     render(<About />);
