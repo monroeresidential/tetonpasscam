@@ -32,6 +32,19 @@ function shellH1Text(): string {
   return normalize(match[1]);
 }
 
+/** Every FAQ question in index.html's #seo-shell, in document order.
+ *  Derived rather than hardcoded: the count and the list used to be written
+ *  out in three places here, so adding a fifth question (2026-08-18) failed
+ *  two accordion tests that cared only about "all of them". Now a new
+ *  question needs no edit in this file -- the parity assertions pick it up
+ *  automatically, which is the whole point of a parity guard. */
+function shellQuestions(): string[] {
+  const html = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
+  return [...html.matchAll(/<h3 class="mt-4 text-sm font-bold">([^<]*)<\/h3>/g)].map((m) =>
+    normalize(m[1]),
+  );
+}
+
 function shellFaqAnswerText(question: string): string {
   const html = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
   const escaped = question.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -70,28 +83,34 @@ describe('About', () => {
     expect(normalize(heading.textContent ?? '')).toBe('Frequently asked questions');
   });
 
-  it.each([
-    'Is Teton Pass open right now?',
-    'How long is the drive from Victor to Jackson?',
-    'Which cameras does this site show?',
-    'Why does the pass close?',
-  ])('renders an FAQ answer for "%s" that exactly matches the static shell in index.html', (question) => {
+  it.each(shellQuestions())(
+    'renders an FAQ answer for "%s" that exactly matches the static shell in index.html',
+    (question) => {
     render(<About />);
     // Accordion structure: the h3 wraps the toggle button; the collapsible
     // wrapper div (the answer <p> inside it) is the heading's next sibling.
     // The answer stays in the DOM even while collapsed, so byte-parity is
     // checkable without expanding.
-    const heading = screen.getByRole('heading', { level: 3, name: question });
-    const paragraph = heading.nextElementSibling?.querySelector('p');
-    expect(paragraph).not.toBeNull();
-    expect(normalize(paragraph!.textContent ?? '')).toBe(shellFaqAnswerText(question));
+      const heading = screen.getByRole('heading', { level: 3, name: question });
+      const paragraph = heading.nextElementSibling?.querySelector('p');
+      expect(paragraph).not.toBeNull();
+      expect(normalize(paragraph!.textContent ?? '')).toBe(shellFaqAnswerText(question));
+    },
+  );
+
+  it('renders every shell question, and no extras', () => {
+    render(<About />);
+    const rendered = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => normalize(h.textContent ?? ''));
+    expect(rendered).toEqual(shellQuestions());
   });
 
   describe('FAQ accordion', () => {
     it('renders every question collapsed initially', () => {
       render(<About />);
       const toggles = screen.getAllByRole('button', { expanded: false });
-      expect(toggles).toHaveLength(4);
+      expect(toggles).toHaveLength(shellQuestions().length);
       for (const toggle of toggles) {
         const wrapper = toggle.closest('h3')!.nextElementSibling!;
         expect(wrapper.className).toContain('grid-rows-[0fr]');
@@ -119,7 +138,9 @@ describe('About', () => {
       await user.click(screen.getByRole('button', { name: 'Why does the pass close?' }));
 
       expect(screen.getAllByRole('button', { expanded: true })).toHaveLength(1);
-      expect(screen.getAllByRole('button', { expanded: false })).toHaveLength(3);
+      expect(screen.getAllByRole('button', { expanded: false })).toHaveLength(
+        shellQuestions().length - 1,
+      );
     });
   });
 

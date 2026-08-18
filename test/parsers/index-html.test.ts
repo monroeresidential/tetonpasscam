@@ -32,6 +32,11 @@ describe('index.html static SEO shell', () => {
     expect(html).toContain('<link rel="canonical" href="https://tetonpasscam.com/" />');
   });
 
+  // Still spec-mandated (TETONPASSCAM-SPEC.md line 98, P1 DoD item 15) even
+  // though the long-form disclaimer now lives in its own FAQ entry: the
+  // paragraph immediately after the H1 is the highest-weight body text on the
+  // page, and it must still carry the disclaimer in short form rather than
+  // relying on the reader scrolling to the questions.
   it('has a 100-150 word explainer paragraph naming data sources, update cadence, and the not-affiliated disclaimer', () => {
     const match = html.match(/<p class="mt-2 text-sm[^"]*">([\s\S]*?)<\/p>/);
     expect(match).not.toBeNull();
@@ -44,7 +49,7 @@ describe('index.html static SEO shell', () => {
     expect(text).toMatch(/not affiliated with/);
   });
 
-  it('has a valid FAQPage JSON-LD block with exactly the four spec questions', () => {
+  it('has a valid FAQPage JSON-LD block with exactly the five shell questions', () => {
     const match = html.match(
       /<script type="application\/ld\+json">([\s\S]*?)<\/script>/,
     );
@@ -53,7 +58,7 @@ describe('index.html static SEO shell', () => {
 
     expect(json['@context']).toBe('https://schema.org');
     expect(json['@type']).toBe('FAQPage');
-    expect(json.mainEntity).toHaveLength(4);
+    expect(json.mainEntity).toHaveLength(5);
 
     const names = json.mainEntity.map((q: { name: string }) => q.name);
     expect(names).toEqual([
@@ -61,6 +66,7 @@ describe('index.html static SEO shell', () => {
       'How long is the drive from Victor to Jackson?',
       'Which cameras does this site show?',
       'Why does the pass close?',
+      'Is this an official WYDOT site?',
     ]);
 
     for (const question of json.mainEntity) {
@@ -83,6 +89,14 @@ describe('index.html static SEO shell', () => {
     expect(json.mainEntity[3].acceptedAnswer.text).toMatch(/avalanche/i);
     expect(json.mainEntity[3].acceptedAnswer.text).toMatch(/US-26/);
     expect(json.mainEntity[3].acceptedAnswer.text).toMatch(/Wyoming 511/);
+    // The disclaimer moved out of the explainer paragraph and into a question
+    // of its own (Drew, 2026-08-18) -- it reads stronger under its own heading
+    // than buried at the end of a paragraph, and "is this official" is a real
+    // search query. These assertions are the liability-relevant half: an
+    // unambiguous no, and a pointer to the authoritative source.
+    expect(json.mainEntity[4].acceptedAnswer.text).toMatch(/^No\./);
+    expect(json.mainEntity[4].acceptedAnswer.text).toMatch(/not affiliated with/);
+    expect(json.mainEntity[4].acceptedAnswer.text).toMatch(/511wy\.com/);
   });
 
   it('has the FAQ JSON-LD questions and answers verbatim in the visible shell markup', () => {

@@ -28,12 +28,10 @@ const ABOUT_PARAGRAPH =
   'live banner above reflects WYDOT road-condition reports, cross-checked against Idaho 511 ' +
   'and highway sensor data, alongside summit weather readings, current drive-time estimates ' +
   'for the Victor-to-Jackson and Driggs-to-Jackson commutes, and recent community-submitted ' +
-  'reports of crashes, slick spots, or wildlife on the roadway. This site is an independent, ' +
-  'unofficial resource built for commuters and travelers -- it is not affiliated with, ' +
-  "endorsed by, or operated by the Wyoming Department of Transportation. WYDOT's own " +
-  '511wy.com remains the official and authoritative source for closures and travel ' +
-  'advisories; always confirm current conditions there before deciding whether to cross, ' +
-  'especially in winter weather.';
+  'reports of crashes, slick spots, or wildlife on the roadway. Drive times are shown against ' +
+  'the typical time for the same hour and season, so you can tell whether the pass is running ' +
+  'slower than usual. This is an independent site, not affiliated with the Wyoming Department ' +
+  'of Transportation; see the questions below before you cross.';
 
 const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
@@ -80,6 +78,24 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
       'closed, the usual alternative route is Swan Valley/Alpine via US-26 and US-89, roughly 85 ' +
       'miles and about 1 hour 40 minutes in good conditions. Always confirm current status and ' +
       'any detour guidance on Wyoming 511 before you commit to a route.',
+  },
+  {
+    // The long-form disclaimer used to be the tail of ABOUT_PARAGRAPH. Moved
+    // here (Drew, 2026-08-18): it reads stronger under its own heading than
+    // buried at the end of an explainer, "is this official" is a question
+    // people actually search, and the paragraph above got shorter for it. A
+    // one-line disclaimer stays up there so it is not conditional on anyone
+    // opening an accordion.
+    question: 'Is this an official WYDOT site?',
+    answer:
+      'No. Teton Pass Cam is an independent, unofficial resource built for commuters and ' +
+      'travelers -- it is not affiliated with, endorsed by, or operated by the Wyoming ' +
+      "Department of Transportation. What you see here is re-published from WYDOT's own public " +
+      'road-condition pages, Idaho 511, and highway sensors, on our schedule rather than theirs, ' +
+      "so it can lag behind or be unavailable. WYDOT's Wyoming 511 (511wy.com) remains the " +
+      'official and authoritative source for closures and travel advisories; always confirm ' +
+      'current conditions there before deciding whether to cross, especially in winter weather. ' +
+      'When this site cannot confirm a status, it says so rather than guessing.',
   },
 ];
 
