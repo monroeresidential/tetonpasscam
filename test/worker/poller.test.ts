@@ -18,7 +18,9 @@ import { fetchDetours, resolveStatus, runPollCycle } from '../../src/worker/poll
 import roadclosuresClosed from '../fixtures/roadclosures-closed.html?raw';
 import roadclosuresOpen from '../fixtures/roadclosures-open.html?raw';
 import roadclosuresRestricted from '../fixtures/roadclosures-restricted.html?raw';
+import roadclosuresClosedMerged from '../fixtures/roadclosures-closed-merged.html?raw';
 import routesresultsWy22Closed from '../fixtures/routesresults-wy22-closed.html?raw';
+import routesresultsWy22ClosedMerged from '../fixtures/routesresults-wy22-closed-merged.html?raw';
 import routesresultsWy22Open from '../fixtures/routesresults-wy22.html?raw';
 import sensorsTetonpass from '../fixtures/sensors-tetonpass.html?raw';
 import statewideClosed from '../fixtures/statewide-closed.html?raw';
@@ -379,6 +381,35 @@ describe('resolveStatus', () => {
       // the both-primary-and-fallback-unknown path, which keeps its
       // historical 'primary' label (see resolveStatus's doc comment).
       expect(result.source).toBe('unresolved');
+    },
+    20_000,
+  );
+
+  // REGRESSION (2026-08-18 incident). WYDOT renders a closed segment with the
+  // *cond cell merged across three columns (colspan="3", no *impact/*restrict
+  // cells) -- see isCompleteDataRow's comment for the archived proof. Both
+  // pages therefore went 'unknown' on every real closure, which dropped
+  // resolution onto the statewide-crosscheck path: status 'closed' with no
+  // closure reason, no advisories and no report time, held for seven hours
+  // until WYDOT restored the ordinary row shape. A real closure must resolve
+  // from the AUTHORITATIVE pages, carrying their detail with it.
+  it(
+    'a real-shaped closure on both pages resolves from primary, not via the crosscheck',
+    async () => {
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': roadclosuresClosedMerged,
+          'SelectedRoute=WY22': routesresultsWy22ClosedMerged,
+          'MEDIA.Statewide': statewideClosed,
+        }),
+      );
+      expect(result.status).toBe('closed');
+      // Not 'crosscheck': the primary page itself carried the closure.
+      expect(result.source).toBe('primary');
+      // The detail the crosscheck path cannot supply, and whose absence is
+      // the fingerprint this incident left on every affected snapshot.
+      expect(result.conditionText).toBe('Road Closed Due To Crash');
+      expect(result.wydotReportTime).not.toBeNull();
     },
     20_000,
   );

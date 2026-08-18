@@ -244,13 +244,19 @@ changes what it points at.
 The poll cadence is set by `wrangler.toml`'s `[triggers]` crons:
 
 ```toml
-crons = ["*/10 11-23 * * *", "*/10 0-6 * * *", "0 7-10 * * *", "10 9 * * *"]
+crons = ["*/10 11-23 * * *", "*/10 0-6 * * *", "*/15 7-10 * * *", "10 9 * * *"]
 ```
 
 (Two entries split the 10-minute cadence across the UTC-midnight wraparound
 Cloudflare cron syntax can't express as one range; the third and fourth
-entries are the once-hourly overnight cadence and the nightly aggregation
-job, respectively — see the comment above this block in `wrangler.toml`.)
+entries are the reduced 01:00–04:59 Denver cadence and the nightly
+aggregation job, respectively — see the comment above this block in
+`wrangler.toml`.)
+
+That third entry was once-hourly (`0 7-10 * * *`) until 2026-08-18, when a
+reopening at 03:34 MDT took 26 minutes to reach the site. Overnight closures
+lift in precisely those hours, so do not slow this window back down below the
+spec's 5–15 minute cadence.
 
 To change cadence for a season (e.g. slower in summer when conditions are
 more stable, faster during winter storm season): edit the `*/N` interval.

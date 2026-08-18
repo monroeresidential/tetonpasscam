@@ -56,7 +56,17 @@ fallthrough = true
 # "*/10 11-6 * * *" would wrap around midnight UTC, which Cloudflare cron
 # triggers do not support (ranges cannot wrap). Split into two entries that
 # together cover the same 11:00 UTC-06:59 UTC window.
-crons = ["*/10 11-23 * * *", "*/10 0-6 * * *", "0 7-10 * * *", "10 9 * * *"]
+#
+# 07:00-10:59 UTC is 01:00-04:59 America/Denver. That window used to poll
+# ONCE PER HOUR ("0 7-10 * * *"), which is both outside the spec's 5-15
+# minute cadence and the worst possible place to be slow: overnight closures
+# lift in exactly those hours, and Victor/Driggs commuters are reading the
+# page from 05:00. On 2026-08-18 WYDOT reopened the pass at 03:34 MDT and the
+# site still read CLOSED at 03:50 because the next poll was not due until
+# 04:00. */15 keeps this the cheapest window (Google Routes is skipped
+# entirely outside its own 05:00-23:00 Denver window, so these cycles are
+# WYDOT fetches only) while staying inside the spec's bound.
+crons = ["*/10 11-23 * * *", "*/10 0-6 * * *", "*/15 7-10 * * *", "10 9 * * *"]
 
 # Exposes the running deployment's id to the Worker. Used solely to scope the
 # homepage cache key (see serveHomepage in src/worker/index.ts): without it, a

@@ -39,7 +39,7 @@
 
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseRoutesResults, parseStatewide, diffAdvisories } from '../../src/worker/poller/wydot-status';
+import { parseRoutesResults, parseStatewide, diffAdvisories, SEGMENT_TEXT } from '../../src/worker/poller/wydot-status';
 
 const load = (f: string) => readFileSync(`test/fixtures/${f}`, 'utf8');
 
@@ -90,6 +90,51 @@ describe('parseRoutesResults', () => {
         <td class="rpttime">Aug 9, 2026, 08:51 AM</td>
       </tr>`;
     expect(parseRoutesResults(html).status).toBe('closed');
+  });
+
+  // REGRESSION (2026-08-18 incident) -- see the long comment in
+  // roadclosures.test.ts. RoutesResults shares RoadClosures' column scheme,
+  // so it drops the *impact/*restrict cells on an elevated row the same way,
+  // and it lost every real closure for the same reason.
+  it('parses a real-shaped closure row (cond cell colspan=3, no *impact/*restrict cells)', () => {
+    const r = parseRoutesResults(load('routesresults-wy22-closed-merged.html'));
+    expect(r.status).toBe('closed');
+    expect(r.conditionText).toBe('Road Closed Due To Crash');
+    expect(r.wydotReportTime).not.toBeNull();
+  });
+
+  // "extended" is the severity WYDOT uses for a long-running closure: every
+  // one of the 15 extendedcond rows in the 2025-02-16 capture reads "Road
+  // Closed Due To Seasonal Closure". Treating it as a PASSABLE class (as the
+  // ROUTESRESULTS_OPEN_COND_CLASSES set originally did) would have reported a
+  // seasonally closed road as OPEN the moment the row-shape fix above let
+  // these rows through -- the exact failure mode hard rule #1 forbids.
+  it('extendedcond (WYDOT\'s seasonal-closure severity) ⇒ closed, never open', () => {
+    const r = parseRoutesResults(load('routesresults-wy22-seasonal-merged.html'));
+    expect(r.status).toBe('closed');
+  });
+
+  // Defense in depth: this page classifies on the cond cell's CLASS, but if a
+  // passable class ever carries closure prose the two disagree, and a
+  // single-source disagreement is an unrecognized shape -- unknown, never
+  // passable. Mirrors parseRoadClosures' own "Road Open + closure language ⇒
+  // unknown" rule.
+  it('a passable *cond class carrying closure prose ⇒ unknown, never open', () => {
+    // The page lists the valley row (Between Jackson and Wilson) FIRST and
+    // both rows use lowimpactcond, so the edit must be anchored to the text of
+    // OUR segment -- patching the first match would leave the pass row intact
+    // and quietly assert nothing.
+    const raw = load('routesresults-wy22.html');
+    const at = raw.indexOf(SEGMENT_TEXT);
+    const html =
+      raw.slice(0, at) +
+      raw
+        .slice(at)
+        .replace(
+          /<td class="lowimpactcond"([^>]*)>[\s\S]*?<\/td>/,
+          '<td class="lowimpactcond"$1>Road Closed Due To Crash</td>',
+        );
+    expect(parseRoutesResults(html).status).toBe('unknown');
   });
 
   it('an empty *cond cell ⇒ unknown, never open', () => {

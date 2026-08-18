@@ -27,6 +27,35 @@ matched" test) and the rowspan structure are left untouched.
 - `roadclosures-mangled.html` -- the entire `<tr>...</tr>` block for the
   `Between Wilson and the Idaho State Line` row deleted, simulating a page
   reshape / scrape failure. Must parse to `unknown`, never `open`.
+- `roadclosures-closed-merged.html` -- **the shape WYDOT actually emits for a
+  closure**, and the fixture the 2026-08-18 incident turned on. The same row's
+  `*cond`, `*impact` and `*restrict` cells are replaced by ONE
+  `<td class="closedcond" colspan="3">Road Closed Due To Crash</td>`; the
+  `*impact` and `*restrict` cells are gone, not blank.
+
+  Note what this means for the three hand-edited fixtures above: they were all
+  derived from an OPEN capture and so keep the six-cell open-row shape even
+  when their text says "Road Closed". No WYDOT page ever renders that
+  combination, which is why a parser that could not read a single real closure
+  still passed the whole suite.
+
+  The merged shape is verified against real WYDOT output rather than guessed.
+  In
+  <https://web.archive.org/web/20250216022646id_/https://www.wyoroad.info/highway/conditions/RoadClosures.html>
+  all 15 closed segments render as
+
+  ```html
+  <td class="closurelocation">Between the E Gate of Yellowstone Nat'l Park and Pahaska</td>
+  <td class="extendedcond" colspan="3">Road Closed Due To Seasonal Closure</td>
+  <td class="rpttime">Feb 15, 2025, 06:59 PM</td>
+  ```
+
+  while all 96 open segments on that same page keep `noimpactcond`
+  `colspan="1"` plus their `*impact` and `*restrict` cells. The same holds in
+  the 2025-01-31, 2025-02-09, 2025-02-23 and 2025-03-05 captures. No capture
+  of the Wilson–Stateline row in a closed state exists (it was open in every
+  archived snapshot), so this fixture applies the verified rendering to that
+  row.
 
 ## routesresults-wy22*.html
 
@@ -54,8 +83,8 @@ carries no information there), this page's own CSS legend declares distinct
 `extendedcond` classes for the `*cond` column, and our live capture uses
 `lowimpactcond` (not the RoadClosures-constant value) for a `Dry` report --
 i.e. the class genuinely varies here. `parseRoutesResults` therefore
-classifies on that class (`closedcond` -> closed; the other four,
-low/mod/high/extendedcond, plus `noimpactcond` included defensively from
+classifies on that class (`closedcond` AND `extendedcond` -> closed;
+low/mod/highcond, plus `noimpactcond` included defensively from
 RoadClosures' shared taxonomy -> open/restricted), the same way
 `parseStatewide` classifies on heading class rather than heading text --
 this is immune to closure prose varying ("CLOSED", "Road Closed due to
@@ -74,7 +103,21 @@ class AND the text, so the fixture exercises the real closedcond shape
 prose), not just a text substitution that happened to still say "closed".
 Everything else, including the generic CLOSED-legend row near the page
 footer (a distractor with no `closurelocation` cell, must not be picked up
-as the data row), is untouched.
+as the data row), is untouched. Like the RoadClosures hand-edits above, it
+keeps the six-cell OPEN row shape -- see the two fixtures below for the shape
+WYDOT really emits.
+
+`routesresults-wy22-closed-merged.html` and
+`routesresults-wy22-seasonal-merged.html` apply the verified merged-cell
+closure rendering (documented under `roadclosures-*.html` above: `*cond` cell
+with `colspan="3"`, no `*impact`/`*restrict` cells) to this page, which shares
+the column scheme and so drops the same cells. The seasonal variant uses
+`class="extendedcond"` / `Road Closed Due To Seasonal Closure` -- the literal
+text of all 15 closed rows in the 2025-02-16 capture -- and pins
+`extendedcond` to CLOSED. That class sat in the parser's PASSABLE set until
+2026-08-18; it was unreachable while merged rows were being rejected outright,
+and would have started reporting seasonal closures as OPEN the moment they
+were let through.
 
 ## statewide*.html
 

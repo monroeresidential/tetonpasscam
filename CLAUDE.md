@@ -50,10 +50,10 @@ src/app/             React SPA (client-render only, no SSR)
 
 src/shared/types.ts   Types shared between worker and app (PassStatus, ApiStatus, PublicAlert, CameraId, etc.)
 
-migrations/           drizzle-kit-generated D1 migrations. 0000-0009 are applied to remote D1 and
-                      frozen. 0010 (forecast_hours) is applied LOCALLY ONLY and is NOT yet on
-                      remote -- it ships with the next deploy, and per docs/RUNBOOK.md the remote
-                      migration must be applied BEFORE the Worker that reads that table.
+migrations/           drizzle-kit-generated D1 migrations. Every migration in this directory is
+                      applied to remote D1 and frozen (verified 2026-08-18 via
+                      `wrangler d1 migrations list tetonpasscam --remote`). Per docs/RUNBOOK.md a new
+                      migration must be applied to remote BEFORE deploying the Worker that reads it.
                       (run `ls migrations/` for the current set -- listing names here only goes stale)
 scripts/              verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts).
                       App icons/favicons come from design/logo-4c/ (the route-22 brand kit,
@@ -85,7 +85,7 @@ tetonpasscam.com — a Teton Pass (WY-22) status app: official WYDOT open/closed
 
 1. **Status is four states, never a boolean:** OPEN / RESTRICTED / CLOSED / UNKNOWN. **Never default to OPEN.** Fetch errors, missing rows, unrecognized page shapes, and exhausted retries all resolve to UNKNOWN. Never report OPEN without fresh, successfully parsed data.
 2. **Community alerts never change the official status banner.** Only WYDOT data drives OPEN/CLOSED. User "closure" reports display as "unconfirmed — check 511".
-3. **WYDOT HTML parsing:** locate the segment row by text match on the exact string `Between Wilson and the Idaho State Line` — **never by cell index** (rowspan on Route/Town cells makes positional indexing silently wrong). Primary source is `RoadClosures.html` (Closure Reason column: literal `Road Open` ⟺ open); fallback is `WRR.RoutesResults?SelectedRoute=WY22`; cross-check is `MEDIA.Statewide`. Unresolved disagreement → UNKNOWN.
+3. **WYDOT HTML parsing:** locate the segment row by text match on the exact string `Between Wilson and the Idaho State Line` — **never by cell index** (rowspan on Route/Town cells makes positional indexing silently wrong). A row's cell *set* also varies with its status: an elevated/closed row merges the `*cond` cell across three columns (`colspan="3"`) and omits the `*impact` and `*restrict` cells entirely, so only `*cond` + `rpttime` are invariant — requiring the full open-row shape made both parsers unable to report any closure (2026-08-18 incident; evidence and archived captures in `isCompleteDataRow`'s comment and `test/fixtures/README.md`). Primary source is `RoadClosures.html` (Closure Reason column: literal `Road Open` ⟺ open); fallback is `WRR.RoutesResults?SelectedRoute=WY22`; cross-check is `MEDIA.Statewide`. Unresolved disagreement → UNKNOWN.
 4. **Never integrate the 511 map's protobuf feed** (`map.wyoroad.info/wti511map-data/*.pbf`) — obfuscated, XOR-encoded, breaks on their deploys.
 5. CLOSED copy must say "Closed — do not attempt" (Wyoming closure is a legal prohibition, W.S. 24-1-109) — never "not recommended". Never display invented reopening estimates.
 6. Standing advisories (e.g. `Falling Rock`, standing all summer 2026) are background state — display them, but only alert on advisory *changes*.

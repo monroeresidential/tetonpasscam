@@ -49,6 +49,35 @@ describe('parseRoadClosures', () => {
     expect(parseRoadClosures(load('roadclosures-mangled.html')).status).toBe('unknown');
   });
 
+  // REGRESSION (2026-08-18 incident): WYDOT does NOT render a closed segment
+  // with the same six-cell shape as an open one. When a segment's condition
+  // is elevated, the *cond cell is emitted with colspan="3" and the *impact
+  // and *restrict cells are DROPPED ENTIRELY -- verified against real WYDOT
+  // pages via the Wayback Machine, e.g.
+  //   https://web.archive.org/web/20250216022646id_/https://www.wyoroad.info/highway/conditions/RoadClosures.html
+  // where all 15 seasonally-closed segments read
+  //   <td class="extendedcond" colspan="3">Road Closed Due To Seasonal Closure</td>
+  //   <td class="rpttime">Feb 15, 2025, 06:59 PM</td>
+  // with no *impact/*restrict cells between them, while all 96 open segments
+  // keep the full <td class="noimpactcond" colspan="1"> + *impact + *restrict
+  // shape. The pre-existing roadclosures-closed.html fixture was hand-edited
+  // from an OPEN capture and so kept all four cells -- a shape WYDOT never
+  // emits for a closure -- which is why this went undetected. Requiring all
+  // four semantic cells made the parser structurally unable to EVER report a
+  // closure from this page: every real closure was discarded as an
+  // unrecognized shape and resolved to 'unknown'.
+  it('parses a real-shaped closure row (cond cell colspan=3, no *impact/*restrict cells)', () => {
+    const r = parseRoadClosures(load('roadclosures-closed-merged.html'));
+    expect(r.status).toBe('closed');
+    expect(r.conditionText).toBe('Road Closed Due To Crash');
+    // The closure's own report time must survive: a CLOSED banner with no
+    // "as of" timestamp is exactly what the incident produced.
+    expect(r.wydotReportTime).not.toBeNull();
+    // Those columns genuinely do not exist on a closure row.
+    expect(r.advisories).toEqual([]);
+    expect(r.restrictions).toEqual([]);
+  });
+
   it('empty/garbage ⇒ unknown', () => {
     expect(parseRoadClosures('').status).toBe('unknown');
     expect(parseRoadClosures('<html><body>oops</body></html>').status).toBe('unknown');

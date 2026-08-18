@@ -23,6 +23,12 @@ import type { PassStatus } from '../../shared/types';
 //   <td class="cameras">    camera links (ignored)
 //   <td class="sensors">    sensor links (ignored)
 //
+// This is the OPEN-row shape. An elevated/closed row does NOT carry all of
+// these cells: its "*cond" cell is emitted with colspan="3" and the
+// "*impact" and "*restrict" cells are omitted altogether. See
+// `isCompleteDataRow` below for the archived proof and for why only
+// "*cond" + "rpttime" may be treated as invariant.
+//
 // There is no separate "Other Restrictions" column as an earlier sketch of
 // this parser assumed. Restrictions live in the single "*restrict" cell
 // alongside always-present weight-limit text, so classification filters
@@ -123,19 +129,47 @@ function extractClassCells(rowBlock: string): ClassifiedCell[] {
 }
 
 /**
- * A genuine WYDOT data row for a segment carries all four semantic cells
- * (status, advisory, restrictions, report time) alongside the plain segment
- * <td> -- every one of the ~80 rows on the live page has this shape. A block
- * that merely contains SEGMENT_TEXT (e.g. a decoy/duplicate fragment
- * elsewhere on the page) but lacks this full shape is not a real data row
- * and must not be treated as authoritative for the segment's status.
+ * A genuine WYDOT data row for a segment carries a status ("*cond") cell and
+ * a report-time cell alongside the segment's own <td>. A block that merely
+ * contains SEGMENT_TEXT (e.g. a decoy/duplicate fragment elsewhere on the
+ * page, or the generic CLOSED legend near RoutesResults' footer) but lacks
+ * that shape is not a real data row and must not be treated as authoritative.
+ *
+ * THE ADVISORY AND RESTRICTION CELLS ARE DELIBERATELY *NOT* REQUIRED, and
+ * that is the whole point of this function's current form. WYDOT renders an
+ * ELEVATED segment differently from an open one: the "*cond" cell is emitted
+ * with colspan="3" and the "*impact" and "*restrict" cells are dropped
+ * entirely, because one merged cell now spans all three columns:
+ *
+ *   <td class="closurelocation">Between the E Gate of Yellowstone Nat'l Park and Pahaska</td>
+ *   <td class="extendedcond" colspan="3">Road Closed Due To Seasonal Closure</td>
+ *   <td class="rpttime">Feb 15, 2025, 06:59 PM</td>
+ *
+ * -- all 15 closed segments in the 2025-02-16 capture at
+ * https://web.archive.org/web/20250216022646id_/https://www.wyoroad.info/highway/conditions/RoadClosures.html
+ * while all 96 open segments on that same page keep the full
+ * <td class="noimpactcond" colspan="1"> + *impact + *restrict shape. Both
+ * pages we parse share this column scheme, so both drop those cells together.
+ *
+ * Requiring all four cells (as this did until 2026-08-18) therefore made BOTH
+ * parsers structurally incapable of ever reporting a closure: every real
+ * closure row was rejected as an unrecognized shape and resolved to
+ * 'unknown'. On 2026-08-18 that put the live site on the statewide-crosscheck
+ * path for seven hours, publishing a CLOSED banner carrying no closure
+ * reason, no advisories and no report time -- the crosscheck page can supply
+ * none of those -- and it could not recover until WYDOT restored the ordinary
+ * row shape. The fixtures did not catch it because the hand-edited "closed"
+ * fixtures were derived from an OPEN capture and kept all four cells, a shape
+ * WYDOT never emits for a closure.
+ *
+ * cond + rpttime is the invariant that actually holds across BOTH shapes, so
+ * it is what the decoy guard tests. It still excludes every non-data block:
+ * legend rows and District Comments tables carry no rpttime cell.
  */
 function isCompleteDataRow(cells: ClassifiedCell[]): boolean {
   const hasCond = cells.some((c) => /cond$/i.test(c.className));
-  const hasAdvisory = cells.some((c) => /impact$/i.test(c.className) && !/restrict$/i.test(c.className));
-  const hasRestrict = cells.some((c) => /restrict$/i.test(c.className));
   const hasRptTime = cells.some((c) => c.className === 'rpttime');
-  return hasCond && hasAdvisory && hasRestrict && hasRptTime;
+  return hasCond && hasRptTime;
 }
 
 /**
@@ -243,18 +277,26 @@ export function parseRoadClosures(html: string): StatusResult {
 // -- same shape reused by Statewide -- from which we pull the District 3
 // comment when it mentions WY22/WY 22/Teton Pass.
 
-const ROUTESRESULTS_CLOSED_COND_CLASS = 'closedcond';
-// The non-closed *cond classes this page's own CSS legend declares
-// (low/mod/high/extendedcond), plus "noimpactcond" from RoadClosures'
-// shared taxonomy (not declared in this page's own legend, but included
-// defensively in case a fully-clear report ever uses it here too). Any
-// *cond class outside this recognized set is an unrecognized shape.
+// The *cond classes that mean CLOSED. "extendedcond" belongs here, not in
+// the passable set below where it originally sat: "extended" is the severity
+// WYDOT uses for a long-running closure, and every one of the 15
+// extendedcond rows in the 2025-02-16 capture cited on isCompleteDataRow
+// reads "Road Closed Due To Seasonal Closure". While that function was
+// rejecting merged-cell rows outright the misclassification was unreachable
+// (those rows never got this far); fixing the row shape without fixing this
+// set would have turned a seasonal closure into a reported OPEN, which is
+// precisely what hard rule #1 forbids.
+const ROUTESRESULTS_CLOSED_COND_CLASSES = new Set(['closedcond', 'extendedcond']);
+// The passable *cond classes this page's own CSS legend declares
+// (low/mod/highcond), plus "noimpactcond" from RoadClosures' shared taxonomy
+// (not declared in this page's own legend, but included defensively in case a
+// fully-clear report ever uses it here too). Any *cond class outside these
+// two recognized sets is an unrecognized shape.
 const ROUTESRESULTS_OPEN_COND_CLASSES = new Set([
   'noimpactcond',
   'lowimpactcond',
   'modimpactcond',
   'highimpactcond',
-  'extendedcond',
 ]);
 
 /**
@@ -332,11 +374,23 @@ export function parseRoutesResults(html: string): StatusResult & { district3Comm
     // shape this file resolves to unknown everywhere else.
     const condClass = condCell ? condCell.className.toLowerCase() : null;
     const hasCondText = conditionText !== null && conditionText.length > 0;
+    // Defense in depth on top of the class taxonomy: closure PROSE in a cell
+    // whose class says passable means the page is contradicting itself, and a
+    // source that contradicts itself has not been "successfully parsed". Text
+    // may only ever VETO a passable classification here, never promote one to
+    // closed -- promoting on prose is the keyword-matching this page
+    // deliberately does not classify on (see the layout comment above).
+    const contradictsPassable = conditionText !== null && CLOSURE_RX.test(conditionText);
 
     let status: PassStatus = 'unknown';
-    if (hasCondText && condClass === ROUTESRESULTS_CLOSED_COND_CLASS) {
+    if (hasCondText && condClass !== null && ROUTESRESULTS_CLOSED_COND_CLASSES.has(condClass)) {
       status = 'closed';
-    } else if (hasCondText && condClass !== null && ROUTESRESULTS_OPEN_COND_CLASSES.has(condClass)) {
+    } else if (
+      hasCondText &&
+      condClass !== null &&
+      ROUTESRESULTS_OPEN_COND_CLASSES.has(condClass) &&
+      !contradictsPassable
+    ) {
       status = restrictions.length > 0 ? 'restricted' : 'open';
     }
 
