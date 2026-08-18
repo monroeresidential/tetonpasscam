@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../../src/worker/api/router';
-import { denverTypicalsKey, setTestNowMs } from '../../src/worker/api/status';
+import { STATEWIDE_ONLY_MAX_MIN, denverTypicalsKey, setTestNowMs } from '../../src/worker/api/status';
 import { seedRoutes } from '../../src/worker/db/seed-routes';
 import { setTestEmailFetcher } from '../../src/worker/notify';
 import { formatShareCode } from '../../src/worker/share-code';
@@ -212,6 +212,128 @@ describe('GET /api/status', () => {
       const { body } = await getStatus();
       expect(body.status).toBe('closed');
       expect(body.isStale).toBe(true);
+    });
+  });
+
+  // A 'statewide-only' CLOSED is the one verdict in this system that no
+  // authoritative page corroborates: both RoadClosures and RoutesResults came
+  // back unreadable and MEDIA.Statewide alone asserted the closure. It carries
+  // no closure reason, no advisories and no report time -- there is not even a
+  // timestamp to tell a driver how old the claim is -- and until this bound
+  // existed nothing stopped it standing indefinitely. On 2026-08-18 it stood
+  // for seven hours while the road was being driven.
+  //
+  // Bounded at READ time rather than in the poller, mirroring `pollerDead`
+  // just above: the snapshot goes on recording exactly what each source said,
+  // so /api/history stays truthful and the next incident is diagnosable from
+  // the table; only the presentation degrades.
+  describe('statewide-only closures are bounded', () => {
+    it('holds CLOSED while a definite authoritative read is recent', async () => {
+      const now = Date.now();
+      await insertStatusSnapshot({
+        capturedAt: new Date(now - 20 * 60_000).toISOString(),
+        status: 'open',
+        conditionText: 'Road Open',
+        source: 'primary',
+      });
+      await insertStatusSnapshot({
+        capturedAt: new Date(now).toISOString(),
+        status: 'closed',
+        wydotReportTime: null,
+        source: 'statewide-only',
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('closed');
+    });
+
+    it('degrades to UNKNOWN once no authoritative page has been read for longer than the bound', async () => {
+      const now = Date.now();
+      await insertStatusSnapshot({
+        capturedAt: new Date(now - (STATEWIDE_ONLY_MAX_MIN + 5) * 60_000).toISOString(),
+        status: 'open',
+        conditionText: 'Road Open',
+        source: 'primary',
+      });
+      await insertStatusSnapshot({
+        capturedAt: new Date(now).toISOString(),
+        status: 'closed',
+        wydotReportTime: null,
+        source: 'statewide-only',
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('unknown');
+      // The closure itself is not erased -- it is what the sources last said,
+      // and a driver reading "last confirmed: closed" alongside an UNKNOWN
+      // banner is being told the truth about both.
+      expect(body.lastConfirmed).toMatchObject({ status: 'closed' });
+    });
+
+    it('does NOT bound a crosscheck closure, where an authoritative page itself reported CLOSED', async () => {
+      const now = Date.now();
+      await insertStatusSnapshot({
+        capturedAt: new Date(now - (STATEWIDE_ONLY_MAX_MIN + 120) * 60_000).toISOString(),
+        status: 'open',
+        conditionText: 'Road Open',
+        source: 'primary',
+      });
+      await insertStatusSnapshot({
+        capturedAt: new Date(now).toISOString(),
+        status: 'closed',
+        wydotReportTime: null,
+        source: 'crosscheck',
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('closed');
+    });
+
+    it('an intervening unresolved row does not count as an authoritative read, so the bound still trips', async () => {
+      // The anchor is the last DEFINITE read from primary/fallback, not merely
+      // the last row that was not statewide-only. Anchoring on the latter
+      // would let a cycle alternating between 'statewide-only' and
+      // 'unresolved' reset the clock forever and never expire.
+      const now = Date.now();
+      await insertStatusSnapshot({
+        capturedAt: new Date(now - (STATEWIDE_ONLY_MAX_MIN + 30) * 60_000).toISOString(),
+        status: 'open',
+        conditionText: 'Road Open',
+        source: 'primary',
+      });
+      await insertStatusSnapshot({
+        capturedAt: new Date(now - 10 * 60_000).toISOString(),
+        status: 'unknown',
+        source: 'unresolved',
+      });
+      await insertStatusSnapshot({
+        capturedAt: new Date(now).toISOString(),
+        status: 'closed',
+        wydotReportTime: null,
+        source: 'statewide-only',
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('unknown');
+    });
+
+    it('with no authoritative read on record at all, the bound runs from the oldest statewide-only row', async () => {
+      const now = Date.now();
+      await insertStatusSnapshot({
+        capturedAt: new Date(now - (STATEWIDE_ONLY_MAX_MIN + 5) * 60_000).toISOString(),
+        status: 'closed',
+        wydotReportTime: null,
+        source: 'statewide-only',
+      });
+      await insertStatusSnapshot({
+        capturedAt: new Date(now).toISOString(),
+        status: 'closed',
+        wydotReportTime: null,
+        source: 'statewide-only',
+      });
+
+      const { body } = await getStatus();
+      expect(body.status).toBe('unknown');
     });
   });
 

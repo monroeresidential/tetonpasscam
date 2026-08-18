@@ -278,8 +278,13 @@ describe('runPollCycle', () => {
     expect(afterCount - beforeCount).toBe(2);
   });
 
+  // The label is 'statewide-only', NOT 'crosscheck': with neither
+  // authoritative page readable, MEDIA.Statewide is the sole basis for this
+  // closure. The API bounds exactly this label (STATEWIDE_ONLY_MAX_MIN), so
+  // writing the same label as a properly corroborated crosscheck closure would
+  // either expire real closures or let unanchored ones stand forever.
   it(
-    'primary+fallback failure with Statewide closed ⇒ crosscheck status (never open)',
+    'primary+fallback failure with Statewide closed ⇒ statewide-only status (never open)',
     async () => {
       const s = await env.DB.prepare(
         'SELECT COUNT(*) n FROM status_snapshots WHERE source = ?',
@@ -302,11 +307,11 @@ describe('runPollCycle', () => {
       const row = await env.DB.prepare(
         'SELECT status, source FROM status_snapshots ORDER BY id DESC LIMIT 1',
       ).first();
-      expect(row).toMatchObject({ status: 'closed', source: 'crosscheck' });
+      expect(row).toMatchObject({ status: 'closed', source: 'statewide-only' });
       expect((row as any).status).not.toBe('open');
       const afterCrosscheckCount = (
         (await env.DB.prepare('SELECT COUNT(*) n FROM status_snapshots WHERE source = ?')
-          .bind('crosscheck')
+          .bind('statewide-only')
           .first()) as any
       ).n as number;
       expect(afterCrosscheckCount - beforeCrosscheckCount).toBe(1);
@@ -340,6 +345,22 @@ describe('resolveStatus', () => {
     async () => {
       const result = await resolveStatus(fakeFetch({}));
       expect(result.status).toBe('unknown');
+    },
+    20_000,
+  );
+
+  it(
+    'both pages unreadable + statewide closed ⇒ closed, labelled statewide-only (not crosscheck)',
+    async () => {
+      const result = await resolveStatus(
+        fakeFetch({
+          'RoadClosures.html': 500,
+          'SelectedRoute=WY22': 500,
+          'MEDIA.Statewide': statewideClosed,
+        }),
+      );
+      expect(result.status).toBe('closed');
+      expect(result.source).toBe('statewide-only');
     },
     20_000,
   );
@@ -579,6 +600,50 @@ describe('fetchDetours', () => {
 });
 
 describe('advisory diff churn avoidance', () => {
+  // A 'statewide-only' cycle has NO advisory data: MEDIA.Statewide reports a
+  // PassStatus and nothing else, so its advisory list is always the synthetic
+  // []. Diffing that against the standing ['Falling Rock'] would announce
+  // "Falling Rock removed" at the exact moment the pass is reported closed,
+  // then "re-added" on the next good read. Log-only today, but P2 wires these
+  // diffs to push notifications. 'crosscheck' was already excluded by name;
+  // splitting 'statewide-only' out of it would have silently re-opened the
+  // hole this describe block exists to guard.
+  it('a statewide-only cycle does not manufacture an advisory diff', async () => {
+    const seededAt = new Date(IN_WINDOW_NOW_MS - 60_000).toISOString();
+    await env.DB
+      .prepare(
+        `INSERT INTO status_snapshots
+           (captured_at, segment, status, condition_text, advisories, restrictions, wydot_report_time, source)
+         VALUES (?, 'wilson-stateline', 'open', 'Road Open', ?, '[]', NULL, 'primary')`,
+      )
+      .bind(seededAt, JSON.stringify(['Falling Rock']))
+      .run();
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await runPollCycle(
+        env as any,
+        fakeFetch({
+          'RoadClosures.html': 500,
+          'SelectedRoute=WY22': 500,
+          'MEDIA.Statewide': statewideClosed,
+          'Sensors.StationResults': sensorsTetonpass,
+          'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+          '511.idaho.gov': '[]',
+        }),
+        IN_WINDOW_NOW_MS,
+      );
+      const row = await env.DB.prepare(
+        'SELECT status, source FROM status_snapshots ORDER BY id DESC LIMIT 1',
+      ).first();
+      expect(row).toMatchObject({ status: 'closed', source: 'statewide-only' });
+      const diffCalls = logSpy.mock.calls.filter(([msg]) => msg === '[poller] advisory diff');
+      expect(diffCalls).toHaveLength(0);
+    } finally {
+      logSpy.mockRestore();
+    }
+  }, 20_000);
+
   it('an unknown cycle between two good reads does not manufacture an advisory diff', async () => {
     // Seed a controlled "prior good cycle" row directly, independent of
     // whatever earlier tests in this file have already written, so this

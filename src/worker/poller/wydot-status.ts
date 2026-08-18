@@ -41,6 +41,15 @@ export interface StatusResult {
   advisories: string[]; // e.g. ['Falling Rock']
   restrictions: string[]; // e.g. ['Chain Law Level 1']
   wydotReportTime: string | null; // ISO UTC, converted from America/Denver
+  // 'statewide-only': NEITHER authoritative page could be read this cycle and
+  // MEDIA.Statewide alone reported a closure. Split out from 'crosscheck' on
+  // 2026-08-18: the two used to share that label, but they carry opposite
+  // amounts of evidence. A 'crosscheck' closure has an authoritative page
+  // itself reporting CLOSED (the other one merely disagreed); a
+  // 'statewide-only' closure has nothing behind it but the weakest of the
+  // three sources, with no reason, no advisories and no report time. Only the
+  // latter is bounded at read time -- see STATEWIDE_ONLY_MAX_MIN in
+  // api/status.ts.
   // 'unresolved': primary and fallback are both definite but DISAGREE on the
   // open-vs-closed axis, and the Statewide crosscheck couldn't resolve it
   // either (see resolveStatus in run.ts) -- distinct from a plain
@@ -48,7 +57,7 @@ export interface StatusResult {
   // backward compatibility with pre-existing snapshots/tests) because it
   // reflects a genuine data conflict worth being able to query for, not
   // merely an absence of data.
-  source: 'primary' | 'fallback' | 'crosscheck' | 'unresolved';
+  source: 'primary' | 'fallback' | 'crosscheck' | 'statewide-only' | 'unresolved';
 }
 
 /**
@@ -79,6 +88,13 @@ export interface ResolvedStatus extends StatusResult {
 }
 
 export const SEGMENT_TEXT = 'Between Wilson and the Idaho State Line';
+
+/** The `source` label for a closure that ONLY MEDIA.Statewide reported, with
+ *  neither authoritative page readable. Named here, beside the union it
+ *  belongs to, because the poller writes it and the API reads it to decide
+ *  when to stop trusting it -- a bare string literal in both places would
+ *  drift silently. */
+export const STATEWIDE_ONLY_SOURCE = 'statewide-only';
 
 const CLOSURE_RX = /closed|closure/i;
 const RESTRICTION_RX = /chain law|no unnecessary travel|no (light )?trailers|high profile/i;

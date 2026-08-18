@@ -1,8 +1,9 @@
-import { desc, isNull, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm';
 
 import type { ApiStatus, ForecastDay, ForecastHour } from '../../shared/types';
 import type { PassStatus } from '../../shared/types';
 import { db, id33Events, statusSnapshots, weatherSnapshots } from '../db';
+import { STATEWIDE_ONLY_SOURCE } from '../poller/wydot-status';
 import type { Env } from '../env';
 import { formatShareCode } from '../share-code';
 import { denverDateKey, denverParts } from '../tz';
@@ -21,6 +22,30 @@ export const STALE_HOURS = 12;
  *  this is implausible for a same-minute report and is treated as
  *  untrustworthy -- i.e. stale -- rather than "fresher than expected". */
 export const FUTURE_SKEW_TOLERANCE_MIN = 15;
+/** How long a `'statewide-only'` CLOSED may stand before the response
+ *  degrades it to 'unknown'.
+ *
+ *  That source label means BOTH authoritative pages came back unreadable and
+ *  MEDIA.Statewide alone asserted the closure. Such a verdict carries no
+ *  closure reason, no advisories and no report time -- there is not even a
+ *  timestamp with which to tell a driver how current the claim is -- and
+ *  MEDIA.Statewide is, by its own parser's documentation, the weakest of the
+ *  three sources. Until this bound existed nothing stopped it standing
+ *  indefinitely: on 2026-08-18 it published "Closed -- do not attempt" for
+ *  seven hours while the road was being driven.
+ *
+ *  Past the bound the honest answer is UNKNOWN, which is what hard rule #1
+ *  prescribes for unreadable sources anyway, and whose UI withholds drive
+ *  times and points at Wyoming 511 rather than asserting a legal prohibition
+ *  nobody can corroborate. `lastConfirmed` still reports the closure and its
+ *  time, so nothing is hidden.
+ *
+ *  45 minutes is Drew's call (2026-08-18) over a laxer suggestion: 3-4
+ *  consecutive cycles at the every-10-to-15-minute poll cadence. The cost of
+ *  being wrong in
+ *  this direction is an UNKNOWN banner that still points at 511; the cost in
+ *  the other direction is a false legal prohibition. */
+export const STATEWIDE_ONLY_MAX_MIN = 45;
 /** A travel_times row older than this is flagged `stale` in the response
  *  (see `TRAVEL_TIME_MAX_AGE_HOURS` below for when it's dropped instead) --
  *  a 45-minute-old drive time displayed as if it were live would mislead a
@@ -100,6 +125,47 @@ function isReportTimeStale(wydotReportTime: string | null, nowMs: number): boole
   if (ageMs > STALE_HOURS * 3_600_000) return true;
   if (ageMs < -FUTURE_SKEW_TOLERANCE_MIN * 60_000) return true;
   return false;
+}
+
+/** When we last got a DEFINITE reading out of an authoritative page
+ *  (RoadClosures or RoutesResults), as epoch ms -- the anchor for
+ *  `STATEWIDE_ONLY_MAX_MIN`.
+ *
+ *  Deliberately NOT "the last row that wasn't statewide-only": a cycle
+ *  alternating between 'statewide-only' and 'unresolved' would reset that
+ *  clock forever and the bound would never trip. It also requires
+ *  status != 'unknown', because the both-sources-failed path writes source
+ *  'primary' with status 'unknown' (a historical label, see resolveStatus)
+ *  and that is precisely a NON-reading.
+ *
+ *  Falls back to the oldest snapshot on record when no authoritative reading
+ *  has ever been stored (a brand-new database), so the bound measures from
+ *  when records began rather than never tripping at all. Null only if the
+ *  table is empty, which callers reach only when a snapshot exists. */
+async function lastAuthoritativeReadMs(database: ReturnType<typeof db>): Promise<number | null> {
+  const [row] = await database
+    .select({ capturedAt: statusSnapshots.capturedAt })
+    .from(statusSnapshots)
+    .where(
+      and(
+        ne(statusSnapshots.status, 'unknown'),
+        or(eq(statusSnapshots.source, 'primary'), eq(statusSnapshots.source, 'fallback')),
+      ),
+    )
+    .orderBy(desc(statusSnapshots.id))
+    .limit(1);
+
+  const [fallbackRow] = row
+    ? [row]
+    : await database
+        .select({ capturedAt: statusSnapshots.capturedAt })
+        .from(statusSnapshots)
+        .orderBy(asc(statusSnapshots.id))
+        .limit(1);
+
+  if (!fallbackRow) return null;
+  const ms = Date.parse(fallbackRow.capturedAt);
+  return Number.isFinite(ms) ? ms : null;
 }
 
 /** Parse a JSON-array-of-strings column (status_snapshots.advisories /
@@ -222,6 +288,17 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
     // normal way, so it must present as stale rather than silently fresh.
     if (newest.status !== 'unknown') {
       isStale = isReportTimeStale(wydotReportTime, nowMs);
+    }
+
+    // Bound an uncorroborated statewide-only closure. Same read-time
+    // degradation as `pollerDead` above -- the snapshot keeps recording what
+    // the sources actually said, and only the presentation gives way. Gated on
+    // the source label so the extra query never runs on an ordinary cycle.
+    if (status !== 'unknown' && newest.source === STATEWIDE_ONLY_SOURCE) {
+      const anchorMs = await lastAuthoritativeReadMs(database);
+      if (anchorMs === null || nowMs - anchorMs > STATEWIDE_ONLY_MAX_MIN * 60_000) {
+        status = 'unknown';
+      }
     }
   }
 

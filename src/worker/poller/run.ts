@@ -14,6 +14,7 @@ import { fetchId33Events } from './idaho511';
 import { fetchRouteTime, inPollingWindow } from './google-routes';
 import { runForecastStep } from './nws-forecast';
 import {
+  STATEWIDE_ONLY_SOURCE,
   diffAdvisories,
   parseRoadClosures,
   parseRoutesResults,
@@ -291,9 +292,15 @@ export async function resolveStatus(fetcher: typeof fetch): Promise<ResolvedStat
     return withSurface(unknownStatusResult('unresolved'));
   }
 
-  // Both unknown.
+  // Both unknown. A closure corroborated here rests on MEDIA.Statewide ALONE
+  // -- neither authoritative page could be read at all -- so it is labelled
+  // 'statewide-only' rather than 'crosscheck' and the API bounds how long it
+  // may stand (STATEWIDE_ONLY_MAX_MIN). The disagreement path above keeps
+  // 'crosscheck' and stays unbounded: there, an authoritative page did report
+  // the closure itself.
   const crosscheck = await consultStatewide(fetcher);
-  if (crosscheck) return withSurface({ ...unknownStatusResult('crosscheck'), status: crosscheck });
+  if (crosscheck)
+    return withSurface({ ...unknownStatusResult(STATEWIDE_ONLY_SOURCE), status: crosscheck });
   return withSurface(unknownStatusResult('primary'));
 }
 
@@ -445,7 +452,17 @@ export async function runPollCycle(
   // intervening unknown/crosscheck rows, so a blip between two good reads
   // never itself looks like a change.
   try {
-    const hasReliableAdvisories = status.status !== 'unknown' && status.source !== 'crosscheck';
+    // An ALLOWLIST, not a denylist. Only 'primary' and 'fallback' ever carry
+    // real advisory data; every other label ('crosscheck', 'statewide-only',
+    // 'unresolved', or the both-failed 'primary'/'unknown' pair) has the
+    // synthetic []. Written as `source !== 'crosscheck'` until 2026-08-18,
+    // which silently broke the moment 'statewide-only' was split out of
+    // 'crosscheck' -- a new label defaulted to "reliable" and manufactured a
+    // spurious "standing advisory removed" event on every closure cycle. It
+    // also matches the prevRow predicate immediately below, which has always
+    // been an allowlist.
+    const hasReliableAdvisories =
+      status.status !== 'unknown' && (status.source === 'primary' || status.source === 'fallback');
     if (hasReliableAdvisories) {
       const [prevRow] = await database
         .select({ advisories: statusSnapshots.advisories })
