@@ -70,7 +70,7 @@ describe('App', () => {
     render(<App />);
 
     // Initial mount fetch has resolved once the banner renders.
-    await screen.findByText('The pass is OPEN');
+    await screen.findByText('OPEN');
     expect(statusFetchCount(fetchMock)).toBe(1);
 
     await user.click(screen.getByRole('button', { name: /report conditions/i }));
@@ -118,7 +118,7 @@ describe('App', () => {
 
       await screen.findByRole('alert');
       // Never present a >2h-old cached "open" as a current OPEN status.
-      expect(screen.queryByText(/The pass is OPEN/)).not.toBeInTheDocument();
+      expect(screen.queryByText('OPEN')).not.toBeInTheDocument();
       expect(await screen.findByText('UNKNOWN')).toBeInTheDocument();
     });
   });
@@ -127,7 +127,7 @@ describe('App', () => {
     it('renders the cameras section exactly once (not duplicated by the grid restructure)', async () => {
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       expect(screen.getAllByRole('region', { name: 'Teton Pass cameras' })).toHaveLength(1);
     });
@@ -135,7 +135,7 @@ describe('App', () => {
     it('renders exactly one report-conditions trigger button (the fixed pill, in default jsdom)', async () => {
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       expect(screen.getAllByRole('button', { name: /report conditions/i })).toHaveLength(1);
     });
@@ -143,7 +143,7 @@ describe('App', () => {
     it('renders the header wordmark', async () => {
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       expect(screen.getByText('Teton Pass Cam')).toBeInTheDocument();
     });
@@ -151,7 +151,7 @@ describe('App', () => {
     it('caps the desktop content wrapper at 960px instead of leaving it unbounded', async () => {
       mockStatusOnlyFetch();
       const { container } = render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       const wrapper = container.querySelector('.mx-auto');
       expect(wrapper).not.toBeNull();
@@ -198,7 +198,7 @@ describe('App', () => {
       });
 
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       // Two matches, not one: the DriveTimes row AND HomeHistoryCard's route
       // name subtitle (I4) both render the active direction's route name.
@@ -252,7 +252,7 @@ describe('App', () => {
       }) as unknown as ReturnType<typeof vi.fn>;
 
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       const link = await screen.findByRole('link', { name: /when should you leave/i });
       expect(link).toHaveAttribute('href', '/history');
@@ -272,7 +272,7 @@ describe('App', () => {
       // case, not a contrived one.
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       expect(screen.queryByText('When should you leave?')).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: /when should you leave/i })).not.toBeInTheDocument();
@@ -316,7 +316,7 @@ describe('App', () => {
       // Cached (poisoned) data renders first, then the mount-effect fetch
       // resolves with a complete payload -- either way, the page must never
       // go blank.
-      expect(await screen.findByText('The pass is OPEN')).toBeInTheDocument();
+      expect(await screen.findByText('OPEN')).toBeInTheDocument();
     });
   });
 
@@ -362,7 +362,7 @@ describe('App', () => {
       });
 
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       const captions = screen.getAllByText(/may be outdated/i);
       expect(captions).toHaveLength(1);
@@ -381,7 +381,7 @@ describe('App', () => {
     it('shows no caption at all when forecastStale is false', async () => {
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       expect(screen.queryByText(/may be outdated/i)).not.toBeInTheDocument();
     });
@@ -397,7 +397,7 @@ describe('App', () => {
     it('renders exactly one h1 (the relocated About explainer, between Sponsor and Footer)', async () => {
       mockStatusOnlyFetch();
       render(<App />);
-      await screen.findByText('The pass is OPEN');
+      await screen.findByText('OPEN');
 
       const headings = screen.getAllByRole('heading', { level: 1 });
       expect(headings).toHaveLength(1);

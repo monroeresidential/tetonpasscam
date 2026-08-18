@@ -44,7 +44,7 @@ describe('StatusBanner', () => {
     // the headline states the state, the line under it states the
     // instruction. "do not attempt" and a stated penalty must both survive
     // any future copy edit.
-    expect(screen.getByTestId('banner-headline')).toHaveTextContent('Closed');
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent('CLOSED');
     expect(screen.getByText(/do not attempt/i)).toBeInTheDocument();
     expect(screen.getByText(/\$750/)).toBeInTheDocument();
     expect(screen.getByText(/Swan Valley/)).toBeInTheDocument();
@@ -170,9 +170,9 @@ describe('StatusBanner', () => {
   // satisfied by some other element -- e.g. deleting the CLOSED headline
   // entirely would still leave the byte-frozen legal `<p>` alone to satisfy
   // a container-wide substring check, silently losing headline coverage.
-  it('OPEN headline reads "The pass is OPEN"', () => {
+  it('OPEN headline is the bare status word', () => {
     render(<StatusBanner data={base} direction="eb" />);
-    expect(screen.getByTestId('banner-headline')).toHaveTextContent('The pass is OPEN');
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent('OPEN');
   });
 
   it('RESTRICTED headline leads with the first restriction', () => {
@@ -213,7 +213,7 @@ describe('StatusBanner', () => {
     const { container } = render(
       <StatusBanner data={{ ...base, status: 'closed' }} direction="eb" />,
     );
-    expect(screen.getByTestId('banner-headline')).toHaveTextContent('Closed');
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent('CLOSED');
     expect(container.textContent).toContain(
       'Do not attempt. A closed Wyoming road is illegal — up to $750.',
     );

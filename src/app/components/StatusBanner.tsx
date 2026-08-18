@@ -56,7 +56,7 @@ export default function StatusBanner({
         <div className="flex-1">
           {effectiveStatus === 'open' && (
             <p data-testid="banner-headline" className={HEADLINE_CLASS}>
-              The pass is OPEN
+              OPEN
             </p>
           )}
 
@@ -72,8 +72,13 @@ export default function StatusBanner({
             // dash orphaned at the start of line two, and then repeated itself
             // verbatim in the warning immediately below. The instruction moved
             // to that warning; this states the state.
+            //
+            // All four states are the bare status word in caps (Drew,
+            // 2026-08-18) -- the same set the embed widget has always used.
+            // Mixing "The pass is OPEN" with a one-word CLOSED read as an
+            // oversight rather than a choice.
             <p data-testid="banner-headline" className={HEADLINE_CLASS}>
-              Closed
+              CLOSED
             </p>
           )}
 

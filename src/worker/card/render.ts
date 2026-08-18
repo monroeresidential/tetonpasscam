@@ -84,18 +84,24 @@ function sanitizeText(raw: string): string {
   return raw.replace(/</g, '');
 }
 
-/** Mirrors StatusBanner.tsx's headline copy per state (`The pass is OPEN`,
- *  `RESTRICTED — {restriction}`, `Closed — do not attempt`, `UNKNOWN — check
+/** Mirrors StatusBanner.tsx's headline copy per state (`OPEN`,
+ *  `RESTRICTED — {restriction}`, `CLOSED — do not attempt`, `UNKNOWN — check
  *  Wyoming 511`) -- the card is a snapshot of the same product surface, so
- *  it uses the same words rather than inventing new phrasing. */
+ *  it uses the same words rather than inventing new phrasing.
+ *
+ *  One deliberate divergence: the banner splits CLOSED into a bare headline
+ *  plus a separate warning line, but the card has no second line to put the
+ *  warning on, so it keeps `— do not attempt` attached to the headline. A
+ *  share card that says only "CLOSED" would drop hard rule #5's instruction
+ *  entirely from the surface most likely to be seen out of context. */
 function headlineFor(status: PassStatus, restrictions: string[]): string {
   switch (status) {
     case 'open':
-      return 'The pass is OPEN';
+      return 'OPEN';
     case 'restricted':
       return `RESTRICTED${restrictions.length > 0 ? ` — ${restrictions[0]}` : ''}`;
     case 'closed':
-      return 'Closed — do not attempt';
+      return 'CLOSED — do not attempt';
     case 'unknown':
       return 'UNKNOWN — check Wyoming 511';
   }

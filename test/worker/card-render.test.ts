@@ -33,7 +33,7 @@ describe('buildCardHtml', () => {
         ],
       }),
     );
-    expect(html).toContain('The pass is OPEN');
+    expect(html).toContain('OPEN');
     // Rendered with a plain ASCII ">" in place of the DB's literal U+2192
     // arrow -- see render.ts's `routeNameHtml` comment on why (no embedded
     // font actually has that glyph, confirmed via wrangler-dev sample
@@ -61,7 +61,7 @@ describe('buildCardHtml', () => {
 
   it('CLOSED: headline + byte-exact legal copy, still shows the as-of footer', () => {
     const html = buildCardHtml(baseInput({ status: 'closed' }));
-    expect(html).toContain('Closed — do not attempt');
+    expect(html).toContain('CLOSED — do not attempt');
     expect(html).toContain(CLOSED_LEGAL_COPY);
     expect(html).toContain('as of 2:15 PM MT · Aug 10 · tetonpasscam.com');
   });
