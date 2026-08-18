@@ -135,22 +135,37 @@ describe('WeatherStrip — surface condition tile', () => {
     expect(screen.getByText('No report')).toBeInTheDocument();
   });
 
-  it('truncates a long WYDOT condition string visually, but keeps it in full via title', () => {
-    // WYDOT emits multi-word strings ("Snow packed, slick in spots") that
-    // run about twice this tile's ~149px inner width at this type size --
-    // jsdom does no layout, so a plain getByText assertion here would pass
-    // regardless of whether the tile can actually hold the string (this is
-    // exactly what happened: the old version of this test asserted the
-    // string rendered "in full, without truncating it", which was true in
-    // jsdom and false on screen). The value element now carries `truncate`
-    // deliberately -- don't revert it to `whitespace-nowrap` because this
-    // test looks green; the CSS is doing real work the DOM query can't see.
+  it('wraps a long WYDOT condition string over two lines instead of clipping it to one', () => {
+    // WYDOT emits multi-word strings ("Snow packed, slick in spots", "Wet
+    // with Fog, Limited Visibility") that run about twice this tile's ~147px
+    // inner width. jsdom does no layout, so a plain getByText assertion here
+    // passes whether or not the tile can actually hold the string -- which is
+    // why these assertions are on the CLASS CONTRACT, not the text. Measured
+    // on a real 390px render: the value needs 288px against 147px available.
+    //
+    // Single-line `truncate` was the old behaviour and it lost the tail on
+    // mobile for good: the `title` fallback below is a hover affordance, and
+    // phones do not hover. Two lines in a taller tile fit the real strings
+    // (Drew, 2026-08-18). `title` is kept for the pathological case that
+    // still clamps at two lines, where it at least serves desktop and AT.
     render(<WeatherStrip weather={reading} surfaceCondition="Snow packed, slick in spots" />);
     const value = screen.getByText('Snow packed, slick in spots');
-    expect(value).toHaveClass('truncate');
-    // The full string still reaches hover and assistive tech via `title`,
-    // even though the tail is visually clipped.
+    expect(value).toHaveClass('line-clamp-2');
+    expect(value).not.toHaveClass('truncate');
     expect(value).toHaveAttribute('title', 'Snow packed, slick in spots');
+  });
+
+  it('gives every tile the taller fixed height the wrapped Surface value needs', () => {
+    // The wrap only works because the tile grew 64px -> 80px; at h-16 the
+    // second line's descenders were sliced off (verified on a real render).
+    // Uniform across all four so the 2x2 grid stays even.
+    render(<WeatherStrip weather={reading} surfaceCondition="Wet with Fog, Limited Visibility" />);
+    const tiles = screen.getAllByTestId('weather-tile');
+    expect(tiles).toHaveLength(4);
+    for (const tile of tiles) {
+      expect(tile).toHaveClass('h-20');
+      expect(tile).not.toHaveClass('h-16');
+    }
   });
 
   it('renders "No report" for the Surface tile when no condition is supplied at all', () => {

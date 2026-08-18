@@ -23,11 +23,13 @@ function SummitHeading() {
 interface Tile {
   label: string;
   value: ReactNode;
-  /** Surface-tile-only: the value truncates visually (see the tile
-   *  definition below), so `title` carries the untruncated string for
-   *  hover and assistive tech even though the tail is clipped on screen. */
+  /** Surface-tile-only: the value wraps over two lines (see the tile
+   *  definition below) and clamps beyond that, so `title` carries the full
+   *  string for hover and assistive tech in the rare case it still clips. */
   title?: string;
-  truncate?: boolean;
+  /** Surface-tile-only: render as wrapping prose rather than a single
+   *  no-wrap number. */
+  wraps?: boolean;
 }
 
 const REPORTED_AT_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -102,17 +104,24 @@ export default function WeatherStrip({
       ),
     },
     // WYDOT's condition strings run multi-word ("Snow packed, slick in
-    // spots") -- long enough to overrun this tile's ~149px inner width at
-    // this type size (about 13 characters). Rather than widen the tile
-    // (breaks the fixed 2x2 grid) or wrap it (breaks the fixed h-16 tile
-    // height), the value truncates visually with an ellipsis and the full
-    // string moves to `title` -- available on hover and to assistive tech,
-    // never silently dropped.
+    // spots", "Wet with Fog, Limited Visibility") -- measured at 288px
+    // against this tile's 147px inner width on a 390px screen, so roughly
+    // half of one gets cut.
+    //
+    // This used to truncate to a single line with the full string on `title`.
+    // That reasoning had a hole: `title` is a HOVER affordance, and the phone
+    // is where this is read at 4am. The tail wasn't degraded on mobile, it
+    // was gone. So the tile now gives the value two lines at a smaller size,
+    // which fits every string WYDOT actually emits, and the tiles grew
+    // 64px -> 80px to hold them -- at h-16 the second line's descenders were
+    // sliced off. `title` stays for the pathological string that still clamps
+    // past two lines. Widening this tile alone was the other option (Drew's
+    // first instinct); it costs 144px of scroll to give "0.5 mi" a full row.
     {
       label: 'Surface',
       value: surfaceCondition ?? 'No report',
       title: surfaceCondition ?? undefined,
-      truncate: true,
+      wraps: true,
     },
     { label: 'Gust', value: gustValue(weather) },
     { label: 'Visibility', value: visibilityValue(weather.visibilityFt) },
@@ -137,13 +146,13 @@ export default function WeatherStrip({
           <div
             key={tile.label}
             data-testid="weather-tile"
-            className="bg-card border-card-border rounded-card flex h-16 flex-col justify-center border px-3.5 py-2.5 text-left"
+            className="bg-card border-card-border rounded-card flex h-20 flex-col justify-center border px-3.5 py-2.5 text-left"
           >
             <p className="text-muted text-[10.5px] uppercase tracking-[0.04em]">{tile.label}</p>
             <p
               className={
-                tile.truncate
-                  ? 'font-display truncate text-[19px] font-extrabold'
+                tile.wraps
+                  ? 'font-display line-clamp-2 text-[15px] font-extrabold leading-[1.2]'
                   : 'font-display text-[19px] font-extrabold whitespace-nowrap'
               }
               title={tile.title}
