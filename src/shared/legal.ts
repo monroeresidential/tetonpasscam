@@ -10,3 +10,23 @@
  */
 export const CLOSED_LEGAL_COPY =
   'Closed — do not attempt. Traveling a closed Wyoming road is illegal (up to $750 fine).';
+
+/**
+ * The same warning for the live StatusBanner, whose own headline already reads
+ * "Closed" in 40px type directly above it.
+ *
+ * Rendering CLOSED_LEGAL_COPY there printed "Closed — do not attempt" twice
+ * within two lines of each other (mobile screenshots, 2026-08-18) while the
+ * headline itself wrapped across four lines, pushing the detour -- the thing a
+ * driver at a closed pass actually needs -- below the fold. Drew's call: the
+ * headline says the state, this line says what to do about it.
+ *
+ * Hard rule #5 is preserved, not weakened: "do not attempt" is still stated
+ * verbatim, still directly under the headline, still at full weight, and the
+ * statutory consequence still names a figure. Only the duplicated "Closed —"
+ * is gone. The surfaces with no separate headline of their own -- the
+ * crawler snapshot and the /og share card -- keep CLOSED_LEGAL_COPY above,
+ * where the full self-contained sentence is what they need.
+ */
+export const CLOSED_BANNER_WARNING =
+  'Do not attempt. A closed Wyoming road is illegal — up to $750.';

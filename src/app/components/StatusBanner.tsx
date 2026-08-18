@@ -1,4 +1,4 @@
-import { CLOSED_LEGAL_COPY } from '../../shared/legal';
+import { CLOSED_BANNER_WARNING } from '../../shared/legal';
 import type { ApiStatus, PassStatus } from '../../shared/types';
 import DetourBlock from './DetourBlock';
 import ShareButton from './ShareButton';
@@ -67,15 +67,13 @@ export default function StatusBanner({
           )}
 
           {effectiveStatus === 'closed' && (
-            // The byte-frozen legal sentence below starts with these same
-            // words. Splitting them across two <span>s keeps this headline's
-            // own text from ever forming the contiguous "Closed — do not
-            // attempt" substring in a single node -- otherwise the frozen
-            // test's getByText(/Closed — do not attempt/) would match both
-            // this headline and the legal sentence and throw for finding
-            // multiple elements. Reads identically to a driver either way.
+            // One word, deliberately. "Closed — do not attempt" as a headline
+            // wrapped across four lines of 40px type on a phone, with the em
+            // dash orphaned at the start of line two, and then repeated itself
+            // verbatim in the warning immediately below. The instruction moved
+            // to that warning; this states the state.
             <p data-testid="banner-headline" className={HEADLINE_CLASS}>
-              <span>Closed —</span> <span>do not attempt</span>
+              Closed
             </p>
           )}
 
@@ -108,7 +106,7 @@ export default function StatusBanner({
         // full (not de-emphasized) size, ahead of the last-confirmed/
         // advisory meta below.
         <>
-          <p className="mt-3 font-semibold">{CLOSED_LEGAL_COPY}</p>
+          <p className="mt-3 font-semibold">{CLOSED_BANNER_WARNING}</p>
           <DetourBlock detours={data.detours} />
         </>
       )}

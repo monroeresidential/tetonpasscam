@@ -103,7 +103,7 @@ describe('App', () => {
       expect(banner).toHaveTextContent(/showing last known status from/i);
       // Cached status still renders -- the cache is only 5 minutes old,
       // well under the 2h "force unknown" cutoff.
-      expect(await screen.findByText(/Closed — do not attempt/)).toBeInTheDocument();
+      expect(await screen.findByText(/do not attempt/i)).toBeInTheDocument();
     });
 
     it('forces the UNKNOWN presentation instead of a stale OPEN when the cached payload is more than 2h old', async () => {

@@ -40,8 +40,13 @@ describe('StatusBanner', () => {
         direction="eb"
       />,
     );
-    expect(screen.getByText(/Closed — do not attempt/)).toBeInTheDocument();
-    expect(screen.getByText(/up to \$750 fine/)).toBeInTheDocument();
+    // Hard rule #5's substance, asserted on the banner's new two-part shape:
+    // the headline states the state, the line under it states the
+    // instruction. "do not attempt" and a stated penalty must both survive
+    // any future copy edit.
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent('Closed');
+    expect(screen.getByText(/do not attempt/i)).toBeInTheDocument();
+    expect(screen.getByText(/\$750/)).toBeInTheDocument();
     expect(screen.getByText(/Swan Valley/)).toBeInTheDocument();
   });
 
@@ -193,20 +198,27 @@ describe('StatusBanner', () => {
     );
   });
 
-  // Split across markup (see StatusBanner's headline comment) so the
-  // frozen assertions above -- which query the loose substrings
-  // "Closed — do not attempt" and "up to $750 fine" -- keep matching a
-  // single element each; this test checks the headline itself reads
-  // correctly (testid-scoped) and that it's immediately followed by the
-  // complete byte-frozen legal sentence.
-  it('CLOSED headline is followed by the complete byte-frozen legal sentence', () => {
+  // The banner headline used to carry the whole legal sentence, which then
+  // repeated verbatim in the line below it -- "Closed — do not attempt"
+  // printed twice within two lines, the headline wrapping across four lines
+  // of 40px type on a phone (screenshots, 2026-08-18). The headline is now
+  // one word and the warning is stated once, beneath it.
+  //
+  // Pinned to the exact strings on purpose: this is the state with legal
+  // exposure, so a copy edit here should have to be deliberate. The
+  // self-contained sentence still exists for the surfaces that have no
+  // headline of their own -- see the seo-inject and card-render suites, which
+  // assert CLOSED_LEGAL_COPY unchanged.
+  it('CLOSED headline states only the state; the warning below states the instruction, once', () => {
     const { container } = render(
       <StatusBanner data={{ ...base, status: 'closed' }} direction="eb" />,
     );
-    expect(screen.getByTestId('banner-headline')).toHaveTextContent('Closed — do not attempt');
+    expect(screen.getByTestId('banner-headline')).toHaveTextContent('Closed');
     expect(container.textContent).toContain(
-      'Closed — do not attempt. Traveling a closed Wyoming road is illegal (up to $750 fine).',
+      'Do not attempt. A closed Wyoming road is illegal — up to $750.',
     );
+    // Said once, not twice: the old duplication is what this guards against.
+    expect(container.textContent!.match(/do not attempt/gi)).toHaveLength(1);
   });
 
   it('renders a standing advisory as an "Advisory: ... (standing)" pill', () => {
