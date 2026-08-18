@@ -1,11 +1,19 @@
 /**
  * Explainer relocation (Drew-requested scope addition): the SEO H1 +
- * 124-word paragraph that used to sit at the top of the page now render
+ * explainer paragraph that used to sit at the top of the page now render
  * here, between Sponsor and Footer, for real users. The byte-frozen
  * original copy stays in index.html's `#seo-shell` -- untouched, still the
  * first thing crawlers and no-JS visitors see -- but main.tsx hides that
  * static block once React mounts, so `#seo-shell` and this component never
  * both show at once for a JS-enabled visitor.
+ *
+ * As of 2026-08-18 the explainer renders HERE as the first FAQ entry rather
+ * than as a paragraph of its own (Drew). The shell keeps the paragraph form,
+ * because the 100-150 word explainer directly under the H1 is a spec
+ * requirement (line 98) and P1 DoD item 15 -- and since the shell is what
+ * crawlers get, that requirement is met without making users read a wall of
+ * prose above the questions. Same words, two presentations, one audience
+ * each.
  *
  * `ABOUT_H1`/`ABOUT_PARAGRAPH` below are independently-authored copies of
  * the same strings baked into index.html, not a shared import -- there's no
@@ -34,6 +42,18 @@ const ABOUT_PARAGRAPH =
   'of Transportation; see the questions below before you cross.';
 
 const FAQ_ITEMS: { question: string; answer: string }[] = [
+  {
+    // The one entry the #seo-shell does not have as a question: the shell
+    // renders this same text as its H1 paragraph, which spec line 98 and P1
+    // DoD item 15 require it to keep for crawlers. Users get it as a
+    // question instead (Drew, 2026-08-18) -- a wall of prose above the
+    // questions is not what someone checking the pass at 4am needs. The
+    // shell is hidden the moment React mounts, so nobody ever sees both.
+    // ABOUT_PARAGRAPH is reused verbatim rather than re-typed so the two
+    // cannot drift; About.test.tsx compares it byte-for-byte to index.html.
+    question: 'What is Teton Pass Cam?',
+    answer: ABOUT_PARAGRAPH,
+  },
   {
     question: 'Is Teton Pass open right now?',
     answer:
@@ -152,7 +172,6 @@ export default function About() {
           StatusBanner's giant top-of-page treatment -- this is the same H1
           text relocated, not a second hero headline. */}
       <h1 className="font-display text-[15px] font-bold">{ABOUT_H1}</h1>
-      <p className="text-muted mt-1 text-[13px] leading-relaxed">{ABOUT_PARAGRAPH}</p>
 
       <h2 className="font-display mt-4 text-[15px] font-bold">Frequently asked questions</h2>
       {FAQ_ITEMS.map((item) => (

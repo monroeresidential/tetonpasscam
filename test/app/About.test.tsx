@@ -45,6 +45,13 @@ function shellQuestions(): string[] {
   );
 }
 
+/** How many questions <About /> renders: every shell question, plus the
+ *  explainer entry the shell keeps as its H1 paragraph instead. Derived from
+ *  the shell rather than hardcoded so adding a question needs no edit here. */
+function aboutQuestionCount(): number {
+  return shellQuestions().length + 1;
+}
+
 function shellFaqAnswerText(question: string): string {
   const html = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
   const escaped = question.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -62,14 +69,28 @@ describe('About', () => {
     expect(normalize(heading.textContent ?? '')).toBe(shellH1Text());
   });
 
-  it("renders a paragraph whose text exactly matches the static shell's paragraph in index.html", () => {
-    // Scope to the paragraph specifically, not the whole section, so this
-    // stays a true byte-parity check rather than a substring match.
-    const { container } = render(<About />);
-    const paragraph = container.querySelector('p');
+  // The explainer is an FAQ ENTRY for users now (Drew, 2026-08-18), not a
+  // standalone paragraph. index.html's #seo-shell keeps it as a paragraph
+  // directly under the H1 -- spec line 98 / P1 DoD item 15 require exactly
+  // that for crawlers -- and the shell is hidden the moment React mounts, so
+  // the two audiences never see the same layout. What must NOT drift is the
+  // TEXT, which is why this still compares byte-for-byte against the shell.
+  it("renders the explainer as an FAQ answer whose text exactly matches the static shell's paragraph", () => {
+    render(<About />);
+    const heading = screen.getByRole('heading', { level: 3, name: 'What is Teton Pass Cam?' });
+    const paragraph = heading.nextElementSibling?.querySelector('p');
     expect(paragraph).not.toBeNull();
     expect(normalize(paragraph!.textContent ?? '')).toBe(shellParagraphText());
   });
+
+  it('no longer renders the explainer as a standalone paragraph above the questions', () => {
+    const { container } = render(<About />);
+    // The h1's next sibling used to be the explainer <p>. It should now be
+    // the "Frequently asked questions" h2 -- nothing between them.
+    const h1 = container.querySelector('h1')!;
+    expect(h1.nextElementSibling?.tagName).toBe('H2');
+  });
+
 
   it('does not use the giant top-of-page headline treatment (section-heading scale instead)', () => {
     render(<About />);
@@ -98,19 +119,24 @@ describe('About', () => {
     },
   );
 
-  it('renders every shell question, and no extras', () => {
+  it('renders every shell question, preceded by the explainer entry', () => {
+    // About carries ONE question the shell does not: the explainer, which the
+    // shell renders as its H1 paragraph instead. Deliberate asymmetry -- see
+    // the comment on the explainer test above -- so this asserts the exact
+    // expected shape rather than plain equality, and still fails if a shell
+    // question goes missing or an unexpected one appears.
     render(<About />);
     const rendered = screen
       .getAllByRole('heading', { level: 3 })
       .map((h) => normalize(h.textContent ?? ''));
-    expect(rendered).toEqual(shellQuestions());
+    expect(rendered).toEqual(['What is Teton Pass Cam?', ...shellQuestions()]);
   });
 
   describe('FAQ accordion', () => {
     it('renders every question collapsed initially', () => {
       render(<About />);
       const toggles = screen.getAllByRole('button', { expanded: false });
-      expect(toggles).toHaveLength(shellQuestions().length);
+      expect(toggles).toHaveLength(aboutQuestionCount());
       for (const toggle of toggles) {
         const wrapper = toggle.closest('h3')!.nextElementSibling!;
         expect(wrapper.className).toContain('grid-rows-[0fr]');
@@ -139,7 +165,7 @@ describe('About', () => {
 
       expect(screen.getAllByRole('button', { expanded: true })).toHaveLength(1);
       expect(screen.getAllByRole('button', { expanded: false })).toHaveLength(
-        shellQuestions().length - 1,
+        aboutQuestionCount() - 1,
       );
     });
   });
