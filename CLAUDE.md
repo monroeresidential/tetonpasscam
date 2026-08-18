@@ -22,6 +22,12 @@ npm run db:migrate:local  # wrangler d1 migrations apply tetonpasscam --local
 npm run test              # vitest run --config vitest.config.ts    (test/parsers/** -- WYDOT HTML parsers, no DOM/Workers runtime)
 npm run test:worker       # vitest run --config vitest.workers.config.ts (test/worker/** -- Hono routes + D1, real Workers runtime via @cloudflare/vitest-pool-workers)
 npm run test:app          # vitest run --config vitest.app.config.ts   (test/app/** -- React components, jsdom)
+npm run test:contract     # vitest run --config vitest.contract.config.ts (test/contract/** -- hits LIVE wyoroad.info)
+                          #   NOT part of the other suites and not run by default. It is the only test that can
+                          #   catch WYDOT reshaping their HTML underneath us: fixtures are frozen, so they keep
+                          #   passing while the live page drifts -- which is exactly what the 2026-08-18 incident
+                          #   was. The poller separately emails ADMIN_EMAIL after 3 consecutive cycles in which
+                          #   neither authoritative page yields a reading. See docs/RUNBOOK.md 8b.
 scripts/verify-launch.sh [base-url] [--skip-writes]   # curl-based DoD check against a running deploy or `wrangler dev`
 ```
 

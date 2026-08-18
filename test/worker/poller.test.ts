@@ -2,6 +2,7 @@ import { env } from 'cloudflare:test';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { seedRoutes } from '../../src/worker/db/seed-routes';
+import { setTestEmailFetcher } from '../../src/worker/notify';
 import { fetchDetours, resolveStatus, runPollCycle } from '../../src/worker/poller/run';
 
 // Fixture HTML is loaded via Vite's `?raw` import suffix rather than
@@ -597,6 +598,113 @@ describe('fetchDetours', () => {
       { route: 'US26', conditionText: 'Between Alpine Jct and Hoback Jct: CLOSED due to Avalanche Control' },
     ]);
   }, 10_000);
+});
+
+describe('blind-cycle alert', () => {
+  // The 2026-08-18 incident's signature was BOTH authoritative pages failing
+  // to yield a reading, cycle after cycle, with nothing telling anyone. A
+  // fixture test cannot notice WYDOT reshaping their markup; this alert is
+  // what notices in production, and it fires at roughly the same moment the
+  // banner degrades to UNKNOWN (STATEWIDE_ONLY_MAX_MIN), so Drew hears about
+  // it as users start seeing it rather than hours later.
+  //
+  // One email per EPISODE, not per cycle: the poller runs every 10-15 minutes
+  // and an outage lasting hours would otherwise send dozens.
+  function stubEmails(): Array<{ subject: string; text: string }> {
+    const calls: Array<{ subject: string; text: string }> = [];
+    setTestEmailFetcher(async (_input, init) => {
+      calls.push(JSON.parse(String(init?.body ?? '{}')));
+      return new Response('{}', { status: 200 });
+    });
+    return calls;
+  }
+
+  /** A cycle where neither authoritative page can be read. */
+  const blindFetch = () =>
+    fakeFetch({
+      'RoadClosures.html': 500,
+      'SelectedRoute=WY22': 500,
+      'MEDIA.Statewide': statewideClosed,
+      'Sensors.StationResults': sensorsTetonpass,
+      'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+      '511.idaho.gov': '[]',
+    });
+
+  it('emails once after the third consecutive blind cycle, and not again while it persists', async () => {
+    await env.DB.prepare('DELETE FROM status_snapshots').run();
+    await env.DB
+      .prepare(
+        `INSERT INTO status_snapshots
+           (captured_at, segment, status, condition_text, advisories, restrictions, wydot_report_time, source)
+         VALUES (?, 'wilson-stateline', 'open', 'Road Open', '[]', '[]', NULL, 'primary')`,
+      )
+      .bind(new Date(IN_WINDOW_NOW_MS - 600_000).toISOString())
+      .run();
+
+    const emails = stubEmails();
+    try {
+      await runPollCycle(env as any, blindFetch(), IN_WINDOW_NOW_MS);
+      expect(emails).toHaveLength(0);
+      await runPollCycle(env as any, blindFetch(), IN_WINDOW_NOW_MS);
+      expect(emails).toHaveLength(0);
+
+      await runPollCycle(env as any, blindFetch(), IN_WINDOW_NOW_MS);
+      expect(emails).toHaveLength(1);
+      expect(emails[0].subject).toMatch(/WYDOT/i);
+
+      // Still blind on the next cycle: no second email.
+      await runPollCycle(env as any, blindFetch(), IN_WINDOW_NOW_MS);
+      expect(emails).toHaveLength(1);
+    } finally {
+      setTestEmailFetcher(undefined);
+    }
+  }, 60_000);
+
+  it('a good read between blind cycles resets the count, so no alert fires', async () => {
+    await env.DB.prepare('DELETE FROM status_snapshots').run();
+    const emails = stubEmails();
+    try {
+      await runPollCycle(env as any, blindFetch(), IN_WINDOW_NOW_MS);
+      await runPollCycle(env as any, blindFetch(), IN_WINDOW_NOW_MS);
+      await runPollCycle(
+        env as any,
+        fakeFetch({
+          'RoadClosures.html': roadclosuresOpen,
+          'Sensors.StationResults': sensorsTetonpass,
+          'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+          '511.idaho.gov': '[]',
+        }),
+        IN_WINDOW_NOW_MS,
+      );
+      await runPollCycle(env as any, blindFetch(), IN_WINDOW_NOW_MS);
+      await runPollCycle(env as any, blindFetch(), IN_WINDOW_NOW_MS);
+      expect(emails).toHaveLength(0);
+    } finally {
+      setTestEmailFetcher(undefined);
+    }
+  }, 60_000);
+
+  it('a healthy cycle never alerts', async () => {
+    await env.DB.prepare('DELETE FROM status_snapshots').run();
+    const emails = stubEmails();
+    try {
+      for (let i = 0; i < 4; i++) {
+        await runPollCycle(
+          env as any,
+          fakeFetch({
+            'RoadClosures.html': roadclosuresOpen,
+            'Sensors.StationResults': sensorsTetonpass,
+            'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+            '511.idaho.gov': '[]',
+          }),
+          IN_WINDOW_NOW_MS,
+        );
+      }
+      expect(emails).toHaveLength(0);
+    } finally {
+      setTestEmailFetcher(undefined);
+    }
+  }, 60_000);
 });
 
 describe('advisory diff churn avoidance', () => {

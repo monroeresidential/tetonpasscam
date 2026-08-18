@@ -10,6 +10,7 @@ import {
   travelTimes,
   weatherSnapshots,
 } from '../db';
+import { sendEmail } from '../notify';
 import { fetchId33Events } from './idaho511';
 import { fetchRouteTime, inPollingWindow } from './google-routes';
 import { runForecastStep } from './nws-forecast';
@@ -396,6 +397,84 @@ export async function fetchDetours(
   return out;
 }
 
+/** Consecutive cycles with NO reading from either authoritative page before
+ *  the poller emails. Three is ~30 minutes at the daytime cadence and ~45 at
+ *  the overnight one -- close enough to STATEWIDE_ONLY_MAX_MIN that the alert
+ *  lands as the banner degrades to UNKNOWN, rather than long after. Below
+ *  three, a single WYDOT hiccup would page Drew for something that self-heals
+ *  on the next cycle. */
+export const BLIND_CYCLE_ALERT_THRESHOLD = 3;
+
+/** True when a snapshot records a cycle in which NEITHER RoadClosures nor
+ *  RoutesResults yielded a reading for the segment -- the two exits
+ *  `resolveStatus` takes when both authoritative pages come back unknown:
+ *
+ *    source 'statewide-only'          both unknown, MEDIA.Statewide reported a closure
+ *    source 'primary' + status unknown  both unknown, MEDIA.Statewide silent too
+ *                                       (a historical label; see resolveStatus)
+ *
+ *  Note what is NOT here: 'unresolved' means both pages WERE read and simply
+ *  disagreed, which is a data conflict rather than blindness, and 'crosscheck'
+ *  means an authoritative page reported the closure itself. Neither warrants
+ *  this alert. */
+function isBlindCycle(row: { status: string; source: string | null }): boolean {
+  if (row.source === STATEWIDE_ONLY_SOURCE) return true;
+  return row.status === 'unknown' && row.source === 'primary';
+}
+
+/**
+ * Email Drew the FIRST time a run of blind cycles reaches
+ * `BLIND_CYCLE_ALERT_THRESHOLD`, and not again until a readable cycle breaks
+ * the run.
+ *
+ * This exists because no test in the repo can see WYDOT reshape their pages:
+ * fixtures are frozen snapshots, so they keep passing while the live markup
+ * drifts. On 2026-08-18 both parsers went blind on every closure row for
+ * seven hours and nothing said so -- the site simply published an
+ * uncorroborated CLOSED. `npm run test:contract` checks the same assumptions
+ * on demand; this is what notices when nobody is looking.
+ *
+ * Fires on the exact cycle the run reaches the threshold (the run is longer
+ * than the threshold on every subsequent cycle, so the equality test is what
+ * makes it one-per-episode). Never throws: the caller wraps it, and sendEmail
+ * itself already swallows Resend failures.
+ */
+async function alertOnBlindCycles(env: Env, database: ReturnType<typeof db>): Promise<void> {
+  const recent = await database
+    .select({ status: statusSnapshots.status, source: statusSnapshots.source })
+    .from(statusSnapshots)
+    .orderBy(desc(statusSnapshots.id))
+    .limit(BLIND_CYCLE_ALERT_THRESHOLD + 1);
+
+  const run = recent.findIndex((row) => !isBlindCycle(row));
+  // -1 => every row we looked at is blind. That only reaches the threshold
+  // exactly when the table holds no older row to break the run (a fresh
+  // database), so it counts as a run of exactly `recent.length`.
+  const blindRun = run === -1 ? recent.length : run;
+  if (blindRun !== BLIND_CYCLE_ALERT_THRESHOLD) return;
+
+  await sendEmail(
+    env,
+    'tetonpasscam: WYDOT pages unreadable for 3 consecutive cycles',
+    [
+      `Neither RoadClosures.html nor WRR.RoutesResults has yielded a reading for`,
+      `"Between Wilson and the Idaho State Line" in ${BLIND_CYCLE_ALERT_THRESHOLD} consecutive poll cycles.`,
+      '',
+      'The site is showing UNKNOWN, or a closure corroborated only by MEDIA.Statewide',
+      'which expires into UNKNOWN shortly (STATEWIDE_ONLY_MAX_MIN).',
+      '',
+      'This is the signature of the 2026-08-18 incident: WYDOT renders elevated/closed',
+      'rows with the *cond cell merged across three columns and no *impact/*restrict',
+      'cells, and a parser that expects the open-row shape discards them silently.',
+      'If WYDOT has changed the markup again, both parsers are blind until it is fixed.',
+      '',
+      'Next step: run `npm run test:contract`, which checks the live pages against the',
+      'shape assumptions the parsers make and names the specific clause that broke.',
+      'Capture the page before changing anything.',
+    ].join('\n'),
+  );
+}
+
 /**
  * Run one poll cycle: resolve status, diff advisories against the previous
  * snapshot (log only -- push notifications are P2), capture weather,
@@ -500,6 +579,15 @@ export async function runPollCycle(
     });
   } catch (err) {
     console.error('[poller] failed to write status snapshot', err);
+  }
+
+  // Step 2b: tell Drew when both authoritative pages have gone unreadable.
+  // Its own try/catch, like every other step, so an alerting failure can
+  // never cost us the rest of the cycle's data.
+  try {
+    await alertOnBlindCycles(env, database);
+  } catch (err) {
+    console.error('[poller] blind-cycle alert step failed', err);
   }
 
   // Step 3: weather.

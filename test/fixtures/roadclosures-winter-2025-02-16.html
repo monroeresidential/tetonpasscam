@@ -1,0 +1,3838 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+
+    <title>WYDOT Travel Information Service</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="Keyword" content="roads, highways, conditions, Restrictions, Distances">
+    <meta name="Description" content="Wyoming Department of Transportation Travel Information Service">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="expires" content="-1">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <meta http-equiv="cache-control" content="no-store">
+    <!-- header image, work for WYDOT - start -->
+    <meta property="og:image" content="https://wyoroad.info/images/Work-for-WYDOT.png" />
+    <meta property="og:image:secure_url" content="https://wyoroad.info/images/Work-for-WYDOT.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="950" />
+    <meta property="og:image:height" content="200" />
+    <meta property="og:image:alt" content="Index image for WYOROAD main website" />
+    <meta property="og:image:url" content="https://wyoroad.info/images/Work-for-WYDOT.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="WYDOT Travel Information Service" />
+    <meta property="og:description" content="Wyoming Department of Transportation Travel Information Service" />
+    <!--<meta property="fb:app_id" content="" />-->
+    <!-- header image, work for WYDOT - end -->    <meta name="robots" content="noarchive,noindex,nofollow,noimageindex,noimageclick">
+    <link href="/css/body.css" rel="stylesheet" type="text/css">
+    <link href="/css/Header.css" rel="stylesheet" type="text/css">
+    <link href="/css/restrictions.css" rel="stylesheet" type="text/css">
+    <script language="JavaScript">
+
+        function popUpSSI(URL) {
+            window.open(URL, 'Popup', 'toolbar=0,scrollbars=1,location=0,statusbar=0,menubar=0,resizable=1,width=400,height=300,left=100,top=100');
+        }
+
+    </script>
+    <script language="JavaScript">
+
+        function popUpbig(URL) {
+            window.open(URL, 'Popup', 'toolbar=0,scrollbars=1,location=0,statusbar=0,menubar=0,resizable=1,width=750,height=620,left=100,top=100');
+        }
+
+    </script>
+    <script language="JavaScript">
+
+        function popUpsmall(URL) {
+            day = new Date();
+            id = day.getTime();
+            eval("page" + id + " = window.open(URL, \'" + id + "\', \'toolbar=0,scrollbars=1,location=0,statusbar=0,menubar=0,resizable=1,width=400,height=340,left = 100,top = 100\'); ");
+        }
+
+    </script>
+    
+    <!--[if !IE]><!-->
+    <style>
+     thead tr th.links, thead tr th.route, thead tr th.town, thead tr th.closurelocation, thead tr th.reason, thead tr th.closureadvisory, thead tr th.closurerestrictions, thead tr th.citylocation, thead tr th.conditions, thead tr th.advisory, thead tr th.restrictions, thead tr th.rpttime, thead tr th.cameras, thead tr th.sensors, thead tr th.projectname, thead tr th.projectnum, thead tr th.wydot, thead tr th.contractor, thead tr th.startdate, thead tr th.completedate, thead tr th.description, thead tr th.road, thead tr th.mileposts, thead tr th.surface, thead tr th.delays, thead tr th.lastupdate, thead tr th.impact, thead tr th.recommendation {
+               text-align:left;
+            }
+        /*
+        Max width before this PARTICULAR table gets nasty
+        This query will take effect for any screen smaller than 760px
+        and also iPads specifically.
+        */
+        @media only screen and (max-width: 760px),
+        (min-device-width: 600px) and (max-device-width: 800px) {
+            /* Force table to not be like tables anymore */
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            /* Hide table headers (but not display: none;, for accessibility)*/
+            thead tr th.links, thead tr th.route, thead tr th.town, thead tr th.closurelocation, thead tr th.reason, thead tr th.closureadvisory, thead tr th.closurerestrictions, thead tr th.citylocation, thead tr th.conditions, thead tr th.advisory, thead tr th.restrictions, thead tr th.rpttime, thead tr th.cameras, thead tr th.sensors, thead tr th.projectname, thead tr th.projectnum, thead tr th.wydot, thead tr th.contractor, thead tr th.startdate, thead tr th.completedate, thead tr th.description, thead tr th.road, thead tr th.mileposts, thead tr th.surface, thead tr th.delays, thead tr th.lastupdate, thead tr th.impact, thead tr th.recommendation {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+
+            .pageheader {
+                border: 0px;
+            }
+
+            #header {
+                display: none;
+            }
+
+            tr {
+                border: 1px solid #000000;
+            }
+
+            .pageheader tr, .linktable tr {
+                border: 0px;
+            }
+
+            .linktable tr td.left, .linktable tr td.right {
+                text-align: left;
+            }
+
+            td.region, td.comments {
+                /* Behave  like a "row" */
+                border: none;
+                position: relative;
+                padding-left: 1%;
+                text-align: left;
+            }
+
+            td.region {
+                white-space: nowrap;
+            }
+
+            td.comments {
+                white-space: wrap;
+            }
+
+            td.route, td.projectname {
+                /* Behave  like a "row" */
+                border: none;
+                border-bottom: 3px solid #000000;
+                background-color: #D1D1D1;
+                position: relative;
+                text-align: center;
+                font-weight: bold;
+                font-size: 18px;
+                text-decoration: underline;
+            }
+
+            td.citylocation, td.closedcond, td.lowimpactcond, td.modimpactcond, td.highimpactcond, td.extendedcond, td.noimpact, td.lowimpact, td.modimpact, td.highimpact, td.extendedimpact, td.noimpactrestrict, td.lowimpactrestrict, td.modimpactrestrict, td.highimpactrestrict, td.closedrestrict, td.rpttime, td.cameras, td.sensors, td.projectnum, td.wydot, td.contractor, td.startdate, td.completedate, td.description, td.road, td.mileposts, td.surface, td.delays, td.lastupdate {
+                /* Behave  like a "row" */
+                border: none;
+                border-bottom: 1px solid #eee;
+                position: relative;
+                padding-left: 50%;
+                text-align: left;
+            }
+
+            td.citylocation:before, td.closedcond:before, td.lowimpactcond:before, td.modimpactcond:before, td.highimpactcond:before, td.extendedcond:before, td.noimpact:before, td.lowimpact:before, td.modimpact:before, td.highimpact:before, td.extendedimpact:before, td.noimpactrestrict:before, td.lowimpactrestrict:before, td.modimpactrestrict:before, td.highimpactrestrict:before, td.closedrestrict:before, td.rpttime:before, td.cameras:before, td.sensors:before, td.projectnum:before, td.wydot:before, td.contractor:before, td.startdate:before, td.completedate:before, td.description:before, td.road:before, td.mileposts:before, td.surface:before, td.delays:before, td.lastupdate:before {
+                /* Now like a table header */
+                position: absolute;
+                /* Top/left values mimic padding */
+                top: 6px;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: normal;
+            }
+
+            /* Label the data */
+            td.citylocation:before {
+                content: "Location";
+            }
+
+            td.closedcond:before {
+                content: "Conditions";
+            }
+
+            td.lowimpactcond:before {
+                content: "Conditions";
+            }
+
+            td.modimpactcond:before {
+                content: "Conditions";
+            }
+
+            td.highimpactcond:before {
+                content: "Conditions";
+            }
+
+            td.extendedcond:before {
+                content: "Conditions";
+            }
+
+            td.noimpact:before {
+                content: "Advisories";
+            }
+
+            td.lowimpact:before {
+                content: "Advisories";
+            }
+
+            td.modimpact:before {
+                content: "Advisories";
+            }
+
+            td.highimpact:before {
+                content: "Advisories";
+            }
+
+            td.extendedimpact:before {
+                content: "Advisories";
+            }
+
+            td.noimpactrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.lowimpactrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.modimpactrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.highimpactrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.closedrestrict:before {
+                content: "Restrictions";
+            }
+
+            td.rpttime:before {
+                content: "Last Report Time";
+            }
+
+            td.cameras:before {
+                content: "Cameras";
+            }
+
+            td.sensors:before {
+                content: "Sensors";
+            }
+
+            td.projectnum:before {
+                content: "Project Number";
+            }
+
+            td.wydot:before {
+                content: "WYDOT Contact";
+            }
+
+            td.contractor:before {
+                content: "Contractor Contact";
+            }
+
+            td.startdate:before {
+                content: "Start Date";
+            }
+
+            td.completedate:before {
+                content: "Completion Date";
+            }
+
+            td.description:before {
+                content: "Description";
+            }
+
+            td.road:before {
+                content: "Town(s)";
+            }
+
+            td.mileposts:before {
+                content: "Milepost(s)";
+            }
+
+            td.surface:before {
+                content: "Surface";
+            }
+
+            td.delays:before {
+                content: "Delays";
+            }
+
+            td.lastupdate:before {
+                content: "Last Updated";
+            }
+        }
+
+        /* Smartphones (portrait and landscape) ----------- */
+        @media only screen
+        and (min-device-width: 320px)
+        and (max-device-width: 480px) {
+            body {
+                padding: 0;
+                margin: 0;
+                width: 320px;
+            }
+        }
+
+        /* iPads (portrait and landscape) ----------- */
+        @media only screen and (width: 768px) {
+            body {
+                width: 495px;
+            }
+        }
+    
+           @media only screen and (min-width: 768px) {
+    .mobile-only {
+        display: none;
+    }
+}
+
+    </style>
+
+     <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var originalCSS = '';
+
+        function clearStyle() {
+            var styleTag = document.querySelector('style');
+            if (styleTag) {
+                // Store original CSS if it's not already stored
+                if (!originalCSS) {
+                    originalCSS = styleTag.innerHTML;
+                }
+                // Clear the content of the <style> tag
+                styleTag.innerHTML = '';
+            }
+        }
+
+        function restoreOriginalCSS() {
+            var styleTag = document.querySelector('style');
+            if (styleTag && originalCSS) {
+                // Restore original CSS
+                styleTag.innerHTML = originalCSS;
+            }
+        }
+
+        // Attach click event to the button to clear and restore CSS
+        var desktopButton = document.querySelector('.desktop');
+        if (desktopButton) {
+            desktopButton.addEventListener('click', function() {
+                if (desktopButton.textContent.trim() === 'Switch to Desktop version') {
+                    clearStyle();
+                    desktopButton.textContent = 'Switch to Mobile version';
+                } else if (desktopButton.textContent.trim() === 'Switch to Mobile version') {
+                    restoreOriginalCSS();
+                    desktopButton.textContent = 'Switch to Desktop version';
+                }
+            });
+        }
+    });
+</script>
+
+
+</head>
+<body>
+<center>
+    <div id="flag">
+      <!--
+      <table class="" style="width: 650px; margin-left: auto; margin-right: auto;">
+               <tbody>
+                  <tr>
+                     <td class="hdrText" colspan="3">&nbsp;&nbsp;Wyoming State Government:&nbsp;&nbsp;&nbsp;&nbsp;
+                        <a href="https://www.wyo.gov/resources/citizen">Citizen</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <a href="https://www.wyo.gov/resources/business">Business</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <a href="https://www.wyo.gov/">Government</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <a href="https://travelwyoming.com/">Visitor</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <a href="https://wyoming.attract.neogov.com/wydot">Apply for WYDOT jobs</a>
+                     </td>
+                  </tr>
+
+                  <tr>
+                     <td>
+                        <img src="/Images/HeaderImage.gif" height="60px" width="100%">
+                     </td>
+                  </tr>
+               </tbody>
+      </table>
+      -->
+      <table class="" style="width: auto; margin-left: auto; margin-right: auto;">
+         <tbody>
+            <tr>
+               <td class="hdrText">
+               <a href="https://wyoming.attract.neogov.com/wydot">
+                  <img src="/images/Work-for-WYDOT.png" height="" width="100%">
+               </a>
+            </tr>
+         </tbody>
+      </table>   </div>
+
+
+        <!--The following section of code is for the breadcrumbs at the top of the body-->
+        <div class="breadcrumbs"><a href="http://www.dot.state.wy.us/">WYDOT</a> &gt;<a href="/Index.html">WYOROAD</a>
+            &gt;Closures &amp; Advisories<br><br></div>
+    
+    <div style="font-family: arial;">
+        <br>
+        <table class="linktable">
+            <tbody>
+            <tr>
+                <td class="left" style="font-weight: bold">
+                    <a href="/highway/FAQ.html">Frequently Asked Questions</a>
+                </td>
+                <td class="right" style="font-weight: bold">
+                    <a href="http://map.wyoroad.info/">Search Conditions By Map</a><br>
+                    <a href="/pls/Browse/WRR.ConditionsQuery">Search By City</a><br>
+                    <a href="/pls/Browse/WRR.RoutesQuery">Search By Route</a><br>
+                    <a href="/Highway/text_road.html">Search By District</a><br>
+                    <a href="/highway/conditions/VSL.html">Variable Speed Limits</a><br>
+                    <a href="/highway/conditions/ChainLaw.html">Chain Law</a><br>
+                    <a href="/Highway/rti_other.html">Neighboring States</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <br>
+        <h1>Closures / Advisories / Restrictions</h1>
+        <h3 class="mobile-only"><img style="border: 0px solid; width: 34px; height: 16px;" src="/images/newicon.gif" alt="New Feature" /> <button class="desktop" style="color:blue">Switch to Desktop version</button><br> </h3>
+        <h3>This page provides information about road closures and travel advisories only. For complete road condition
+            information, visit the road conditions by <a href="/Highway/text_road.html">district</a>, <a
+                    href="/pls/Browse/WRR.RoutesQuery">route</a>, or <a href="/pls/Browse/WRR.ConditionsQuery">city</a>
+            pages.</h3>
+
+        <center><div title="Generated at: Feb 15, 2025, 07:26 PM [603]">Last update at: Feb 15, 2025, 07:22 PM</div></center>
+        <br><br>
+
+        <table class="grid">
+            <thead>
+            <tr>
+                <th class="title" colspan="2">
+                    District Comments
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="region">District 1 (Southeast)</td>
+                    <td class="comments"></td>
+                </tr>
+                <tr>
+                    <td class="region">District 2 (Central)</td>
+                    <td class="comments">I25: Vehicle fire, Right lane blocked NORTHBOUND between Wheatland and Glendo at milepost 101, Expect delays. <p></td>
+                </tr>
+                <tr>
+                    <td class="region">District 3 (Southwest)</td>
+                    <td class="comments">WY22: Weight limit of 60,000 GVW is in effect over Teton Pass between Jackson and the Idaho state line from milepost 7 to 17. <p>
+
+US191: 40,000 GVWR Restriction and no semi traffic is in effect between Rock Springs and the Utah state line from milepost 500 to 551. <p>
+
+I80: Crash cleanup, all lanes closed between Rock Springs and Green River at milepost 90, all westbound traffic being diverted to exit 91, all eastbound traffic being diverted to exit 89. <p></td>
+                </tr>
+                <tr>
+                    <td class="region">District 4 (Northeast)</td>
+                    <td class="comments"></td>
+                </tr>
+                <tr>
+                    <td class="region">District 5 (Northwest)</td>
+                    <td class="comments"></td>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+
+        <table class="grid">
+            <thead>
+            <tr>
+                <th class="route">
+                    Route
+                </th>
+                <th class="town">
+                    Nearest Town
+                </th>
+                <th class="closurelocation">
+                    Location
+                </th>
+                <th class="reason">
+                    Closure Reason
+                </th>
+                <th class="closureadvisory">
+                    Advisories
+                </th>
+                <th class="closurerestrictions">
+                    Restrictions
+                </th>
+                <th class="rpttime">
+                    Last Report Time
+                </th>
+                <th class="cameras">
+                    Cameras
+                </th>
+                <th class="sensors">
+                    Sensors
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+                <tr>
+                        <td class="route" rowspan="4">I 25</td>
+                        <td class="town" rowspan="1">
+                            Chugwater
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.7631174470059&amp;lon&#x3D;-104.82879638671875">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Laramie County Line and WY 321
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            I 25 SVRD at milepost 26.580<br />Single unit 6+ axles: 32T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25Whitaker&popUp=true')" class="tooltip" title="Whitaker">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Whitaker')" class="tooltip" title="Whitaker">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Bear+Creek')" class="tooltip" title="Bear Creek">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Casper
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.85960815223624&amp;lon&#x3D;-106.32465362548828">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between WY 259 and Ormsby Road
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            I 25 SVRD at milepost 0.650<br />Single unit 2-3 axles: 20T<br />, Single unit 4-5 axles: 20T<br />, Single unit 6+ axles: 24T<br />, Semi-trailer combos: 37T<br />, Truck & full trailer combos: 36T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Casper and Exit 210, Horse Ranch Creek Rd
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            I 25 , US 20 , US 26 , US 87 from milepost 187.530 to 189.510<br />Width restriction: 12 ft<br />I 25 / US 87 at milepost 191.640<br />Single unit 6+ axles: 36T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25FStreetHill&popUp=true')" class="tooltip" title="F Street Hill">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25TwentyMileHill&popUp=true')" class="tooltip" title="Twenty Mile Hill">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=F+Street+Hill')" class="tooltip" title="F Street Hill">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Twenty+Mile+Hill')" class="tooltip" title="Twenty Mile Hill">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Douglas
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.76856483709167&amp;lon&#x3D;-105.3834342956543">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Douglas and Glenrock
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25NaturalBridge&popUp=true')" class="tooltip" title="Natural Bridge Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25DeerCreek&popUp=true')" class="tooltip" title="Deer Creek">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Deer+Creek')" class="tooltip" title="Deer Creek">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Hat+Six')" class="tooltip" title="Hat Six">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="8">I 80</td>
+                        <td class="town" rowspan="1">
+                            Elk Mountain
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.70470324689897&amp;lon&#x3D;-106.40876770019531">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Exit 235, Walcott Jct and Exit 255, WY 72
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Walcott&popUp=true')" class="tooltip" title="Walcott Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80DanaRidge&popUp=true')" class="tooltip" title="Dana Ridge">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80MM249&popUp=true')" class="tooltip" title="Mile Marker 249.1">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80HalleckRidge&popUp=true')" class="tooltip" title="Halleck Ridge">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80ElkMtn&popUp=true')" class="tooltip" title="Elk Mountain">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Walcott+Junction')" class="tooltip" title="Walcott Junction">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Dana+Ridge')" class="tooltip" title="Dana Ridge">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Mile+Marker+249.1')" class="tooltip" title="Mile Marker 249.1">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Halleck+Ridge')" class="tooltip" title="Halleck Ridge">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Elk+Mountain')" class="tooltip" title="Elk Mountain">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Arlington
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.597986086554684&amp;lon&#x3D;-106.21479034423828">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Exit 267, Wagonhound Rd and Arlington
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Wagonhound&popUp=true')" class="tooltip" title="Wagonhound">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80FooteCreek&popUp=true')" class="tooltip" title="Foote Creek">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Arlington&popUp=true')" class="tooltip" title="Arlington">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80ArlingtonEast&popUp=true')" class="tooltip" title="Arlington East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Wagonhound')" class="tooltip" title="Wagonhound">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Foote+Creek')" class="tooltip" title="Foote Creek">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Arlington')" class="tooltip" title="Arlington">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Arlington and Exit 279, Cooper Cove Rd
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Arlington&popUp=true')" class="tooltip" title="Arlington">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80ArlingtonEast&popUp=true')" class="tooltip" title="Arlington East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80CooperCove&popUp=true')" class="tooltip" title="Cooper Cove">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80CooperCoveEast&popUp=true')" class="tooltip" title="Cooper Cove East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Arlington')" class="tooltip" title="Arlington">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Arlington+East')" class="tooltip" title="Arlington East">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Cooper+Cove')" class="tooltip" title="Cooper Cove">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="3">
+                            Laramie
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.31185540579858&amp;lon&#x3D;-105.6060791015625">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Exit 279, Cooper Cove Rd and Exit 290, Quealy Dome
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80CooperCove&popUp=true')" class="tooltip" title="Cooper Cove">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80CooperCoveEast&popUp=true')" class="tooltip" title="Cooper Cove East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80StroussHill&popUp=true')" class="tooltip" title="Strouss Hill">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80QuealyDome&popUp=true')" class="tooltip" title="Quealy Dome">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Cooper+Cove')" class="tooltip" title="Cooper Cove">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Strouss+Hill')" class="tooltip" title="Strouss Hill">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Quealy+Dome')" class="tooltip" title="Quealy Dome">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Herrick+Lane')" class="tooltip" title="Herrick Lane">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Laramie and Exit 323, Happy Jack Rd
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Laramie&popUp=true')" class="tooltip" title="Laramie East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80TelephoneCanyon&popUp=true')" class="tooltip" title="Telephone Canyon">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Summit&popUp=true')" class="tooltip" title="Summit">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Exit 323, Happy Jack Rd and Exit 335, Buford
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Summit&popUp=true')" class="tooltip" title="Summit">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80SummitEast&popUp=true')" class="tooltip" title="Summit East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80SummitTavern&popUp=true')" class="tooltip" title="Summit Tavern">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Vedauwoo&popUp=true')" class="tooltip" title="Vedauwoo">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80LoneTree&popUp=true')" class="tooltip" title="Lone Tree">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80BufordEast&popUp=true')" class="tooltip" title="Buford East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Summit+East')" class="tooltip" title="Summit East">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Vedauwoo')" class="tooltip" title="Vedauwoo">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Lone+Tree')" class="tooltip" title="Lone Tree">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Buford+East')" class="tooltip" title="Buford East">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Cheyenne
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.14169157821065&amp;lon&#x3D;-104.8263931274414">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Exit 335, Buford and Exit 348, Otto Rd
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80LoneTree&popUp=true')" class="tooltip" title="Lone Tree">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80BufordEast&popUp=true')" class="tooltip" title="Buford East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Remount&popUp=true')" class="tooltip" title="Remount Road">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Harriman&popUp=true')" class="tooltip" title="Harriman">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Warren&popUp=true')" class="tooltip" title="Warren Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Buford+East')" class="tooltip" title="Buford East">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Remount+Road')" class="tooltip" title="Remount Road">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Otto')" class="tooltip" title="Otto">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Exit 348, Otto Rd and Exit 359, Junction I-25
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80MM353&popUp=true')" class="tooltip" title="MP 353.0">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Roundtop&popUp=true')" class="tooltip" title="Roundtop">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Otto')" class="tooltip" title="Otto">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=MP+353')" class="tooltip" title="MP 353.0">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="2">I 90</td>
+                        <td class="town" rowspan="1">
+                            Sheridan
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.79511453711269&amp;lon&#x3D;-106.95508003234863">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the Montana State Line and Ranchester
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            I 90/US 87 from milepost 0.000 to 8.000<br />Width restriction: 14 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90MTStateLine&popUp=true')" class="tooltip" title="Montana State Line">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90Ranchester&popUp=true')" class="tooltip" title="Ranchester Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Montana+State+Line')" class="tooltip" title="Montana State Line">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Sundance
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.40300503763042&amp;lon&#x3D;-104.37784194946289">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Sundance and the South Dakota State Line
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            I 90 , US 14 from milepost 205.700 to 206.100<br />Height restriction: 15 ft 11 in
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90SundancePOE&popUp=true')" class="tooltip" title="Sundance East POE">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90SundanceEast&popUp=true')" class="tooltip" title="Sundance East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90MoskeeRd&popUp=true')" class="tooltip" title="Moskee Road">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90Beulah&popUp=true')" class="tooltip" title="Beulah Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Beulah')" class="tooltip" title="Beulah Interchange">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="6">US 14</td>
+                        <td class="town" rowspan="3">
+                            Cody
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.53126931165007&amp;lon&#x3D;-109.05990600585938">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the E Gate of Yellowstone Nat&#39;l Park and Pahaska
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Pahaska and the Shoshone National Forest Boundary
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between the Shoshone National Forest Boundary and Cody
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US141620Cody&popUp=true')" class="tooltip" title="Cody (West)">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Basin
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.38031204112625&amp;lon&#x3D;-108.04092407226562">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Shell and Antelope Butte Mountain Recreation Area
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US14AntelopeButte&popUp=true')" class="tooltip" title="Antelope Butte">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US14GranitePass&popUp=true')" class="tooltip" title="Granite Pass">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Granite+Pass')" class="tooltip" title="Granite Pass">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Sundance
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.40300503763042&amp;lon&#x3D;-104.37784194946289">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between WY 24 and Sundance
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 14 from milepost 181.100 to 181.300<br />Height restriction: 19 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US14SunnyDivide&popUp=true')" class="tooltip" title="Sunny Divide">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Sunny+Divide')" class="tooltip" title="Sunny Divide">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Sundance and the South Dakota State Line
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            I 90 , US 14 from milepost 205.700 to 206.100<br />Height restriction: 15 ft 11 in
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90SundancePOE&popUp=true')" class="tooltip" title="Sundance East POE">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90SundanceEast&popUp=true')" class="tooltip" title="Sundance East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90MoskeeRd&popUp=true')" class="tooltip" title="Moskee Road">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90Beulah&popUp=true')" class="tooltip" title="Beulah Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Beulah')" class="tooltip" title="Beulah Interchange">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="2">US 14A</td>
+                        <td class="town" rowspan="1">
+                            Lovell
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.83773445787507&amp;lon&#x3D;-108.39334487915039">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between 22 miles east of Lovell and the Sheridan&#x2F;Big Horn County Line
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Burgess Junction
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.77452392661551&amp;lon&#x3D;-107.52388000488281">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the Sheridan&#x2F;Big Horn County Line and Bear Lodge
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="5">US 16</td>
+                        <td class="town" rowspan="3">
+                            Cody
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.53126931165007&amp;lon&#x3D;-109.05990600585938">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the E Gate of Yellowstone Nat&#39;l Park and Pahaska
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Pahaska and the Shoshone National Forest Boundary
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between the Shoshone National Forest Boundary and Cody
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US141620Cody&popUp=true')" class="tooltip" title="Cody (West)">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Newcastle
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.85619252622504&amp;lon&#x3D;-104.20652389526367">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Upton and Newcastle
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Single unit 6+ axles: 32T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Mile Marker 249 and Mile Marker 254, Eastbound Closure Gate
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 16 from milepost 245.670 to 249.820<br />Width restriction: 12 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="5">US 20</td>
+                        <td class="town" rowspan="3">
+                            Cody
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.53126931165007&amp;lon&#x3D;-109.05990600585938">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the E Gate of Yellowstone Nat&#39;l Park and Pahaska
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Pahaska and the Shoshone National Forest Boundary
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between the Shoshone National Forest Boundary and Cody
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US141620Cody&popUp=true')" class="tooltip" title="Cody (West)">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Thermopolis
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.645019610189216&amp;lon&#x3D;-108.21413040161133">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Thermopolis and Boysen Dam
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 20 BUS/WY 789 from milepost 116.100 to 116.500<br />Width restriction: 12 ft<br />Height restriction: 15 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US20BoysenDam&popUp=true')" class="tooltip" title="Boysen Dam">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US20WindRiverCanyon&popUp=true')" class="tooltip" title="Wind River Canyon">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US20Thermopolis&popUp=true')" class="tooltip" title="Thermopolis (South)">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Douglas
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.76856483709167&amp;lon&#x3D;-105.3834342956543">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Glenrock and Douglas
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25NaturalBridge&popUp=true')" class="tooltip" title="Natural Bridge Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25DeerCreek&popUp=true')" class="tooltip" title="Deer Creek">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Deer+Creek')" class="tooltip" title="Deer Creek">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Hat+Six')" class="tooltip" title="Hat Six">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="4">US 26</td>
+                        <td class="town" rowspan="3">
+                            Jackson
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.47995448044043&amp;lon&#x3D;-110.76261520385742">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Alpine Jct and Hoback Jct
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Falling Rock, Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US89AlpineJct&popUp=true')" class="tooltip" title="Alpine Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US2689HobackJct&popUp=true')" class="tooltip" title="Hoback Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Hoback Jct and Jackson
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Width restriction: 15 ft<br />Height restriction: 15 ft<br />Length restriction: 90 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US2689HobackJct&popUp=true')" class="tooltip" title="Hoback Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US89WYO22Jct&popUp=true')" class="tooltip" title="US 89 / WYO 22 Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Jackson and the S Boundary of Grand Teton Nat&#39;l Park
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Width restriction: 15 ft<br />Height restriction: 15 ft<br />Length restriction: 90 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Douglas
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.76856483709167&amp;lon&#x3D;-105.3834342956543">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Glenrock and Douglas
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25NaturalBridge&popUp=true')" class="tooltip" title="Natural Bridge Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25DeerCreek&popUp=true')" class="tooltip" title="Deer Creek">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Deer+Creek')" class="tooltip" title="Deer Creek">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Hat+Six')" class="tooltip" title="Hat Six">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="8">US 30</td>
+                        <td class="town" rowspan="6">
+                            Laramie
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.31185540579858&amp;lon&#x3D;-105.6060791015625">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Rock River and Divided Highway at Mile Marker 290
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Divided Highway at Mile Marker 290 and Divided Highway at Mile Marker 308
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Divided Highway at Mile Marker 308 and WY 34, Closure Gate
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between WY 34, Closure Gate and Laramie
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US30BoslerJct&popUp=true')" class="tooltip" title="Bosler Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Laramie and I-80 Exit 323, Happy Jack Rd
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Laramie&popUp=true')" class="tooltip" title="Laramie East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80TelephoneCanyon&popUp=true')" class="tooltip" title="Telephone Canyon">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Summit&popUp=true')" class="tooltip" title="Summit">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between I-80 Exit 323, Happy Jack Rd and I-80 Exit 335, Buford
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Summit&popUp=true')" class="tooltip" title="Summit">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80SummitEast&popUp=true')" class="tooltip" title="Summit East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80SummitTavern&popUp=true')" class="tooltip" title="Summit Tavern">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Vedauwoo&popUp=true')" class="tooltip" title="Vedauwoo">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80LoneTree&popUp=true')" class="tooltip" title="Lone Tree">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80BufordEast&popUp=true')" class="tooltip" title="Buford East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Summit+East')" class="tooltip" title="Summit East">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Vedauwoo')" class="tooltip" title="Vedauwoo">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Lone+Tree')" class="tooltip" title="Lone Tree">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Buford+East')" class="tooltip" title="Buford East">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Cheyenne
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.14169157821065&amp;lon&#x3D;-104.8263931274414">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between I-80 Exit 335, Buford and I-80 Exit 348, Otto Rd
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80LoneTree&popUp=true')" class="tooltip" title="Lone Tree">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80BufordEast&popUp=true')" class="tooltip" title="Buford East">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Remount&popUp=true')" class="tooltip" title="Remount Road">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Harriman&popUp=true')" class="tooltip" title="Harriman">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Warren&popUp=true')" class="tooltip" title="Warren Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Buford+East')" class="tooltip" title="Buford East">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Remount+Road')" class="tooltip" title="Remount Road">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Otto')" class="tooltip" title="Otto">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between I-80 Exit 348, Otto Rd and I-80 Exit 359, Junction I-25
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80MM353&popUp=true')" class="tooltip" title="MP 353.0">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Roundtop&popUp=true')" class="tooltip" title="Roundtop">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Otto')" class="tooltip" title="Otto">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=MP+353')" class="tooltip" title="MP 353.0">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="3">US 87</td>
+                        <td class="town" rowspan="1">
+                            Douglas
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.76856483709167&amp;lon&#x3D;-105.3834342956543">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Douglas and Glenrock
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25NaturalBridge&popUp=true')" class="tooltip" title="Natural Bridge Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25DeerCreek&popUp=true')" class="tooltip" title="Deer Creek">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Deer+Creek')" class="tooltip" title="Deer Creek">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Hat+Six')" class="tooltip" title="Hat Six">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Casper
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.85960815223624&amp;lon&#x3D;-106.32465362548828">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Casper and I-25 Exit 210, Horse Ranch Creek Rd
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            I 25 , US 20 , US 26 , US 87 from milepost 187.530 to 189.510<br />Width restriction: 12 ft<br />I 25 / US 87 at milepost 191.640<br />Single unit 6+ axles: 36T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25FStreetHill&popUp=true')" class="tooltip" title="F Street Hill">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25TwentyMileHill&popUp=true')" class="tooltip" title="Twenty Mile Hill">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=F+Street+Hill')" class="tooltip" title="F Street Hill">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Twenty+Mile+Hill')" class="tooltip" title="Twenty Mile Hill">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Sheridan
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.79511453711269&amp;lon&#x3D;-106.95508003234863">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Ranchester and the Montana State Line
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            I 90/US 87 from milepost 0.000 to 8.000<br />Width restriction: 14 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90MTStateLine&popUp=true')" class="tooltip" title="Montana State Line">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I90Ranchester&popUp=true')" class="tooltip" title="Ranchester Interchange">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Montana+State+Line')" class="tooltip" title="Montana State Line">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="4">US 89</td>
+                        <td class="town" rowspan="4">
+                            Jackson
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.47995448044043&amp;lon&#x3D;-110.76261520385742">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Alpine Jct and Hoback Jct
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Falling Rock, Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US89AlpineJct&popUp=true')" class="tooltip" title="Alpine Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US2689HobackJct&popUp=true')" class="tooltip" title="Hoback Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Hoback Jct and Jackson
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Width restriction: 15 ft<br />Height restriction: 15 ft<br />Length restriction: 90 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US2689HobackJct&popUp=true')" class="tooltip" title="Hoback Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US89WYO22Jct&popUp=true')" class="tooltip" title="US 89 / WYO 22 Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Jackson and the S Boundary of Grand Teton Nat&#39;l Park
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Width restriction: 15 ft<br />Height restriction: 15 ft<br />Length restriction: 90 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Flagg Ranch and the S Boundary of Yellowstone Nat&#39;l Park
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="5">US 189</td>
+                        <td class="town" rowspan="1">
+                            Kemmerer
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.793328494130215&amp;lon&#x3D;-110.54117202758789">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Kemmerer and WY 372
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US189WYO240Jct&popUp=true')" class="tooltip" title="US189/WYO240 Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            La Barge
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.26816325848521&amp;lon&#x3D;-110.19424438476562">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between La Barge and Big Piney
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 189 at milepost 104.840<br />Single unit 6+ axles: 34T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Pinedale
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.8699254870066&amp;lon&#x3D;-109.86671447753906">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Big Piney and Daniel Jct
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 189 from milepost 130.510 to 130.640<br />Width restriction: 15 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US189MarbletonNorth&popUp=true')" class="tooltip" title="Marbleton North">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Jackson
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.47995448044043&amp;lon&#x3D;-110.76261520385742">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Bondurant and Hoback Jct
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Hoback Jct and Jackson
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Width restriction: 15 ft<br />Height restriction: 15 ft<br />Length restriction: 90 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US2689HobackJct&popUp=true')" class="tooltip" title="Hoback Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US89WYO22Jct&popUp=true')" class="tooltip" title="US 89 / WYO 22 Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="8">US 191</td>
+                        <td class="town" rowspan="3">
+                            Rock Springs
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.587458719528954&amp;lon&#x3D;-109.20753479003906">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Mile Marker 513 and Mile Marker 502, Southbound Closure Gate
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 191 from milepost 502.400 to 551.390<br />Weight restriction: 40000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US191MinniesGap&popUp=true')" class="tooltip" title="Minnies Gap">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Mile Marker 502, Southbound Closure Gate and I-80
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 191 from milepost 502.400 to 551.390<br />Weight restriction: 40000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between the Utah State Line and Mile Marker 513
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 191 from milepost 502.400 to 551.390<br />Weight restriction: 40000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Pinedale
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.8699254870066&amp;lon&#x3D;-109.86671447753906">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between WY 351 and Pinedale
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 191 at milepost 88.230<br />Single unit 6+ axles: 33T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US191SandDraw&popUp=true')" class="tooltip" title="Sand Draw">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="4">
+                            Jackson
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.47995448044043&amp;lon&#x3D;-110.76261520385742">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Bondurant and Hoback Jct
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Hoback Jct and Jackson
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Width restriction: 15 ft<br />Height restriction: 15 ft<br />Length restriction: 90 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US2689HobackJct&popUp=true')" class="tooltip" title="Hoback Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US89WYO22Jct&popUp=true')" class="tooltip" title="US 89 / WYO 22 Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Jackson and the S Boundary of Grand Teton Nat&#39;l Park
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Width restriction: 15 ft<br />Height restriction: 15 ft<br />Length restriction: 90 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Flagg Ranch and the S Boundary of Yellowstone Nat&#39;l Park
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="3">US 212</td>
+                        <td class="town" rowspan="3">
+                            Cody
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.53126931165007&amp;lon&#x3D;-109.05990600585938">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the Montana State Line and Mile Marker 4.5, Westbound Closure Gate
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Mile Marker 4.5, Westbound Closure Gate and WY 296
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between WY 296 and Beartooth Pass
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="5">US 287</td>
+                        <td class="town" rowspan="4">
+                            Laramie
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.31185540579858&amp;lon&#x3D;-105.6060791015625">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Laramie and WY 34, Closure Gate
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US30BoslerJct&popUp=true')" class="tooltip" title="Bosler Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between WY 34, Closure Gate and Divided Highway at Mile Marker 308
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Divided Highway at Mile Marker 308 and Divided Highway at Mile Marker 290
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Divided Highway at Mile Marker 290 and Rock River
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Jackson
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.47995448044043&amp;lon&#x3D;-110.76261520385742">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Flagg Ranch and the S Boundary of Yellowstone Nat&#39;l Park
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">US 310</td>
+                        <td class="town" rowspan="1">
+                            Lovell
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.83773445787507&amp;lon&#x3D;-108.39334487915039">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between US 310 &#x2F; WY 789 and the Montana State Line
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 310 / WY 789 at milepost 257.010<br />Single unit 4-5 axles: 26T<br />, Single unit 6+ axles: 30T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US310FranniePOE&popUp=true')" class="tooltip" title="Frannie POE">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 12</td>
+                        <td class="town" rowspan="1">
+                            Laramie
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.31185540579858&amp;lon&#x3D;-105.6060791015625">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between WY 130 and Mandel Lane
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 12 at milepost 8.070<br />Single unit 2-3 axles: 22T<br />, Single unit 4-5 axles: 27T<br />, Single unit 6+ axles: 34T<br />, Semi-trailer combos: 39T<br />, Truck & full trailer combos: 40T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80HerrickLn&popUp=true')" class="tooltip" title="Herrick Lane">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Herrick+Lane')" class="tooltip" title="Herrick Lane">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 13</td>
+                        <td class="town" rowspan="1">
+                            Arlington
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.597986086554684&amp;lon&#x3D;-106.21479034423828">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Rock River and Arlington
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I80Arlington&popUp=true')" class="tooltip" title="Arlington">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Arlington')" class="tooltip" title="Arlington">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="2">WY 22</td>
+                        <td class="town" rowspan="2">
+                            Jackson
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.47995448044043&amp;lon&#x3D;-110.76261520385742">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Jackson and Wilson
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 22 from milepost 3.650 to 3.850<br />Width restriction: 12 ft<br />WY 22 from milepost 6.000 to 17.490<br />Weight restriction: 60000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22WYO390Jct&popUp=true')" class="tooltip" title="WYO 22 / WYO 390 Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22Wilson&popUp=true')" class="tooltip" title="Wilson">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Wilson and the Idaho State Line
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="extendedimpact">
+                            Falling Rock, No Trailer Traffic
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 22 from milepost 6.000 to 17.490<br />Weight restriction: 60000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22Wilson&popUp=true')" class="tooltip" title="Wilson">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22TetonPass&popUp=true')" class="tooltip" title="Teton Pass">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO22IDStateLine&popUp=true')" class="tooltip" title="Idaho State Line">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Teton+Pass')" class="tooltip" title="Teton Pass">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="2">WY 24</td>
+                        <td class="town" rowspan="1">
+                            Hulett
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.68378916997173&amp;lon&#x3D;-104.60237503051758">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between US 14 and Hulett
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 24 from milepost 0.000 to 0.100<br />Height restriction: 19 ft<br />WY 24 from milepost 5.970 to 5.990<br />Height restriction: 20 ft 6 in
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO24WYO110Jct&popUp=true')" class="tooltip" title="WYO 24 / WYO 110 Junction - Devils Tower">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Sundance
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.40300503763042&amp;lon&#x3D;-104.37784194946289">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the east side of Bear Lodge and the South Dakota State Line
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 24 from milepost 39.650 to 39.670<br />Height restriction: 19 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="2">WY 28</td>
+                        <td class="town" rowspan="2">
+                            South Pass
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.57078141476864&amp;lon&#x3D;-108.69667053222656">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the Fremont&#x2F;Sublette Cty Line and Mile Marker 47
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO28OregonButtes&popUp=true')" class="tooltip" title="Oregon Buttes">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO28SweetwaterRiver&popUp=true')" class="tooltip" title="Sweetwater River">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO28SouthPass&popUp=true')" class="tooltip" title="South Pass">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO28LouisLake&popUp=true')" class="tooltip" title="Louis Lake">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=New+South+Pass')" class="tooltip" title="South Pass">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Mile Marker 47 and Mile Marker 63, Westbound Closure Gate
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO28LimestoneMtn&popUp=true')" class="tooltip" title="Limestone Mountain">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO28RedCanyon&popUp=true')" class="tooltip" title="Upper Red Canyon">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO28LowerRedCanyon&popUp=true')" class="tooltip" title="Lower Red Canyon">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Lower+Red+Canyon')" class="tooltip" title="Lower Red Canyon">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="3">WY 34</td>
+                        <td class="town" rowspan="2">
+                            Laramie
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.31185540579858&amp;lon&#x3D;-105.6060791015625">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Bosler and Morton Pass
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO34SybilleCanyon&popUp=true')" class="tooltip" title="Sybille Canyon">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Morton Pass and the Platte&#x2F;Albany County Line
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Wheatland
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.054901088559106&amp;lon&#x3D;-104.95634078979492">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the Platte&#x2F;Albany Cty Line and Tally Ho Ranch
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 51</td>
+                        <td class="town" rowspan="1">
+                            Moorcroft
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.27077150858353&amp;lon&#x3D;-104.952392578125">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Rozet and Moorcroft
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 51 at milepost 143.600<br />Single unit 6+ axles: 33T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="3">WY 70</td>
+                        <td class="town" rowspan="2">
+                            Baggs
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.04000226828485&amp;lon&#x3D;-107.65640258789062">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Mile Marker 22 and Mile Marker 27, Eastbound Closure Gate
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            No Unnecessary Travel
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Mile Marker 27, Eastbound Closure Gate and Haskins Creek
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Saratoga
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.45842348844393&amp;lon&#x3D;-106.8065071105957">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Haskins Creek and Mile Marker 50, Westbound Closure Gate
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="3">WY 77</td>
+                        <td class="town" rowspan="3">
+                            Shirley Basin
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.368183624385786&amp;lon&#x3D;-106.23504638671875">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the South Jct WY 487 and Mile Marker 132, Northbound Closure Gate
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 77 from milepost 122.100 to 144.280<br />Weight restriction: 80000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Mile Marker 132, Northbound Closure Gate and Mile Marker 142, Southbound Closure Gate
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Mile Marker 142, Southbound Closure Gate and the North Jct WY 487
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 77 from milepost 122.100 to 144.280<br />Weight restriction: 80000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 110</td>
+                        <td class="town" rowspan="1">
+                            Hulett
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.68378916997173&amp;lon&#x3D;-104.60237503051758">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between WY 24 and Devils Tower Nat&#39;l Monument
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 110 from milepost 0.000 to 0.020<br />Height restriction: 20 ft 6 in
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO110DevilsTower&popUp=true')" class="tooltip" title="WYO 110 Devils Tower">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 111</td>
+                        <td class="town" rowspan="1">
+                            Sundance
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.40300503763042&amp;lon&#x3D;-104.37784194946289">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Aladdin and I-90
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 111 from milepost 0.000 to 0.050<br />Height restriction: 19 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:51 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="4">WY 130</td>
+                        <td class="town" rowspan="2">
+                            Saratoga
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.45842348844393&amp;lon&#x3D;-106.8065071105957">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between WY 230 and Mile Marker 48, Eastbound Closure Gate
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 130 from milepost 34.500 to 68.020<br />Weight restriction: 80000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Mile Marker 48, Eastbound Closure Gate and Mirror Lake
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="2">
+                            Laramie
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.31185540579858&amp;lon&#x3D;-105.6060791015625">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Mirror Lake and Green Rock
+                    </td>
+                        <td class="extendedcond" colspan="3">
+                            Road Closed Due To Seasonal Closure
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between Green Rock and Centennial
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 130 from milepost 34.500 to 68.020<br />Weight restriction: 80000 lbs
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO130GreenrockTH&popUp=true')" class="tooltip" title="Green Rock Trailhead">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 192</td>
+                        <td class="town" rowspan="1">
+                            Kaycee
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.711812409337&amp;lon&#x3D;-106.63690567016602">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Kaycee and Linch
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 192 at milepost 21.100<br />Single unit 4-5 axles: 23T<br />, Single unit 6+ axles: 27T<br />, Semi-trailer combos: 37T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 211</td>
+                        <td class="town" rowspan="1">
+                            Cheyenne
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.14169157821065&amp;lon&#x3D;-104.8263931274414">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between WY 219, Yellowstone Rd and Jordan Road
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 211 at milepost 20.460<br />Single unit 2-3 axles: 21T<br />, Single unit 4-5 axles: 24T<br />, Single unit 6+ axles: 27T<br />, Truck & full trailer combos: 39T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:22 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=I25CheyenneNorth&popUp=true')" class="tooltip" title="Cheyenne North">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 233</td>
+                        <td class="town" rowspan="1">
+                            Kemmerer
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.793328494130215&amp;lon&#x3D;-110.54117202758789">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Kemmerer and End of State Route
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 239</td>
+                        <td class="town" rowspan="1">
+                            Afton
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.72431706017358&amp;lon&#x3D;-110.93376159667969">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between US 89 and Freedom
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 239 at milepost 0.940<br />Single unit 6+ axles: 32T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 296</td>
+                        <td class="town" rowspan="1">
+                            Cody
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.53126931165007&amp;lon&#x3D;-109.05990600585938">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between US 212 and WY 120
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO296ChiefJoseph&popUp=true')" class="tooltip" title="Chief Joseph">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Chief+Joseph')" class="tooltip" title="Chief Joseph">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="2">WY 319</td>
+                        <td class="town" rowspan="1">
+                            Wheatland
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.054901088559106&amp;lon&#x3D;-104.95634078979492">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between I-25 &#x2F; US 26&#x2F;87 and US 18&#x2F;20
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 319 at milepost 106.350<br />Single unit 6+ axles: 35T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Coleman')" class="tooltip" title="Coleman">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Douglas
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.76856483709167&amp;lon&#x3D;-105.3834342956543">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Glendo and Jct US 18&#x2F;20
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            Single unit 4-5 axles: 26T<br />, Single unit 6+ axles: 26T<br />, Semi-trailer combos: 39T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 320</td>
+                        <td class="town" rowspan="1">
+                            Wheatland
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.054901088559106&amp;lon&#x3D;-104.95634078979492">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Grey Rocks Closure Gate and US 26
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 320 at milepost 2.520<br />Single unit 6+ axles: 34T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 353</td>
+                        <td class="town" rowspan="1">
+                            Pinedale
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.8699254870066&amp;lon&#x3D;-109.86671447753906">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between US 191 and End of State Route
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 353 from milepost 6.650 to 6.730<br />Width restriction: 9 ft 6 in
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="1">WY 410</td>
+                        <td class="town" rowspan="1">
+                            Lyman
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;41.32784195426916&amp;lon&#x3D;-110.29346466064453">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Mountain View and End of State Route
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            WY 410 at milepost 15.540<br />Single unit 4-5 axles: 25T<br />, Single unit 6+ axles: 31T<br />, Semi-trailer combos: 39T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:18 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="2">WY 487</td>
+                        <td class="town" rowspan="2">
+                            Shirley Basin
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;42.368183624385786&amp;lon&#x3D;-106.23504638671875">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between the South Jct WY 77 and the North Jct WY 77
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO487ShirleyRim&popUp=true')" class="tooltip" title="Shirley Rim">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                            <a href="javascript:popUpSSI('http://www.wyoroad.info/pls/Browse/Sensors.StationResults?SelectedStation=Shirley+Rim')" class="tooltip" title="Shirley Rim">
+                                <img src="/images/weatherstation.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="closurelocation">
+                        Between the North Jct WY 77 and WY 220
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="highimpact">
+                            Black Ice
+                        </td>
+                        <td class="noimpactrestrict">
+                            None
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 07:09 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=WYO487WYO77Jct&popUp=true')" class="tooltip" title="WYO 487 / WYO 77 Junction">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="route" rowspan="2">WY 789</td>
+                        <td class="town" rowspan="1">
+                            Thermopolis
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;43.645019610189216&amp;lon&#x3D;-108.21413040161133">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Boysen Dam and Thermopolis
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="modimpact">
+                            Falling Rock
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 20 BUS/WY 789 from milepost 116.100 to 116.500<br />Width restriction: 12 ft<br />Height restriction: 15 ft
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US20BoysenDam&popUp=true')" class="tooltip" title="Boysen Dam">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US20WindRiverCanyon&popUp=true')" class="tooltip" title="Wind River Canyon">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US20Thermopolis&popUp=true')" class="tooltip" title="Thermopolis (South)">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                        <td class="town" rowspan="1">
+                            Lovell
+                            <br><a href="http:&#x2F;&#x2F;forecast.weather.gov&#x2F;MapClick.php?lat&#x3D;44.83773445787507&amp;lon&#x3D;-108.39334487915039">NWS Forecast</a>
+                        </td>
+                    <td class="closurelocation">
+                        Between Lovell and the Montana State Line
+                    </td>
+                        <td class="noimpactcond" colspan="1">
+                            Road Open
+                        </td>
+                        <td class="noimpact">
+                            None
+                        </td>
+                        <td class="noimpactrestrict">
+                            US 310 / WY 789 at milepost 257.010<br />Single unit 4-5 axles: 26T<br />, Single unit 6+ axles: 30T
+                        </td>
+
+                    <td class="rpttime">
+                        Feb 15, 2025, 06:59 PM
+                    </td>
+                    <td class="cameras"> &nbsp;
+                            <a href="javascript:popUpbig('/highway/webcameras/view?site=US310FranniePOE&popUp=true')" class="tooltip" title="Frannie POE">
+                                <img src="/images/webcam.png" border="0" width="20px" height="20px">
+                            </a>
+                    </td>
+                    <td class="sensors"> &nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+
+
+        <table class="linktable">
+            <tr>
+                <td class="left">
+                    <a href="&#x2F;ext&#x2F;chainlaw.html">*Chain Law - Level 1 Definition</a>
+                </td>
+            </tr>
+            <tr>
+                <td class="left">
+                    <a href="&#x2F;ext&#x2F;chainlaw.html">**Chain Law - Level 2 Definition</a>
+                </td>
+            </tr>
+            <tr>
+                <td class="left">
+                    <a href="&#x2F;Highway&#x2F;definitions.html">Other Definitions</a>
+                </td>
+            </tr>
+        </table>
+        <br>
+
+        <table class="grid">
+            <thead>
+            <tr>
+                <th class="impact">
+                    Impact Levels
+                </th>
+                <th class="recommendation">
+                    Description / Recommended Action
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="low">
+                    Low
+                </td>
+                <td>
+                    Minimal impacts expected, use general caution.
+                </td>
+            </tr>
+            <tr>
+                <td class="moderate">
+                    Moderate
+                </td>
+                <td>
+                    Some impacts expected, use extra caution. Stay alert for changing road and weather conditions.
+                </td>
+            </tr>
+            <tr>
+                <td class="high">
+                    High
+                </td>
+                <td>
+                    Dangerous impacts expected, use extreme caution, delay travel or consider alternate route. If travel
+                    is necessary, slow down and allow extra time.
+                </td>
+            </tr>
+            <tr>
+                <td class="closed">
+                    CLOSED
+                </td>
+                <td>Per <a href="javascript:popUpbig('http:&#x2F;&#x2F;legisweb.state.wy.us&#x2F;statutes&#x2F;statutes.aspx?file&#x3D;titles&#x2F;Title24&#x2F;T24CH1.htm')">W.S. 24-1-109</a>,
+                    motorists
+                    traveling on a closed road without permission from WYDOT or WHP may be subject to a fine of up to
+                    $750
+                    and/or up to 30 days imprisonment.
+                </td>
+            </tr>
+            <tr>
+                <td class="extended">Seasonal / Long-Duration Event</td>
+                <td>Impact level used to distinguish long-duration events from emergent events.</td>
+            </tr>
+            <tr>
+                <td colspan="2" style="font-weight: bold">
+                    <center>
+                        All travelers are encouraged to check present conditions and forecasts before departing.
+                    </center>
+                </td>
+            </tr>
+        </table>
+
+        <br>
+        <br>
+        <div>
+            <!--<table class="linktable" style="width: 650px">-->
+            <table class="linktable footer" style="">
+                <tbody>
+                <tr>
+                    <td><a href="https://www.wyo.gov/resources/citizen">Citizen</a></td>
+                    <td><a href="https://www.wyo.gov/resources/business">Business</a></td>
+                    <td><a href="https://www.wyo.gov/">Government</a></td>
+                    <td><a href="https://travelwyoming.com/">Visitor</a></td>
+                    <td>
+                        <a href="#contactpopup">Contact Us</a>
+                        <div id="contactpopup" class="overlay">
+                            <div class="popup">
+                                <a class="close" href="#">&times;</a>
+                                <div class="content">To contact WYDOT please send an email to wyoroad@wyo.gov.</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        Copyright &copy; 2024 State of Wyoming
+                    </td>
+                    <td>
+                        <a href="/disclaimer.html">Disclaimer</a>
+                    </td>
+                    <td>
+                        <a href="https://ag.wyo.gov/privacy">Privacy Policy</a>
+                    </td>
+                    <td>
+                        <a href="/pls/Browse/MEDIA.Statewide">Media</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9" style="text-align: center;">
+                        Production Laramie v. 1.2.0.1938-20241016&nbsp;
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+
+        </div>
+
+    </div>
+</center>
+</body>
+</html>

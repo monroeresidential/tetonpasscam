@@ -9,6 +9,7 @@
     "test": "vitest run --config vitest.config.ts",
     "test:worker": "vitest run --config vitest.workers.config.ts",
     "test:app": "vitest run --config vitest.app.config.ts",
+    "test:contract": "vitest run --config vitest.contract.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply tetonpasscam --local",
     "deploy": "npm run build && wrangler deploy"

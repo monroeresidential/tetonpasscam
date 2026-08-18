@@ -57,6 +57,27 @@ matched" test) and the rowspan structure are left untouched.
   archived snapshot), so this fixture applies the verified rendering to that
   row.
 
+`roadclosures-winter-2025-02-16.html` is the one fixture here whose CLOSED
+rows are WYDOT's own output rather than a hand-edit. It is a genuine capture
+of a winter day on which 15 Wyoming segments were seasonally closed, retrieved
+from the Wayback Machine:
+
+```bash
+curl -s --compressed \
+  "https://web.archive.org/web/20250216022646id_/https://www.wyoroad.info/highway/conditions/RoadClosures.html" \
+  > test/fixtures/roadclosures-winter-2025-02-16.html
+```
+
+(`--compressed` matters -- without it the archive returns a gzipped body that
+looks like a truncated page. Use the CDX API to list other captures:
+`https://web.archive.org/cdx/search/cdx?url=wyoroad.info/highway/conditions/RoadClosures.html&output=json&from=YYYYMMDD&to=YYYYMMDD`.)
+
+It holds both shapes at once -- 96 open rows and 15 merged/closed rows -- which
+is what makes it the corpus for `test/parsers/row-shape-contract.test.ts`. Our
+own segment is OPEN in it, as it was in every archived capture found; its value
+is entirely in the other 15 rows. Teton Pass is open the overwhelming majority
+of the time, so this is the only practical way to hold real closed-row markup.
+
 ## routesresults-wy22*.html
 
 Source page: https://www.wyoroad.info/pls/Browse/WRR.RoutesResults?SelectedRoute=WY22

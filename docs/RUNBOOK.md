@@ -286,6 +286,54 @@ task.
 
 ---
 
+## 8b. WYDOT changed their HTML (or you suspect they did)
+
+Two mechanisms exist because they catch different things. Fixture tests catch
+regressions in OUR code; neither of these does — they catch WYDOT changing
+theirs, which is what caused the 2026-08-18 incident and which no committed
+fixture can ever notice.
+
+**The alert (automatic).** When neither `RoadClosures.html` nor
+`WRR.RoutesResults` yields a reading for the Wilson–Stateline segment for
+`BLIND_CYCLE_ALERT_THRESHOLD` (3) consecutive poll cycles, the poller emails
+`ADMIN_EMAIL` once — then stays quiet until a readable cycle breaks the run,
+so a multi-hour outage sends one message, not dozens. Three cycles is ~30 min
+by day and ~45 min overnight, so it lands as the banner degrades to UNKNOWN
+rather than long after. It deliberately does NOT fire for `unresolved` (both
+pages read fine and disagreed) or `crosscheck` (an authoritative page reported
+the closure itself) — neither of those is blindness.
+
+**The contract test (on demand).**
+
+```
+npm run test:contract
+```
+
+Hits the live pages and checks them against the structural assumptions the
+parsers make: every data row carries a `*cond` and an `rpttime` cell; every
+`*cond` class is one we recognise; and the colspan↔cell-set relation holds
+(`colspan="1"` ⇒ `*impact` + `*restrict` present, `colspan>=2` ⇒ both absent).
+A failure names the clause that broke. It is excluded from `npm test` and the
+other suites by config, so a WYDOT outage or an offline laptop can never fail
+the ordinary suite.
+
+Read its output, not just its exit code. It reports how many merged/closed-shape
+rows it actually saw, and prints `NO closed rows present, merged-shape clause
+unexercised` when no Wyoming road is closed — a normal summer result, and a
+green tick that verified only half the contract.
+
+**If it fails:** capture the page *before* changing anything —
+`curl -s -A "tetonpasscam.com poller (drew@monroeresidential.com)" <url> > capture.html` —
+then compare against `test/fixtures/roadclosures-winter-2025-02-16.html`, which
+holds both row shapes as WYDOT really emits them. The narrative of how the
+shape was pinned down last time is in `isCompleteDataRow`'s comment in
+`src/worker/poller/wydot-status.ts`. Never widen `KNOWN_COND_CLASSES` in
+`test/support/row-shape.ts` just to get green: a new severity class needs a
+decision about whether it means closed or passable, and the corresponding
+entry in the parser's own closed/passable sets.
+
+---
+
 ## 9. Lighthouse launch check
 
 Run from any machine with Chrome installed (does not need repo access
