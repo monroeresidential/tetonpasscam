@@ -32,7 +32,7 @@ describe('index.html static SEO shell', () => {
     expect(html).toContain('<link rel="canonical" href="https://tetonpasscam.com/" />');
   });
 
-  // Still spec-mandated (TETONPASSCAM-SPEC.md line 98, P1 DoD item 15) even
+  // Still spec-mandated (docs/TETONPASSCAM-SPEC.md line 98, P1 DoD item 15) even
   // though the long-form disclaimer now lives in its own FAQ entry: the
   // paragraph immediately after the H1 is the highest-weight body text on the
   // page, and it must still carry the disclaimer in short form rather than

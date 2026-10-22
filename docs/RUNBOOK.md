@@ -3,7 +3,7 @@
 This is the day-2 operations reference: deploying from scratch, verifying a
 launch, and the routine maintenance tasks an operator (Drew, or whoever
 inherits this) will need. For "what is this app and how is it built," see
-`CLAUDE.md` and `TETONPASSCAM-SPEC.md` instead.
+`CLAUDE.md` and `docs/TETONPASSCAM-SPEC.md` instead.
 
 Everything in this document that touches a real Cloudflare account, a real
 domain, or a real secret value requires credentials this repo's automation
@@ -376,6 +376,47 @@ Service Workers should show the registered worker with no errors, for
 `https://tetonpasscam.com`.
 
 ---
+
+## 10. Node toolchain version policy
+
+Production runs on Cloudflare's workerd runtime, not Node -- Node.js CVEs do not
+apply to the deployed Worker. Node only runs the **toolchain** (vite, wrangler,
+vitest, npm) on whatever machine builds and deploys, and that toolchain holds
+the Cloudflare API token and talks to the npm registry over TLS, so it is kept
+on a patched release.
+
+Policy (set 2026-10-22 for the Node.js October 21, 2026 security release and the
+eMudhra/emSign CA distrust): **26.x >= 26.12.1**. If a different line is ever
+needed, 22.x must be >= 22.23.4 and 24.x >= 24.22.1. Odd-numbered lines and
+<= 20 are never acceptable.
+
+Where the version lives -- keep all four in agreement:
+
+| File | Role |
+| --- | --- |
+| `.nvmrc`, `.node-version` | exact version read by nvm/fnm/mise and by Cloudflare Workers Builds |
+| `package.json` `engines.node` | floor; `.npmrc` `engine-strict=true` makes `npm install` fail below it |
+| `scripts/check-node.mjs` | `prebuild` guard: prints `process.version` into the build log, exits 1 if unpatched |
+
+To move to a newer patch: edit the two version files, the `engines` floor and
+`MIN_PATCHED` in the guard, then `npm test` (test/scripts/check-node.test.ts
+asserts they agree).
+
+If a git-connected Workers Build is ever set up, the dashboard's `NODE_VERSION`
+variable (Workers & Pages > project > Settings > Build / Variables) overrides
+every repo file above -- set it to the same exact version or leave it unset.
+
+TLS trust check for the eMudhra incident (expect `OK CERT_REVOKED`, never
+`VULNERABLE`):
+
+```
+node -e "fetch('https://dv-g3b-emudhra.we-have-a-problem.com/').then(r=>{console.log('VULNERABLE',r.status);process.exit(1)}).catch(e=>console.log('OK', e.cause?.code||e.message))"
+```
+
+If the build machine sets `NODE_EXTRA_CA_CERTS` (e.g. for a Cloudflare Gateway
+inspection CA), that file should contain **only** the private CA, not a copy of a
+public root bundle: a bundled copy re-adds roots that patched Node deliberately
+dropped and goes stale on its own schedule.
 
 ## P2: Capacitor onboarding readiness
 
