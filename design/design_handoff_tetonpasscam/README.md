@@ -1,7 +1,7 @@
 # Handoff: tetonpasscam.com — "Trailhead" design
 
 ## Overview
-Visual design for tetonpasscam.com, a Teton Pass status utility (see `TETONPASSCAM-SPEC.md` for the full product spec and build prompt). Covers: Home (desktop light + phone dark + phone light), History, the Report-conditions modal, and Feedback. Direction chosen: **"Trailhead"** — warm, rounded, local-and-friendly.
+Visual design for tetonpasscam.com, a Teton Pass status utility (see `docs/TETONPASSCAM-SPEC.md` for the full product spec and build prompt). Covers: Home (desktop light + phone dark + phone light), History, the Report-conditions modal, and Feedback. Direction chosen: **"Trailhead"** — warm, rounded, local-and-friendly.
 
 ## About the Design Files
 `Teton Pass Cam.dc.html` is a **design reference created in HTML** — a static mockup document showing intended look and layout, not production code. It renders a canvas of option cards; the sections labeled **1a, 2a, 2b, 2c, 2d, 2e** are the chosen direction (ignore 1b and 1c — rejected explorations kept for history). Your task is to **recreate these designs in the app's stack** (React + Vite per the spec), using real data wiring per the spec's build prompt.
@@ -91,4 +91,4 @@ All data comes from the app's own API per the spec (`GET /api/status`, `/api/his
 
 ## Files
 - `Teton Pass Cam.dc.html` — the design document (open in a browser; newest work at top; build from 1a, 2a–2e)
-- `TETONPASSCAM-SPEC.md` — full product spec + backend build prompt
+- `docs/TETONPASSCAM-SPEC.md` — full product spec + backend build prompt

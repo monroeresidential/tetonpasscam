@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**Implemented (P1 complete as of 2026-08-09).** React + Vite + Hono-on-Workers app, deployed to Cloudflare Workers with a D1 database, per `TETONPASSCAM-SPEC.md` (still the source of truth for product intent — read it before making product decisions). See `docs/RUNBOOK.md` for deploying from scratch, launch verification, secret rotation, and other operational tasks.
+**Implemented (P1 complete as of 2026-08-09).** React + Vite + Hono-on-Workers app, deployed to Cloudflare Workers with a D1 database, per `docs/TETONPASSCAM-SPEC.md` (still the source of truth for product intent — read it before making product decisions). See `docs/RUNBOOK.md` for deploying from scratch, launch verification, secret rotation, and other operational tasks.
 
 ### Commands
 
 ```
 npm run dev             # vite build, then wrangler dev (local Worker + local D1)
-npm run build            # vite build only (outputs dist/)
+npm run build            # scripts/check-node.mjs (prebuild Node-version guard, docs/RUNBOOK.md §10), then vite build (outputs dist/)
 npm run deploy            # vite build, then wrangler deploy (real Cloudflare account required)
 npm run db:generate       # drizzle-kit generate (schema -> migrations/*.sql, after editing src/worker/db/schema.ts)
                           #   NOTE: EVERY migration already applied to remote D1 is frozen -- never edit one
@@ -19,7 +19,7 @@ npm run db:generate       # drizzle-kit generate (schema -> migrations/*.sql, af
                           #   filenames: an enumerated list goes stale every time a migration lands, and a
                           #   reader who trusts a short list will edit a frozen file that isn't on it.
 npm run db:migrate:local  # wrangler d1 migrations apply tetonpasscam --local
-npm run test              # vitest run --config vitest.config.ts    (test/parsers/** -- WYDOT HTML parsers, no DOM/Workers runtime)
+npm run test              # vitest run --config vitest.config.ts    (test/parsers/** + test/scripts/** -- WYDOT HTML parsers + the Node-version guard, no DOM/Workers runtime)
 npm run test:worker       # vitest run --config vitest.workers.config.ts (test/worker/** -- Hono routes + D1, real Workers runtime via @cloudflare/vitest-pool-workers)
 npm run test:app          # vitest run --config vitest.app.config.ts   (test/app/** -- React components, jsdom)
 npm run test:contract     # vitest run --config vitest.contract.config.ts (test/contract/** -- hits LIVE wyoroad.info)
@@ -61,7 +61,7 @@ migrations/           drizzle-kit-generated D1 migrations. Every migration in th
                       `wrangler d1 migrations list tetonpasscam --remote`). Per docs/RUNBOOK.md a new
                       migration must be applied to remote BEFORE deploying the Worker that reads it.
                       (run `ls migrations/` for the current set -- listing names here only goes stale)
-scripts/              verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts).
+scripts/              check-node.mjs (prebuild Node-version guard), verify-launch.sh, seed-routes.sql (generated from db/seed-routes.ts).
                       App icons/favicons come from design/logo-4c/ (the route-22 brand kit,
                       not generated) -- regenerate by re-copying its PNGs into public/ and
                       public/icons/ per that directory's README.

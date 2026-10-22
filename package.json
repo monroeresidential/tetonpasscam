@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "node scripts/check-node.mjs",
     "dev": "npm run build && wrangler dev",
     "build": "vite build",
     "test": "vitest run --config vitest.config.ts",
@@ -19,14 +20,14 @@
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@fontsource/bricolage-grotesque": "^5.3.0",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.13.1",
+    "hono": "^4.13.13",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "workers-og": "^0.0.27"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.20.3",
-    "@cloudflare/workers-types": "^5.20260809.1",
+    "@cloudflare/vitest-pool-workers": "^0.23.0",
+    "@cloudflare/workers-types": "^5.20261022.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
@@ -36,13 +37,22 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
     "drizzle-kit": "^0.31.10",
-    "jsdom": "^29.1.1",
-    "sharp": "^0.35.3",
+    "jsdom": "^30.1.3",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.2.1",
+    "vite": "^8.3.5",
     "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.120.0"
+    "vitest": "^4.1.12",
+    "wrangler": "^4.152.0"
+  },
+  "engines": {
+    "node": ">=26.12.1 <27"
+  },
+  "overrides": {
+    "miniflare": {
+      "undici": "^7.30.1"
+    },
+    "sharp": "^0.35.5"
   }
 }

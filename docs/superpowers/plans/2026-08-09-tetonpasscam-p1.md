@@ -4,7 +4,7 @@
 
 **Goal:** Ship the P1 web app: Cloudflare Worker (Hono API + cron poller + D1) serving a React/Vite/Tailwind PWA at tetonpasscam.com.
 
-**Architecture:** One Worker project. `fetch` serves static assets + `/api/*`; `scheduled` runs the WYDOT/Google/Idaho poller and nightly aggregation. D1 via Drizzle. Spec: `docs/superpowers/specs/2026-08-09-tetonpasscam-design.md`; product spec: `TETONPASSCAM-SPEC.md`.
+**Architecture:** One Worker project. `fetch` serves static assets + `/api/*`; `scheduled` runs the WYDOT/Google/Idaho poller and nightly aggregation. D1 via Drizzle. Spec: `docs/superpowers/specs/2026-08-09-tetonpasscam-design.md`; product spec: `docs/TETONPASSCAM-SPEC.md`.
 
 **Tech Stack:** TypeScript, Hono, Drizzle ORM + drizzle-kit, D1, React 18, Vite, Tailwind, vite-plugin-pwa, Vitest (+ @cloudflare/vitest-pool-workers for worker tests), Resend API.
 

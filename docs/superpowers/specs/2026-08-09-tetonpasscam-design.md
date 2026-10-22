@@ -1,6 +1,6 @@
 # tetonpasscam.com — Technical Design
 
-Date: 2026-08-09. Product requirements: `TETONPASSCAM-SPEC.md` (source of truth for product behavior; this doc records the technical decisions made with Drew for P1).
+Date: 2026-08-09. Product requirements: `docs/TETONPASSCAM-SPEC.md` (source of truth for product behavior; this doc records the technical decisions made with Drew for P1).
 
 ## Decisions made
 
