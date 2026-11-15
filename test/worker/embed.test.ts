@@ -182,7 +182,11 @@ describe('GET /embed/{badge,card,strip}', () => {
     async (variant) => {
       const now = Date.now();
       await insertSnapshot({ capturedAt: new Date(now).toISOString(), status: 'open' });
-      const staleAt = new Date(now - 45 * MIN_MS).toISOString(); // between the 30min freshness window and 12h max-age cap
+      // Stale at any hour of the day this suite might run: the freshness
+      // window depends on the polling cadence at capture time and tops out at
+      // 70 minutes (routes-schedule.ts), so 45 minutes was only stale during
+      // some hours. Still well inside the 12h max-age cap.
+      const staleAt = new Date(now - 120 * MIN_MS).toISOString();
       await insertTravelTime('victor-jackson-eb', staleAt, 40 * 60);
       await insertTravelTime('driggs-jackson-eb', new Date(now).toISOString(), 46 * 60);
 

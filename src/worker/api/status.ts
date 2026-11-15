@@ -3,6 +3,7 @@ import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm';
 import type { ApiStatus, ForecastDay, ForecastHour } from '../../shared/types';
 import type { PassStatus } from '../../shared/types';
 import { db, id33Events, statusSnapshots, weatherSnapshots } from '../db';
+import { travelTimeFreshnessMs, type RouteDirection } from '../poller/routes-schedule';
 import { STATEWIDE_ONLY_SOURCE } from '../poller/wydot-status';
 import type { Env } from '../env';
 import { formatShareCode } from '../share-code';
@@ -46,17 +47,13 @@ export const FUTURE_SKEW_TOLERANCE_MIN = 15;
  *  this direction is an UNKNOWN banner that still points at 511; the cost in
  *  the other direction is a false legal prohibition. */
 export const STATEWIDE_ONLY_MAX_MIN = 45;
-/** A travel_times row older than this is flagged `stale` in the response
- *  (see `TRAVEL_TIME_MAX_AGE_HOURS` below for when it's dropped instead) --
- *  a 45-minute-old drive time displayed as if it were live would mislead a
- *  driver deciding whether to leave now, so past this point it's shown
- *  muted/labeled rather than as current. */
-export const TRAVEL_TIME_FRESHNESS_MIN = 30;
-/** A travel_times row older than this is dropped from the response entirely,
- *  same as `TRAVEL_TIME_FRESHNESS_MIN` above -- but rows between the two
- *  cutoffs are still returned, flagged `stale: true`, so the overnight
- *  polling gap (Google Routes only runs 05:00-23:00 America/Denver, max
- *  ~6.5h between the last evening poll and the next morning one) shows the
+/** A travel_times row older than this is dropped from the response entirely.
+ *  A row younger than this but past its own freshness window is still
+ *  returned, flagged `stale: true` -- that window is not a constant here: it
+ *  follows the polling cadence in force when the row was captured
+ *  (`travelTimeFreshnessMs` in poller/routes-schedule.ts, 30-70 minutes). So
+ *  the overnight polling gap (drive times are polled 05:00-22:00
+ *  America/Denver, 8h between the 21:00 reading and the 05:00 one) shows the
  *  last evening reading instead of "no data" without ever resurfacing a
  *  multi-day-old reading after a poller outage. */
 export const TRAVEL_TIME_MAX_AGE_HOURS = 12;
@@ -185,7 +182,7 @@ function safeStringArray(raw: string | null): string[] {
  * Derive the (weekday-class, hour, season) key used to look up a route's
  * typical travel time for "now", all computed in America/Denver per the
  * brief. Thin wrapper over the shared `tz.ts` derivation (Task 12
- * consolidated this and google-routes.ts's `inPollingWindow` onto one
+ * consolidated this and the poller's polling-window check onto one
  * module) -- kept exported here under its original name since
  * test/worker/api-status.test.ts imports it from this module.
  */
@@ -203,6 +200,7 @@ interface TravelTimeRow {
   durationSec: number;
   capturedAt: string;
   routeId: number;
+  direction: RouteDirection;
 }
 
 interface MinCapturedRow {
@@ -348,7 +346,8 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
   const latestTravelRows = (
     await env.DB.prepare(
       `SELECT r.slug AS slug, r.name AS name, t.duration_sec AS durationSec,
-              t.captured_at AS capturedAt, t.route_id AS routeId
+              t.captured_at AS capturedAt, t.route_id AS routeId,
+              r.direction AS direction
          FROM travel_times t
          INNER JOIN (
            SELECT route_id, MAX(captured_at) AS max_captured_at
@@ -378,7 +377,6 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
   const typicalByRoute = new Map(typicalRows.map((r) => [r.routeId, r.medianSec]));
 
   const minHistoryMs = MIN_HISTORY_DAYS * 24 * 3_600_000;
-  const travelTimeFreshnessMs = TRAVEL_TIME_FRESHNESS_MIN * 60_000;
   const travelTimeMaxAgeMs = TRAVEL_TIME_MAX_AGE_HOURS * 3_600_000;
   const travelTimes = latestTravelRows
     // A route's latest row can still be older than the max-age cap (the
@@ -391,8 +389,11 @@ export async function getStatus(env: Env, nowMs: number = effectiveNowMs()): Pro
       return Number.isFinite(ageMs) && ageMs <= travelTimeMaxAgeMs;
     })
     .map((row) => {
-      const ageMs = nowMs - Date.parse(row.capturedAt);
-      const stale = ageMs > travelTimeFreshnessMs;
+      const capturedMs = Date.parse(row.capturedAt);
+      // Stale relative to when this reading's replacement was due, which
+      // depends on the hour and direction it was captured in -- a midday
+      // reading is replaced every 30 minutes, a rush-hour one every 10.
+      const stale = nowMs - capturedMs > travelTimeFreshnessMs(capturedMs, row.direction);
       const minCapturedAt = minCapturedByRoute.get(row.routeId);
       const historyEligible =
         minCapturedAt !== undefined && nowMs - Date.parse(minCapturedAt) >= minHistoryMs;

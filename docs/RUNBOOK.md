@@ -266,6 +266,48 @@ call volume; see the design doc's poller-cadence math). After editing,
 `npm run deploy` to push the new schedule — cron changes require a full
 redeploy, there's no separate "just update the schedule" command.
 
+### 7a. Drive times have their own, slower schedule
+
+The crons above set how often the poller runs, which is how often WYDOT
+status and weather are read. They do **not** set how often Google is asked for
+drive times. That is decided per cycle by
+`src/worker/poller/routes-schedule.ts`, because every traffic-aware Google
+Routes call bills at $0.01 beyond 5,000 free a month:
+
+| America/Denver | To Jackson (`eb`) | To Idaho (`wb`) |
+|---|---|---|
+| Weekdays 05–06 | hourly | hourly |
+| Weekdays 06–07 | 30 min | 30 min |
+| Weekdays 07–10 | **10 min** | 30 min |
+| Weekdays 10–16 | 30 min | 30 min |
+| Weekdays 16–19 | 30 min | **10 min** |
+| Weekdays 19–22 | hourly | hourly |
+| Weekends 05–09 and 18–22 | hourly | hourly |
+| Weekends 09–18 | 30 min | 30 min |
+| 22–05 | off | off |
+
+That is 504 calls on a weekday and 312 on a weekend day: 12,600–14,100 a
+month, about $76–91, against a $100 ceiling (15,000 calls). Polling all 12
+routes every 10 minutes from 05:00 to 23:00, as P1 launched, was 1,296 calls a
+day and about $350 a month.
+
+To retune it, edit the band tables in that file. Two things must stay true,
+and `test/parsers/routes-schedule.test.ts` checks the first:
+
+- **The budget.** The test walks every tick of a 31-day, 23-weekday month and
+  fails above 15,000 calls. Moving one weekday hour from 30-minute to
+  10-minute polling for one direction adds 24 calls a weekday, roughly $5 a
+  month; for both directions, double.
+- **Bands start and end on the hour, and cadences divide 60.** How long a
+  reading counts as current (`travelTimeFreshnessMs`, 30–70 minutes) is
+  derived from the cadence at the time it was captured and relies on this.
+
+The bands were chosen from readings up to 2026-11-15, of which only two weeks
+were winter and none were ski season. Re-check them against `route_typicals`
+(the p25–p75 spread per hour is the signal: a wide spread means the hour is
+unpredictable and worth polling more often) once a month or two of winter has
+been recorded.
+
 ---
 
 ## 8. D1 backup

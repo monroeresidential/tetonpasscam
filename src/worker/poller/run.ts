@@ -13,8 +13,9 @@ import {
 } from '../db';
 import { sendEmail } from '../notify';
 import { fetchId33Events } from './idaho511';
-import { fetchRouteTime, inPollingWindow } from './google-routes';
+import { fetchRouteTime } from './google-routes';
 import { runForecastStep } from './nws-forecast';
+import { isRouteDue } from './routes-schedule';
 import {
   STATEWIDE_ONLY_SOURCE,
   diffAdvisories,
@@ -496,8 +497,8 @@ async function alertOnBlindCycles(env: Env, database: ReturnType<typeof db>): Pr
 /**
  * Run one poll cycle: resolve status, diff advisories against the previous
  * snapshot (log only -- push notifications are P2), capture weather,
- * capture travel times for all 12 route-directions (only inside the
- * polling window), upsert Idaho 511 ID-33 events, and (only when the
+ * capture travel times for the route-directions due on this tick (see
+ * routes-schedule.ts), upsert Idaho 511 ID-33 events, and (only when the
  * resolved status is 'closed') fetch detour conditions. Every step runs in
  * its own try/catch so one source's failure can never block another's, and
  * a status_snapshots row is written every single cycle -- even 'unknown' --
@@ -641,13 +642,19 @@ export async function runPollCycle(
     console.error('[poller] weather step failed', err);
   }
 
-  // Step 4: travel times for all 12 route-directions, only inside the
-  // polling window. Promise.allSettled so one route's failure can't affect
-  // another's; a settled-but-null result (Google API failure) simply skips
-  // that route's insert.
+  // Step 4: travel times, for whichever route-directions the schedule says
+  // are due on this tick -- all 12, one direction's 6, or none (see
+  // routes-schedule.ts; every Google call is billed, so most cycles make
+  // none). Promise.allSettled so one route's failure can't affect another's;
+  // a settled-but-null result (Google API failure) simply skips that route's
+  // insert.
   try {
-    if (inPollingWindow(nowMs)) {
-      const routeRows = await database.select().from(routes);
+    // Checked before touching D1 so the many cycles with nothing due cost
+    // nothing at all.
+    if (isRouteDue(nowMs, 'eb') || isRouteDue(nowMs, 'wb')) {
+      const routeRows = (await database.select().from(routes)).filter((route) =>
+        isRouteDue(nowMs, route.direction),
+      );
       const settled = await Promise.allSettled(
         routeRows.map((route) => fetchRouteTime(env.GOOGLE_ROUTES_KEY, route, fetcher)),
       );

@@ -63,9 +63,13 @@ fallthrough = true
 # lift in exactly those hours, and Victor/Driggs commuters are reading the
 # page from 05:00. On 2026-08-18 WYDOT reopened the pass at 03:34 MDT and the
 # site still read CLOSED at 03:50 because the next poll was not due until
-# 04:00. */15 keeps this the cheapest window (Google Routes is skipped
-# entirely outside its own 05:00-23:00 Denver window, so these cycles are
-# WYDOT fetches only) while staying inside the spec's bound.
+# 04:00. */15 keeps this the cheapest window (Google Routes is never polled
+# between 22:00 and 05:00 Denver, so these cycles are WYDOT fetches only)
+# while staying inside the spec's bound.
+#
+# These crons set how often the poller RUNS. How often a run asks Google for
+# drive times is a separate, slower schedule decided in code
+# (src/worker/poller/routes-schedule.ts), because those calls are billed.
 crons = ["*/10 11-23 * * *", "*/10 0-6 * * *", "*/15 7-10 * * *", "10 9 * * *"]
 
 # Exposes the running deployment's id to the Worker. Used solely to scope the

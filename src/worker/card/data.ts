@@ -3,6 +3,7 @@ import { and, desc, eq, gte, lt } from 'drizzle-orm';
 import type { PassStatus } from '../../shared/types';
 import { db, statusSnapshots } from '../db';
 import type { Env } from '../env';
+import { MAX_TRAVEL_TIME_FRESHNESS_MS, travelTimeFreshnessMs } from '../poller/routes-schedule';
 import { formatShareCode, shareCodeToUtcWindow } from '../share-code';
 import type { CardInput, CardRoute } from './render';
 
@@ -24,13 +25,17 @@ import type { CardInput, CardRoute } from './render';
 const WINDOW_BEFORE_MS = 2 * 3_600_000;
 const WINDOW_AFTER_MS = 3 * 3_600_000;
 
-/** Travel-time rows within this many minutes of the snapshot's own
- *  `capturedAt` count as "that cycle's" reading for a route (design doc:
- *  "its cycle's travel_times, rows within ±5 min of the snapshot's captured
- *  _at"). Independent of `TRAVEL_TIME_FRESHNESS_MIN` in api/status.ts --
- *  that constant governs "is this fresh enough to show as LIVE right now";
- *  this one instead pairs a historical snapshot with the travel times that
- *  were actually captured alongside it, however long ago that was. */
+/** How far AFTER the snapshot's own `capturedAt` a travel-time row may sit
+ *  and still count as "that cycle's" reading (the cycle writes its status row
+ *  first and its travel times a moment later; design doc: "rows within ±5 min
+ *  of the snapshot's captured_at").
+ *
+ *  Looking BACK is a different question. Drive times are no longer fetched
+ *  every cycle (poller/routes-schedule.ts), so most snapshots have no reading
+ *  of their own. A card carries whichever reading was current at the moment
+ *  of the snapshot -- the same `travelTimeFreshnessMs` rule /api/status uses
+ *  to call a reading current, applied at the snapshot's time instead of now.
+ *  The card therefore shows what the live page showed at that minute. */
 const ROUTE_WINDOW_MIN = 5;
 
 interface TravelTimeRow {
@@ -137,10 +142,12 @@ export async function loadCardData(
 
   const capturedMs = Date.parse(snapshot.capturedAt);
   const windowMs = ROUTE_WINDOW_MIN * 60_000;
-  const lowerBound = new Date(capturedMs - windowMs).toISOString();
+  // The SQL bound is the widest a freshness window can be; each candidate is
+  // then held to its own window below.
+  const lowerBound = new Date(capturedMs - MAX_TRAVEL_TIME_FRESHNESS_MS).toISOString();
   const upperBound = new Date(capturedMs + windowMs).toISOString();
 
-  const rows = (
+  const candidates = (
     await env.DB.prepare(
       `SELECT r.id AS routeId, r.slug AS slug, r.name AS name,
               t.duration_sec AS durationSec, t.captured_at AS capturedAt
@@ -155,8 +162,16 @@ export async function loadCardData(
       .all()
   ).results as unknown as TravelTimeRow[];
 
-  // A route can have more than one row inside the ±5min window (overlapping
-  // poll cycles); keep only the one closest to the snapshot's own
+  // Keep a row captured before the snapshot only if it was still current at
+  // the snapshot's time. Rows captured after it are already bounded to
+  // ROUTE_WINDOW_MIN by the query.
+  const rows = candidates.filter((row) => {
+    const rowMs = Date.parse(row.capturedAt);
+    return rowMs >= capturedMs || capturedMs - rowMs <= travelTimeFreshnessMs(rowMs, dir);
+  });
+
+  // A route can have more than one qualifying row (a rush-hour snapshot has
+  // several readings inside the window); keep only the one closest to the snapshot's own
   // capturedAt per route, first-seen-wins order otherwise (rows arrive
   // ORDER BY r.id ASC, i.e. seed order -- see seed-routes.ts's PAIRS array).
   const byRoute = new Map<number, TravelTimeRow>();
