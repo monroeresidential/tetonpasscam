@@ -5,7 +5,7 @@ import { getActiveAlerts, postAlert, postCameraError } from './alerts';
 import { readJsonCapped } from './body';
 import { postFeedback } from './feedback';
 import { getHistory } from './history';
-import { getStatus } from './status';
+import { effectiveNowMs, getStatus } from './status';
 import { getWeatherHistory } from './weather-history';
 
 // Per-endpoint body size caps for `readJsonCapped` (see body.ts) -- sized to
@@ -61,7 +61,10 @@ api.get('/history', async (c) => {
   // drives an expensive full-season travel_times scan the home page's
   // compact chart card never needs, so it stays off unless asked for.
   const includeSummary = c.req.query('summary') === '1';
-  const result = await getHistory(c.env, slug, Date.now(), includeSummary);
+  // effectiveNowMs(), not Date.now(): the same test-only clock seam /status
+  // uses. "Today" and "this season" are both read off this instant, so a
+  // route-level test has to be able to pin it.
+  const result = await getHistory(c.env, slug, effectiveNowMs(), includeSummary);
   if (!result) return c.json({ error: 'not found' }, 404);
   c.header('Cache-Control', 'public, max-age=300');
   return c.json(result);
