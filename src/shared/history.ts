@@ -1,10 +1,11 @@
 /**
  * How many distinct America/Denver calendar days a (route, weekday-class,
  * hour, season) bucket needs before /history will draw a p25-p75 band for
- * it. Gates on DAYS, not sample count: the poller runs every 10 minutes for
- * most of the day, so a single day contributes ~6 samples to an hour bucket
- * -- a 30-sample bucket can be just 5 days, and within-hour spread is not
- * the day-to-day spread a "typical band" claims to show.
+ * it. Gates on DAYS, not sample count: a single day contributes anywhere
+ * from 1 to 6 samples to an hour bucket depending on the drive-time polling
+ * cadence for that hour (poller/routes-schedule.ts) -- a 30-sample bucket
+ * can be just 5 days, and within-hour spread is not the day-to-day spread a
+ * "typical band" claims to show.
  *
  * Consequence, accepted deliberately (see the design doc): weekend buckets
  * accrue only 2 distinct days per week, so weekend bands do not appear

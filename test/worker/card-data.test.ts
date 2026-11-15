@@ -130,6 +130,54 @@ describe('loadCardData', () => {
     const result = await loadCardData(env as any, id, 'eb');
     expect(result!.routes).toEqual([]);
   });
+
+  // Drive times are no longer fetched every cycle (routes-schedule.ts), so
+  // most snapshots have no reading of their own within ±5 min. A card shows
+  // the reading that was current when the snapshot was taken, by the same
+  // rule /api/status uses to call a reading current. Each test below uses its
+  // own date so the time-window query cannot pick up another test's rows.
+  it('a snapshot between half-hourly polls carries the reading that was current at that moment', async () => {
+    // Wed 2026-07-22, 12:20 PM MDT; the midday reading was taken at 12:00.
+    const capturedAt = '2026-07-22T18:20:00.000Z';
+    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    await insertTravelTime('victor-jackson-wb', '2026-07-22T18:00:00.000Z', 37 * 60);
+
+    const result = await loadCardData(env as any, id, 'wb');
+    expect(result!.routes).toEqual([{ name: 'Jackson → Victor', durationSec: 37 * 60 }]);
+  });
+
+  it('a reading that had already gone stale by the snapshot is left off the card', async () => {
+    // Thu 2026-07-23, 12:45 PM MDT; the 12:00 reading's replacement was due
+    // at 12:30 and is now 15 minutes overdue.
+    const capturedAt = '2026-07-23T18:45:00.000Z';
+    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    await insertTravelTime('victor-jackson-wb', '2026-07-23T18:00:00.000Z', 37 * 60);
+
+    const result = await loadCardData(env as any, id, 'wb');
+    expect(result!.routes).toEqual([]);
+  });
+
+  it('an hourly evening reading is still carried 65 minutes later', async () => {
+    // Fri 2026-07-24, 9:05 PM MDT (03:05 UTC on the 25th); read at 8:00 PM.
+    const capturedAt = '2026-07-25T03:05:00.000Z';
+    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    await insertTravelTime('driggs-jackson-wb', '2026-07-25T02:00:00.000Z', 52 * 60);
+
+    const result = await loadCardData(env as any, id, 'wb');
+    expect(result!.routes).toEqual([{ name: 'Jackson → Driggs', durationSec: 52 * 60 }]);
+  });
+
+  it('prefers the reading closest to the snapshot when an older one is also still current', async () => {
+    // Mon 2026-07-27, 12:32 PM MDT: the 12:00 reading is still current, and
+    // the 12:30 one is closer.
+    const capturedAt = '2026-07-27T18:32:00.000Z';
+    const id = await insertSnapshot({ capturedAt, status: 'open' });
+    await insertTravelTime('victor-tetonvillage-wb', '2026-07-27T18:00:00.000Z', 44 * 60);
+    await insertTravelTime('victor-tetonvillage-wb', '2026-07-27T18:30:00.000Z', 48 * 60);
+
+    const result = await loadCardData(env as any, id, 'wb');
+    expect(result!.routes).toEqual([{ name: 'Teton Village → Victor', durationSec: 48 * 60 }]);
+  });
 });
 
 describe('resolveShareCode', () => {

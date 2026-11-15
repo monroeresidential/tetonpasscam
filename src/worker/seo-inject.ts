@@ -1,6 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
 
-import { DEAD_HOURS, TRAVEL_TIME_FRESHNESS_MIN, WEATHER_STALE_MIN } from './api/status';
+import { DEAD_HOURS, WEATHER_STALE_MIN, effectiveNowMs } from './api/status';
+import { travelTimeFreshnessMs } from './poller/routes-schedule';
 import { db, routes, statusSnapshots, travelTimes, weatherSnapshots } from './db';
 import type { Env } from './env';
 import { CLOSED_LEGAL_COPY } from '../shared/legal';
@@ -131,11 +132,12 @@ async function buildLiveStatusHtml(env: Env, nowMs: number): Promise<string> {
     .orderBy(desc(travelTimes.capturedAt))
     .limit(1);
   if (travelRow) {
-    const ageMs = nowMs - Date.parse(travelRow.capturedAt);
-    // Same "no valid placeholder" contract as getStatus's travelTimes filter
-    // -- a drive time older than the freshness window is omitted entirely
-    // rather than shown as if it were live.
-    if (Number.isFinite(ageMs) && ageMs <= TRAVEL_TIME_FRESHNESS_MIN * 60_000) {
+    const capturedMs = Date.parse(travelRow.capturedAt);
+    const ageMs = nowMs - capturedMs;
+    // Same rule getStatus uses to flag a row `stale` -- but here a stale
+    // drive time is omitted entirely rather than shown muted, since this
+    // sentence has no way to qualify it. 'eb': VICTOR_JACKSON_EB_SLUG.
+    if (Number.isFinite(ageMs) && ageMs <= travelTimeFreshnessMs(capturedMs, 'eb')) {
       const minutes = Math.round(travelRow.durationSec / 60);
       sentence += ` Victor to Jackson is currently running about ${minutes} minutes.`;
     }
@@ -158,7 +160,9 @@ async function buildLiveStatusHtml(env: Env, nowMs: number): Promise<string> {
  */
 export async function injectLiveStatus(response: Response, env: Env): Promise<Response> {
   try {
-    const html = await buildLiveStatusHtml(env, Date.now());
+    // effectiveNowMs() rather than Date.now(): the same test-only clock seam
+    // /api/status uses, so both can be exercised at a pinned instant.
+    const html = await buildLiveStatusHtml(env, effectiveNowMs());
     return new HTMLRewriter()
       .on('#seo-shell', {
         element(el) {

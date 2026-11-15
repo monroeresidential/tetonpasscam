@@ -338,6 +338,65 @@ describe('runPollCycle', () => {
       .n as number;
     expect(afterCount).toBe(beforeCount);
   });
+
+  // The drive-time schedule (src/worker/poller/routes-schedule.ts). Each
+  // Google call is billed, so "which routes did this cycle actually ask
+  // Google about" is the behavior that matters, not just what was stored.
+  const ALL_SOURCES_OK = {
+    'RoadClosures.html': roadclosuresOpen,
+    'SelectedRoute=WY22': routesresultsWy22Open,
+    'Sensors.StationResults': sensorsTetonpass,
+    'routes.googleapis.com': GOOGLE_ROUTES_STUB,
+    '511.idaho.gov': '[]',
+  };
+
+  async function directionsCapturedAt(nowMs: number): Promise<string[]> {
+    const rows = (
+      await env.DB.prepare(
+        `SELECT r.direction AS direction FROM travel_times t
+           INNER JOIN routes r ON r.id = t.route_id
+          WHERE t.captured_at = ?`,
+      )
+        .bind(new Date(nowMs).toISOString())
+        .all()
+    ).results as unknown as { direction: string }[];
+    return rows.map((r) => r.direction);
+  }
+
+  it('a weekday morning-rush tick asks Google for the six Jackson-bound routes only', async () => {
+    // Mon 2026-08-10 07:10 MDT. Jackson-bound is on its 10-minute rush
+    // cadence; Idaho-bound is half-hourly and 07:10 is not one of its ticks.
+    const nowMs = Date.parse('2026-08-10T13:10:00.000Z');
+    const requestedUrls: string[] = [];
+    await runPollCycle(env as any, fakeFetch(ALL_SOURCES_OK, requestedUrls), nowMs);
+
+    expect(requestedUrls.filter((u) => u.includes('routes.googleapis.com'))).toHaveLength(6);
+    expect(await directionsCapturedAt(nowMs)).toEqual(['eb', 'eb', 'eb', 'eb', 'eb', 'eb']);
+  });
+
+  it('a weekday evening-rush tick asks Google for the six Idaho-bound routes only', async () => {
+    // Mon 2026-08-10 16:40 MDT.
+    const nowMs = Date.parse('2026-08-10T22:40:00.000Z');
+    const requestedUrls: string[] = [];
+    await runPollCycle(env as any, fakeFetch(ALL_SOURCES_OK, requestedUrls), nowMs);
+
+    expect(requestedUrls.filter((u) => u.includes('routes.googleapis.com'))).toHaveLength(6);
+    expect(await directionsCapturedAt(nowMs)).toEqual(['wb', 'wb', 'wb', 'wb', 'wb', 'wb']);
+  });
+
+  it('a midday tick between half-hours makes no Google call, but still records status', async () => {
+    // Mon 2026-08-10 12:10 MDT: inside the day, off both directions' cadence.
+    const nowMs = Date.parse('2026-08-10T18:10:00.000Z');
+    const requestedUrls: string[] = [];
+    await runPollCycle(env as any, fakeFetch(ALL_SOURCES_OK, requestedUrls), nowMs);
+
+    expect(requestedUrls.filter((u) => u.includes('routes.googleapis.com'))).toHaveLength(0);
+    expect(await directionsCapturedAt(nowMs)).toEqual([]);
+    const snapshot = await env.DB.prepare('SELECT status FROM status_snapshots WHERE captured_at = ?')
+      .bind(new Date(nowMs).toISOString())
+      .first();
+    expect(snapshot).toMatchObject({ status: 'open' });
+  });
 });
 
 describe('resolveStatus', () => {

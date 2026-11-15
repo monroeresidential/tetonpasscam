@@ -42,7 +42,9 @@ src/worker/          Cloudflare Worker (Hono) -- the only thing with DB/secret a
   api/                 router.ts (mounts all routes) + status.ts, alerts.ts, feedback.ts, history.ts, admin.ts,
                        weather-history.ts
   poller/              run.ts (poll cycle orchestration), wydot-status.ts, wydot-weather.ts, google-routes.ts,
-                       idaho511.ts (per-source fetch+parse), aggregate.ts (nightly typicals job),
+                       idaho511.ts (per-source fetch+parse), routes-schedule.ts (WHEN drive times are
+                       fetched and how long a reading stays current -- a $100/mo Google budget, see
+                       docs/RUNBOOK.md 7a; not every cycle fetches them), aggregate.ts (nightly typicals job),
                        nws-forecast.ts (hourly-forecast fetch + Denver-day rollup)
   db/                  schema.ts (drizzle schema), index.ts (db() helper), seed-routes.ts (ROUTES data + one-off seeder)
   notify.ts            Resend email helper (used by alerts/feedback/camera-error)

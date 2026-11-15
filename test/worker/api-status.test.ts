@@ -375,25 +375,11 @@ describe('GET /api/status', () => {
     expect(body.travelTimes.some((t) => t.slug === 'driggs-airport-wb')).toBe(false);
   });
 
-  it('travel_times freshness (LH T2 finding 4, updated by stale-drive-times): a route whose latest row is 31 minutes old is now included, but flagged stale rather than omitted', async () => {
-    // Distinct, previously-untouched slug -- this file's D1 instance is
-    // shared across tests, so reusing a slug another test already inserted
-    // rows for would make "included/omitted" ambiguous with "just never had
-    // a row".
-    const id = await routeId('driggs-airport-eb');
-    const staleAt = new Date(Date.now() - 31 * 60_000).toISOString();
-    await env.DB.prepare(
-      `INSERT INTO travel_times (route_id, captured_at, duration_sec) VALUES (?, ?, 1234)`,
-    )
-      .bind(id, staleAt)
-      .run();
-
-    const { body } = await getStatus();
-    const entry = body.travelTimes.find((t) => t.slug === 'driggs-airport-eb');
-    expect(entry).toBeTruthy();
-    expect(entry!.stale).toBe(true);
-  });
-
+  // Where exactly a reading turns stale (30-70 minutes) depends on the hour
+  // and direction it was captured in, so those boundaries are tested at
+  // pinned instants in travel-time-freshness.test.ts. The tests here use the
+  // wall clock and so only assert ages that are unambiguous at any hour:
+  // under 30 minutes is always current, over 70 is always stale.
   it('travel_times freshness (LH T2 finding 4): a route whose latest row is 29 minutes old is still included with stale:false', async () => {
     const id = await routeId('driggs-tetonvillage-wb');
     const freshAt = new Date(Date.now() - 29 * 60_000).toISOString();
@@ -460,7 +446,7 @@ describe('GET /api/status', () => {
     expect(body.travelTimes.some((t) => t.slug === 'victor-tetonvillage-wb')).toBe(false);
   });
 
-  it('a fresh row (within TRAVEL_TIME_FRESHNESS_MIN) reports stale:false', async () => {
+  it('a fresh row (5 minutes old) reports stale:false', async () => {
     const id = await routeId('victor-airport-wb');
     const freshAt = new Date(Date.now() - 5 * 60_000).toISOString();
     await env.DB.prepare(

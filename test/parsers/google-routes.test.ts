@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fetchRouteTime, inPollingWindow } from '../../src/worker/poller/google-routes';
+import { fetchRouteTime } from '../../src/worker/poller/google-routes';
 import { ROUTES } from '../../src/worker/db/seed-routes';
 
 describe('fetchRouteTime', () => {
@@ -66,24 +66,5 @@ describe('fetchRouteTime', () => {
         }),
       );
     expect(await fetchRouteTime('k', ROUTES[0], stub)).toBeNull();
-  });
-});
-
-describe('inPollingWindow', () => {
-  it('polling window is Denver-local', () => {
-    expect(inPollingWindow(Date.UTC(2026, 0, 15, 10, 0))).toBe(false); // 03:00 MST
-    expect(inPollingWindow(Date.UTC(2026, 0, 15, 15, 0))).toBe(true); // 08:00 MST
-    expect(inPollingWindow(Date.UTC(2026, 6, 15, 6, 0))).toBe(false); // 00:00 MDT
-  });
-
-  it('exactly 05:00 Denver is true, exactly 23:00 Denver is false', () => {
-    // Jan 2026 is MST (UTC-7): 05:00 MST == 12:00 UTC same day; 23:00 MST == 06:00 UTC next day
-    expect(inPollingWindow(Date.UTC(2026, 0, 15, 12, 0))).toBe(true); // 05:00 MST
-    expect(inPollingWindow(Date.UTC(2026, 0, 16, 6, 0))).toBe(false); // 23:00 MST (Jan 15)
-  });
-
-  it('04:59 Denver is false (just before window opens)', () => {
-    // 04:59 MST == 11:59 UTC
-    expect(inPollingWindow(Date.UTC(2026, 0, 15, 11, 59))).toBe(false);
   });
 });

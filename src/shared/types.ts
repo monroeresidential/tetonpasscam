@@ -101,10 +101,11 @@ export interface ApiStatus {
     durationSec: number;
     typicalSec: number | null;
     capturedAt: string;
-    // True when this row is older than the live freshness window but still
-    // within the max-age cap (see status.ts's TRAVEL_TIME_FRESHNESS_MIN /
-    // TRAVEL_TIME_MAX_AGE_HOURS) -- the overnight-gap case: last night's
-    // reading, shown muted and labeled "as of" rather than as current.
+    // True when this row is older than its freshness window but still within
+    // the max-age cap (poller/routes-schedule.ts's travelTimeFreshnessMs --
+    // 30 to 70 minutes, by the polling cadence when it was captured -- and
+    // status.ts's TRAVEL_TIME_MAX_AGE_HOURS). The usual case is the overnight
+    // gap: last night's reading, shown muted rather than as current.
     stale: boolean;
   }[];
   id33Advisory: string | null;

@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { api } from '../../src/worker/api/router';
 import { getHistory } from '../../src/worker/api/history';
+import { setTestNowMs } from '../../src/worker/api/status';
 import { seedRoutes } from '../../src/worker/db/seed-routes';
 
 async function routeId(slug: string): Promise<number> {
@@ -293,9 +294,20 @@ describe('GET /api/history — summary is opt-in (I3)', () => {
     const id = await routeId(slug);
     await insertTravelTime(id, '2026-08-11T18:00:00.000Z', 3600);
 
-    const res = await api.request(`/history?route=${slug}&summary=1`, {}, env as any);
-    const body = (await res.json()) as { summary: { worstDays: unknown } };
-    expect(body.summary).not.toBeNull();
-    expect(body.summary.worstDays).toEqual([{ date: '2026-08-11', peakSec: 3600 }]);
+    // Pinned to the same summer instant the direct getHistory() tests above
+    // pass in. "Worst days THIS SEASON" is read off the clock, and this test
+    // goes through the real route, which used the wall clock: it passed all
+    // summer and began failing on Nov 1, when the August reading stopped
+    // being "this season".
+    setTestNowMs(NOW);
+    try {
+      const res = await api.request(`/history?route=${slug}&summary=1`, {}, env as any);
+      const body = (await res.json()) as { summary: { worstDays: unknown } };
+      expect(body.summary).not.toBeNull();
+      expect(body.summary.worstDays).toEqual([{ date: '2026-08-11', peakSec: 3600 }]);
+    } finally {
+      // MUST clear: a module-level override shared by every later test.
+      setTestNowMs(undefined);
+    }
   });
 });

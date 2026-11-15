@@ -1,10 +1,9 @@
 /**
  * Shared America/Denver time-zone derivations, consolidated out of
- * google-routes.ts (Task 6, hour extraction for `inPollingWindow`) and
- * status.ts (Task 9, weekday-class/hour/season extraction for
- * `denverTypicalsKey`). Both modules now delegate to this file; their own
- * exported functions keep their existing names/signatures so no caller
- * (production or test) needs to change, only the internals moved.
+ * google-routes.ts (Task 6, hour extraction for the polling window -- now
+ * the drive-time schedule in poller/routes-schedule.ts) and status.ts (Task
+ * 9, weekday-class/hour/season extraction for `denverTypicalsKey`). Both
+ * delegate to this file.
  *
  * `denverToUtcIso` (wydot-status.ts, Task 3) stays where it is -- it parses
  * a WYDOT wall-clock string INTO a UTC instant (the reverse direction from
@@ -49,7 +48,7 @@ export function denverParts(ms: number): DenverParts {
   };
 }
 
-/** Just the hour component of `denverParts` -- used by `inPollingWindow`. */
+/** Just the hour component of `denverParts`. */
 export function denverHour(ms: number): number {
   return denverParts(ms).hour;
 }

@@ -1,5 +1,4 @@
 import type { SeedRoute } from '../db/seed-routes';
-import { denverHour } from '../tz';
 
 export interface RouteTimeResult {
   durationSec: number;
@@ -66,11 +65,4 @@ export async function fetchRouteTime(
   } catch {
     return null;
   }
-}
-
-/** True during the 05:00-23:00 America/Denver polling window (DST-aware via
- *  Intl), false outside it. */
-export function inPollingWindow(nowUtcMs: number): boolean {
-  const hour = denverHour(nowUtcMs);
-  return hour >= 5 && hour < 23;
 }
